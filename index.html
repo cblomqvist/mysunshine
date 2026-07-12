@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySunshine - Solar Panel & Battery ROI Simulator</title>
+    <meta name="description" content="Calculate your solar panel and home battery payoff period, lifetime savings, and environmental impact with our interactive hourly energy simulation.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-sun-plant-wilt"></i>
+                </div>
+                <div>
+                    <h1>MySunshine</h1>
+                    <p class="tagline">Solar & Battery ROI Simulator</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="badge badge-success"><i class="fa-solid fa-bolt"></i> Live Simulator</span>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="app-main">
+            <!-- Sidebar Panel: Inputs -->
+            <aside class="sidebar-panel">
+                <div class="panel-section">
+                    <h2 class="section-title"><i class="fa-solid fa-solar-panel"></i> Solar Settings</h2>
+                    
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="solar-capacity">Solar Capacity</label>
+                            <span class="value-display" id="solar-capacity-val">6.0 kW</span>
+                        </div>
+                        <input type="range" id="solar-capacity" min="0" max="20" step="0.5" value="6.0" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="solar-cost">Solar Cost (Installed)</label>
+                        </div>
+                        <div class="input-addon-wrapper">
+                            <span class="input-addon">$</span>
+                            <input type="number" id="solar-cost" value="5500" min="0" step="100" class="custom-input">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="sun-hours">Average Daily Sun Hours</label>
+                            <span class="value-display" id="sun-hours-val">4.5 hrs</span>
+                        </div>
+                        <input type="range" id="sun-hours" min="1" max="10" step="0.1" value="4.5" class="custom-slider">
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2 class="section-title"><i class="fa-solid fa-battery-three-quarters"></i> Battery Settings</h2>
+                    
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="battery-capacity">Battery Capacity</label>
+                            <span class="value-display" id="battery-capacity-val">10.0 kWh</span>
+                        </div>
+                        <input type="range" id="battery-capacity" min="0" max="30" step="0.5" value="10.0" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="battery-cost">Battery Cost (Installed)</label>
+                        </div>
+                        <div class="input-addon-wrapper">
+                            <span class="input-addon">$</span>
+                            <input type="number" id="battery-cost" value="8500" min="0" step="100" class="custom-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2 class="section-title"><i class="fa-solid fa-house-chimney-user"></i> Usage & Grid</h2>
+                    
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="daily-usage">Daily Electricity Usage</label>
+                            <span class="value-display" id="daily-usage-val">18.0 kWh</span>
+                        </div>
+                        <input type="range" id="daily-usage" min="5" max="50" step="1" value="18" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="grid-rate">Grid Rate (Buy)</label>
+                            <span class="value-display" id="grid-rate-val">$0.32 /kWh</span>
+                        </div>
+                        <input type="range" id="grid-rate" min="0.05" max="0.80" step="0.01" value="0.32" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="feed-in-tariff">Feed-in Tariff (Sell)</label>
+                            <span class="value-display" id="feed-in-tariff-val">$0.08 /kWh</span>
+                        </div>
+                        <input type="range" id="feed-in-tariff" min="0.00" max="0.40" step="0.01" value="0.08" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="inflation-rate">Annual Energy Price Inflation</label>
+                            <span class="value-display" id="inflation-rate-val">4.0%</span>
+                        </div>
+                        <input type="range" id="inflation-rate" min="0" max="15" step="0.5" value="4.0" class="custom-slider">
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Results Viewport -->
+            <section class="results-viewport">
+                <!-- KPI Dashboard Cards -->
+                <div class="kpi-grid">
+                    <div class="kpi-card" id="kpi-payback">
+                        <div class="kpi-header">
+                            <h3>Payback Period</h3>
+                            <i class="fa-solid fa-calendar-check kpi-icon"></i>
+                        </div>
+                        <div class="kpi-value">
+                            <span id="val-payback">--</span> <span class="unit">Years</span>
+                        </div>
+                        <p class="kpi-sub" id="sub-payback">Initial investment break-even</p>
+                    </div>
+
+                    <div class="kpi-card highlight-card" id="kpi-savings">
+                        <div class="kpi-header">
+                            <h3>25-Yr Net Savings</h3>
+                            <i class="fa-solid fa-piggy-bank kpi-icon"></i>
+                        </div>
+                        <div class="kpi-value" id="val-savings">--</div>
+                        <p class="kpi-sub" id="sub-savings">Cumulative profit after payoff</p>
+                    </div>
+
+                    <div class="kpi-card" id="kpi-cost">
+                        <div class="kpi-header">
+                            <h3>Net System Cost</h3>
+                            <i class="fa-solid fa-receipt kpi-icon"></i>
+                        </div>
+                        <div class="kpi-value" id="val-net-cost">--</div>
+                        <p class="kpi-sub" id="sub-net-cost">Solar + Battery combined cost</p>
+                    </div>
+
+                    <div class="kpi-card" id="kpi-co2">
+                        <div class="kpi-header">
+                            <h3>Annual CO₂ Saved</h3>
+                            <i class="fa-solid fa-leaf kpi-icon"></i>
+                        </div>
+                        <div class="kpi-value">
+                            <span id="val-co2">--</span> <span class="unit">Tons</span>
+                        </div>
+                        <p class="kpi-sub" id="sub-co2">Equivalent to ~50 trees planted</p>
+                    </div>
+                </div>
+
+                <!-- Interactive Charts Section -->
+                <div class="charts-container">
+                    <div class="chart-wrapper main-chart">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <h3><i class="fa-solid fa-chart-line"></i> Cumulative Lifetime Savings (25 Years)</h3>
+                                <p>Shows payback time and long-term financial payoff</p>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="savings-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid-secondary">
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <div class="chart-title">
+                                    <h3><i class="fa-solid fa-chart-area"></i> Hourly Energy Flow Simulator</h3>
+                                    <p>Typical 24h cycle: Solar gen vs. household load & battery SoC</p>
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="energy-flow-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- System Specs Summary Card -->
+                        <div class="specs-card">
+                            <h3><i class="fa-solid fa-microchip"></i> System Performance Specs</h3>
+                            <ul class="specs-list">
+                                <li>
+                                    <span class="spec-label">Solar Self-Consumption</span>
+                                    <span class="spec-value" id="spec-self-consumption">--%</span>
+                                </li>
+                                <li>
+                                    <span class="spec-label">Battery Utilization Rate</span>
+                                    <span class="spec-value" id="spec-battery-util">--%</span>
+                                </li>
+                                <li>
+                                    <span class="spec-label">Energy Grid Independence</span>
+                                    <span class="spec-value" id="spec-grid-indep">--%</span>
+                                </li>
+                                <li>
+                                    <span class="spec-label">Annual Solar Output</span>
+                                    <span class="spec-value" id="spec-annual-gen">-- kWh</span>
+                                </li>
+                                <li>
+                                    <span class="spec-label">Annual Grid Purchase</span>
+                                    <span class="spec-value" id="spec-annual-import">-- kWh</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Annual Detailed Breakdown Table -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3><i class="fa-solid fa-table-list"></i> 25-Year Detailed Financial Ledger</h3>
+                        <p>Year-by-year cash flows, grid savings, and cumulative ROI</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="ledger-table">
+                            <thead>
+                                <tr>
+                                    <th>Year</th>
+                                    <th>Solar Gen (kWh)</th>
+                                    <th>Self-Consumed (kWh)</th>
+                                    <th>Exported (kWh)</th>
+                                    <th>Imported (kWh)</th>
+                                    <th>Bill w/o Solar</th>
+                                    <th>Bill w/ Solar</th>
+                                    <th>Annual Savings</th>
+                                    <th>Net Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledger-body">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <p>MySunshine Solar Calculator &copy; 2026. Made with ❤️ for a greener future. All calculations are simulations based on standard energy models.</p>
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
