@@ -72,7 +72,7 @@ Energy data from 2025 is in the file `data/sonnen_energy_data_2025.csv`
 ### B. Electricity Prices (Nordpool SE3)
 
 * **Nordpool Prices**: Dynamic hourly spot prices for the **SE3 bidding zone**.
-* **API Access**: We will use the **ENTSO-E Transparency Platform API** (requires a free registration) or a public aggregator like **Energy-Charts** or **Elering** to fetch historical day-ahead prices for SE3.
+* **API Access**: We will use the **ENTSO-E Transparency Platform API** (requires a free registration) or a public aggregator like **Energy-Charts** or **Elering** to fetch historical day-ahead prices for SE3. An API key has been requested for ENTSO-E access, by using the instructions for the HA integration at https://github.com/yxkrage/hass-entso-e
 
 ---
 
