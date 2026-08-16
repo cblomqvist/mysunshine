@@ -1,101 +1,169 @@
 # Product Requirements Document (PRD): MySunshine
 
-A system to track, simulate, and calculate the actual financial return on investment (ROI) for a household solar panel and home battery system, with future capabilities for smart charging and energy arbitrage.
+A comprehensive system to track, simulate, and calculate the actual financial return on investment (ROI) for a household solar panel and home battery system in Sweden (SE3), with future capabilities for solar forecasting, smart charging, and price arbitrage.
 
 ---
 
 ## 1. Objectives
 
-### Core Objective (Phase 1)
+### Core Objective (Phase 1: Historical ROI & Value Analysis)
+Calculate the **true financial ROI and savings** of the existing solar and battery installation using real historical electricity price data (Nordpool SE3 / Tibber) and actual consumption/production logs.
+- Quantify total savings against realistic baselines (No Solar/Battery, Solar-only).
+- Isolate the **marginal financial contribution** of the SonnenBatterie 10.
+- Account for Swedish electricity market specifics: spot prices (both hourly and 15-minute/quarterly), energy tax (*energiskatt*), grid fees (*nätavgift*), grid benefit (*nätnytta*), 25% VAT (*moms*), Tibber fees, and micro-production tax deduction (*skattereduktion* 60 öre/kWh).
 
-Calculate the **actual ROI** of the existing solar and battery installation using real historical electricity price data (Nordpool) and real consumption/production logs.
-
-### Future Objective (Phase 2)
-
-Implement smart battery control strategies, including:
-
-* Charging the battery from the grid when electricity prices are low and solar generation is forecast to be low, and battery SoC (State of Charge) is below 50% or some other threshold that we calculate when we have more data.
-* Arbitrage (buying low, discharging to avoid grid consumption or selling back when prices are high but only when SoC is > 50% or some other threshold that we calculate when we have more data).
-
----
-
-## 2. System Architecture & Hardware
-
-* **Solar Inverter**: SMA Inverter model STP8.0-3AV-40 (solar generation).
-* **Battery Storage**: SonnenBatterie 10 performance with 4 modules (stores solar energy, charges/discharges, reports real-time power levels).
-* **Bidding Zone**: **SE3** (Sweden - Stockholm zone, Nordpool market).
-* **Execution Environment**: 
-  * Primary: **Home Assistant Green** (as the hub for polling and historical storage).
-  * Fallback/Secondary: **Dedicated Ubuntu laptop** running 24/7.
+### Future Objective (Phase 2: Smart Strategy & Arbitrage Optimizer)
+Implement predictive battery control strategies and dynamic charging recommendations:
+- **Low-Price Grid Pre-charging**: Charge the battery from the grid during cheap night hours when solar generation is forecast to be low, winter load is high, and SoC is below target threshold.
+- **Spot Price Arbitrage**: Strategically charge low and discharge during high-demand/peak-price hours while factoring in the ~77% round-trip efficiency hurdle, 15-minute price volatility, and grid transfer fees.
 
 ---
 
-## 3. Data Integration Strategy
+## 2. System Hardware & Environmental Configuration
+
+* **Bidding Zone**: **SE3** (Sweden - Stockholm / Central Sweden, Nordpool market).
+* **Electricity Retailer (Elhandelsbolag)**: **Tibber** (`https://tibber.com/se`).
+  * Price Model: Dynamic spot pricing.
+  * **Pricing Resolution Transition Date**: **2025-10-01** (Switched from 60-min hourly prices to 15-min quarterly prices).
+  * Fixed Subscription: 49 SEK / month (incl. moms).
+* **Grid Operator (Elnätsbolag)**: **Eskilstuna Energi & Miljö (EEM)** (`https://eem.se`).
+* **Solar Inverter**: **SMA Inverter model STP8.0-3AV-40** (3-phase, 8.0 kW AC rating).
+* **Battery Storage**: **SonnenBatterie 10 performance** with 4 modules:
+  * Nominal Capacity: ~22 kWh (~20 kWh usable).
+  * Continuous Power: Up to 7.0–8.0 kW.
+  * Observed Round-Trip Efficiency: ~76.7% – 77.0%.
+* **Execution & Data Hub**:
+  * Primary: **Home Assistant Green** (local polling, long-term statistics storage, automation hub).
+  * Fallback / Analysis Host: Dedicated Ubuntu laptop running 24/7.
+* **Network & Local Device Endpoints**:
+  * Home Assistant Green: `192.168.3.138` (`http://ha.home`)
+  * SonnenBatterie 10: `192.168.3.125` (`http://sonnen.home`)
+  * SMA Inverter: `192.168.3.61` (`http://sma.home`)
+
+---
+
+## 3. Data Architecture & Integration Strategy
 
 ```mermaid
 flowchart TD
-    subgraph Home Assistant Green
-        sonnen[Sonnen HA Integration] -->|Polls Real-time Data| db[(HA Database / History)]
+    subgraph Data Sources
+        sonnen[SonnenBatterie Local API / App Export]
+        sma[SMA Inverter Webconnect / HA Integration]
+        tibber[Tibber API / HA Tibber Integration]
+        ha[Home Assistant Green History DB]
+        price_apis[Modular Price Providers: Tibber / ENTSO-E / Elering / Energy-Charts]
     end
-    db -->|Extract Historical Energy Logs| app[MySunshine Analyzer]
-    api[ENTSO-E / Aggregator API] -->|Fetch Historical SE3 Prices| app
-    app -->|Process & Compute| UI[Dashboard / UI Reports]
+
+    subgraph Core Engine: MySunshine Analyzer
+        ingest[Data Ingestion & Multi-Resolution Normalizer (15-min / Hourly / Daily)]
+        price_mod[Price Matching & Swedish Tariff Engine (Tibber + EEM SE3)]
+        baseline[3-Way Baseline Engine (No Solar vs. Solar Only vs. Solar+Battery)]
+        roi_calc[ROI, Capex & Cash Flow Calculator]
+    end
+
+    subgraph Outputs
+        ui[Interactive Dashboard & Charts]
+        ha_sensor[HA Custom Sensors & Dispatch Advice (Phase 2)]
+    end
+
+    sonnen --> ingest
+    sma --> ingest
+    tibber --> ingest
+    ha --> ingest
+    price_apis --> price_mod
+    ingest --> price_mod
+    price_mod --> baseline
+    baseline --> roi_calc
+    roi_calc --> ui
+    roi_calc --> ha_sensor
 ```
 
-### IP addresses/DNS records
+### A. Energy Data Ingestion & Resolution Matching
 
-1. HA Green IP address: 192.168.3.138/ha.home
-2. SonnenBattery IP address: 192.168.3.125/sonnen.home
-3. SMA Inverter IP address: 192.168.3.61/sma.home
+Because the electricity market transitioned from hourly to 15-minute prices on **2025-10-01**, the analyzer supports dynamic multi-resolution alignment:
 
-### A. Solar & Battery Logs (Sonnen & SMA)
+1. **Pre-2025-10-01 Timeline (Hourly Market)**:
+   * Market spot prices: Hourly (60 min).
+   * Energy data: Ingested as hourly or mapped from daily aggregated totals.
+2. **Post-2025-10-01 Timeline (15-Minute / Quarterly Market)**:
+   * Market spot prices: 15-minute intervals (96 intervals/day).
+   * **When Energy Data is Hourly (e.g. Sonnen 30-day export)**: The 4 quarterly prices within each hour are arithmetic/volume averaged for the hourly block, or synthetic quarter-hour disaggregation is applied.
+   * **When Energy Data is 15-Minute (e.g. Tibber API / Home Assistant logs)**: Exact interval-by-interval multiplication for peak precision.
+3. **Daily Aggregated Time-Series (2025 Historical Baseline)**:
+   * Evaluated using synthetic diurnal load/generation profile weighting across the year.
 
-* **Home Assistant Integration**: We will leverage the official/community Home Assistant integration for **sonnenBatterie** to pull real-time production, consumption, grid export/import, and battery state-of-charge (SoC). Here is the Home Assistant integration we have found https://github.com/mrpointblue/sonnenBatterie-Integration.
-* **Option to create our own integration**: Here is the official API documentation for the SonnenBatterie:
-    http://sonnen.home/api/doc.html. The OpenAPI spec is here blob:http://sonnen.home/cebf25a1-f125-4cc4-b1c8-bedb45aefcff. We have the option to allow our token to READ, WRITE, and use the Webhook API. We also have an SMA Inverter model STP8.0-3AV-40 solar generator. Here is the SMA integration we can use for HA: https://www.home-assistant.io/integrations/sma/
-* **Historical Data Extraction**: Since the local Sonnen API doesn't support querying historical data, we will retrieve historical logs from the Home Assistant database or history API for the future. The historical data we can see in the Sonnen app can help us initially. It can be manually downloaded from the mobile app in two variants:
-    * Power data in W
-      * Discharge
-      * Charge
-      * Consumption
-      * Production    
-    * Energy data in kWh (this is probably what we need)
-      * Discharge
-      * Charge
-      * Consumption
-      * Production    
-      * Feed-in
-      * Grid purchase
+### B. Modular Historical Electricity Price Engine
 
-Energy data from 2025 is in the file `data/sonnen_energy_data_2025.csv`
+A pluggable adapter interface (`PriceProvider`) to fetch and cache historical SE3 spot prices with automatic fallback:
 
-### B. Electricity Prices (Nordpool SE3)
-
-* **Nordpool Prices**: Dynamic hourly spot prices for the **SE3 bidding zone**.
-* **API Access**: We will use the **ENTSO-E Transparency Platform API** (requires a free registration) or a public aggregator like **Energy-Charts** or **Elering** to fetch historical day-ahead prices for SE3. An API key has been requested for ENTSO-E access, by using the instructions for the HA integration at https://github.com/yxkrage/hass-entso-e
+| Provider | Data Coverage | Granularity | Auth / API Key | Use Case |
+| :--- | :--- | :--- | :--- | :--- |
+| **Tibber API (GraphQL)** | Exact household prices & historical spot | 15-min (post-2025-10-01) & Hourly (pre-2025-10-01) | Free Personal Access Token | Direct retailer ground truth |
+| **ENTSO-E Transparency Platform** | Official European TSO | Hourly & 15-min | Free API Token (via email) | Primary European official source |
+| **Elering API** | Nordic & Baltic Bidding Zones | Hourly | None (Public REST) | Instant fallback & verification |
+| **Energy-Charts API (Fraunhofer ISE)** | European Day-Ahead Spot | Hourly | None (Public REST) | Robust secondary fallback |
+| **Local Cache / Static File Adapter** | User-supplied or pre-fetched | Any | Local file | Offline & rapid test execution |
 
 ---
 
-## 4. Feature Requirements
+## 4. Swedish Electricity Pricing & Tariff Model (Tibber + EEM / SE3)
 
-### Phase 1: Historical ROI Calculator
+To determine the true financial payoff, every kWh imported and exported is calculated using the Swedish market tariff structure:
 
-1. **Dynamic Spot Price Matching**: Map every hour of historical household grid import and export to the corresponding SE3 spot price.
-2. **Cost Saved by Solar/Battery**: Compute how much money was saved by:
-   - Direct self-consumption of solar.
-   - Charging the battery from solar and using it later (avoiding grid imports during peak price hours).
-3. **Net Cash Flow Tracker**: Include fixed costs, feed-in tariffs, taxes, and solar export earnings to compute true net savings and playback progression.
-4. **Interactive Dashboard**: A clean web interface showing cumulative savings, ROI, monthly/daily breakdown charts, and system efficiency.
+### 1. Grid Import Cost Formula ($C_{\text{import}}$)
+$$C_{\text{import}}(t) = \left( \text{SpotPrice}_{\text{SE3}}(t) + \text{TibberMarkup} + \text{Elcertifikat} + \text{Energiskatt} + \text{Överföringsavgift}_{\text{EEM}} \right) \times (1 + \text{Moms}_{25\%})$$
+* **SpotPrice**: 15-minute quarterly or hourly spot price (öre/kWh).
+* **Tibber Markup & Certificates**: Variable retailer cost component.
+* **Energiskatt (Energy Tax)**: Government energy tax (~42.8–53.5 öre/kWh incl. VAT).
+* **Överföringsavgift (EEM Grid Transfer Fee)**: Variable distribution fee from Eskilstuna Energi & Miljö.
+* **Moms**: 25% Swedish Value Added Tax applied to all applicable components.
+* **Fixed Monthly Costs**: Tibber base fee (49 SEK/mo) + EEM grid connection subscription (*säkringsavgift*).
 
-### Phase 2: Smart Strategy Optimizer
-
-1. **Solar Production Forecast**: Integrate solar forecasts (e.g., Forecast.Solar integration in HA). Note that the SMA Android app has a forecast feature which suggests that we may be able to get this from the inverter or its integration directly. The Sonnen API does not seem to provide this information. In addition, we need to consider how to use the forecast. For instance if the forecast is poor, should we consider turning on the consumption based charger to charge the battery from the grid, or would that be too expensive? We also need to forecast our consumption. When SoC is 100% the battery currently lasts around 24h on average. During winter time slightly less than during summer time.
-2. **Dynamic Charging Scheduler**: Generate a recommendation engine showing when to force-charge the battery from the grid during low-price hours to prep for low-solar, high-price days. This is related to the previous point on how to use the forecast.
+### 2. Grid Export Revenue Formula ($R_{\text{export}}$)
+$$R_{\text{export}}(t) = \text{SpotPrice}_{\text{SE3}}(t) + \text{Nätnytta}_{\text{EEM}} + \text{Skattereduktion}_{60\text{öre}}$$
+* **SpotPrice**: Received spot price per exported kWh via Tibber.
+* **Nätnytta (EEM Grid Benefit)**: Payment from EEM for localized micro-production grid relief (~5–10 öre/kWh, tax-free).
+* **Skattereduktion (60 öre/kWh)**: Tax reduction for green micro-production (*skattereduktion för mikroproduktion av förnybar el*, inkomstskattelagen 67 kap). Active for 2025; configurable/toggleable for 2026+ calculations.
 
 ---
 
-## 5. Next Steps for Next Session
+## 5. Feature Requirements
 
-1. **Home Assistant Setup**: Verify if the SonnenBatterie integration is active on the Home Assistant Green.
-2. **Nordpool/ENTSO-E Token**: Assist the user in setting up free ENTSO-E API access if needed, or implement the aggregator fallback.
-3. **Draft Implementation Plan**: Create the backend and frontend architecture for the analyzer tool.
+### Phase 1: Historical ROI & Value Analysis
+
+1. **3-Way Comparative Financial Baseline**:
+   * **Baseline 1 (No Solar, No Battery)**: Simulates total electricity bill if 100% of household consumption had to be purchased from the grid.
+   * **Baseline 2 (Solar Only, No Battery)**: Simulates the financial outcome if solar panels were installed without a battery (direct self-consumption capped at instant load, remainder exported).
+   * **Actual (Solar + SonnenBatterie 10)**: Realized electricity bills and export revenues.
+   * **Marginal Battery Value**: $\text{Savings}_{\text{Actual}} - \text{Savings}_{\text{Solar-Only}}$ to show the exact annual SEK contribution of the battery.
+2. **Capex & Payback Period Tracking**:
+   * Input field for Net Capex (after Swedish *Grön Teknik* deduction: 20% solar, 50% battery).
+   * Calculates dynamic payback years, cumulative net cash flow curve, and annualized ROI %.
+3. **Battery Health & Performance Diagnostics**:
+   * Continuous tracking of round-trip efficiency (observed ~76.7%–77.0%), daily throughput cycles, and standby losses.
+4. **Interactive Dashboard & Financial Ledger**:
+   * Monthly and annual breakdown of energy flows (produced, self-consumed, charged, discharged, exported, imported).
+   * Financial ledger showing costs, export revenue, tax reductions, and net savings.
+
+### Phase 2: Smart Strategy & Arbitrage Optimizer
+
+1. **Solar & Consumption Forecasting**:
+   * Integrate solar generation forecasts (via SMA Inverter data or Forecast.Solar) and household consumption patterns.
+   * Model battery autonomy (current battery lasts ~24h on full charge in summer, slightly less in winter).
+2. **Dynamic Grid Pre-Charging Recommendation Engine**:
+   * Evaluate next-day 15-minute spot prices and solar forecast.
+   * Recommend force-charging the battery during cheap night hours when next-day solar is forecast to be low and peak daytime prices are high.
+3. **Arbitrage Feasibility & Efficiency Gate**:
+   * Gate arbitrage actions behind the efficiency threshold:
+     $$\Delta \text{Price} > \frac{C_{\text{import}}}{\eta_{\text{roundtrip}}} - R_{\text{export}} + \text{LossMargin}$$
+     Ensures battery is never cycled for arbitrage unless the net spread guarantees profit after accounting for the ~23% round-trip conversion loss.
+
+---
+
+## 6. Implementation Roadmap & Milestones
+
+1. **Milestone 1: Price Provider Module**: Implement the modular `PriceProvider` interface with adapters for Tibber API, Elering, Energy-Charts, and ENTSO-E (handling the 2025-10-01 hourly-to-quarterly transition).
+2. **Milestone 2: 2025 Full-Year ROI Engine**: Ingest `sonnen_energy_data_2025.csv`, match against 2025 SE3 prices, apply Tibber/EEM/Swedish tax rules, and compute 2025 realized savings.
+3. **Milestone 3: High-Resolution 30-Day Analyzer**: Ingest `sonnen_energy_data_Sun_Aug_16_2026.csv` for exact hourly/quarterly spot-price matching and compare against daily aggregated approximations.
+4. **Milestone 4: Interactive Web Dashboard**: Provide interactive charts for 3-way baseline comparisons, cumulative ROI, and hourly dispatch views.
+5. **Milestone 5: Home Assistant Integration / Phase 2 Optimization**: Setup continuous data logging and Phase 2 dispatch advice.
