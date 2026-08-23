@@ -147,23 +147,52 @@ $$R_{\text{export}}(t) = \text{SpotPrice}_{\text{SE3}}(t) + \text{Nätnytta}_{\t
 
 ---
 
-## 5. Feature Requirements
+## 5. Feature & Visualization Requirements
 
-### Phase 1: Historical ROI & Value Analysis
+### Phase 1: Historical ROI & Financial Analytics
 
-1. **3-Way Comparative Financial Baseline**:
-   * **Baseline 1 (No Solar, No Battery)**: Simulates total electricity bill if 100% of household consumption had to be purchased from the grid.
-   * **Baseline 2 (Solar Only, No Battery)**: Simulates the financial outcome if solar panels were installed without a battery (direct self-consumption capped at instant load, remainder exported).
-   * **Actual (Solar + SonnenBatterie 10)**: Realized electricity bills and export revenues.
-   * **Marginal Battery Value**: $\text{Savings}_{\text{Actual}} - \text{Savings}_{\text{Solar-Only}}$ to show the exact annual SEK contribution of the battery.
-2. **Capex & Payback Period Tracking**:
-   * Input field for Net Capex (after Swedish *Grön Teknik* deduction: 20% solar, 50% battery).
-   * Calculates dynamic payback years, cumulative net cash flow curve, and annualized ROI %.
-3. **Battery Health & Performance Diagnostics**:
-   * Continuous tracking of round-trip efficiency (observed ~76.7%–77.0%), daily throughput cycles, and standby losses.
-4. **Interactive Dashboard & Financial Ledger**:
-   * Monthly and annual breakdown of energy flows (produced, self-consumed, charged, discharged, exported, imported).
-   * Financial ledger showing costs, export revenue, tax reductions, and net savings.
+#### 1. Core Financial Engine
+* **3-Way Comparative Financial Baselines**:
+  * **Baseline 1 (No Solar, No Battery)**: Simulates total electricity bill if 100% of household consumption had to be purchased from the grid.
+  * **Baseline 2 (Solar Only, No Battery)**: Simulates the financial outcome if solar panels were installed without a battery (direct self-consumption capped at instant load, remainder exported).
+  * **Actual (Solar + SonnenBatterie 10)**: Realized electricity bills and export revenues.
+  * **Marginal Battery Value**: $\text{Savings}_{\text{Actual}} - \text{Savings}_{\text{Solar-Only}}$ to isolate the exact annual SEK contribution of the battery.
+* **Capex & Investment Payback Tracking**:
+  * Configurable Net Capex input (after Swedish *Grön Teknik* deduction: 20% solar, 50% battery).
+  * Computes percentage of Capex recouped to date, remaining unrecovered balance, and dynamic break-even year.
+* **Battery Health & Performance Diagnostics**:
+  * Tracks real-world round-trip efficiency (observed ~76.7%–77.0%), annual cycle counts, and standby energy losses.
+
+#### 2. Dashboard UI & Visualization Blueprint
+The web interface will feature a modern dark-theme dashboard with interactive visualizations:
+
+1. **Top-Level KPI Dashboard Cards**:
+   * **Total Savings to Date (SEK)**: Cumulative financial gain compared to the "No Solar" baseline.
+   * **Capex Recouped Progress Gauge / Card**: e.g., *"34.2% of Capex Recouped (112,400 / 328,000 SEK)"* with a radial progress ring.
+   * **Payback Period Estimate**: Estimated years to break-even based on historical run-rate and energy inflation.
+   * **Marginal Battery Contribution**: Extra SEK earned solely due to battery load shifting.
+   * **Annual CO₂ Offset**: Kilograms/tonnes of carbon emissions avoided.
+
+2. **Cumulative Cash Flow & Payback S-Curve (Chart 1)**:
+   * Line chart starting below zero ($-\text{Capex}$) at Year 0 and ascending through time.
+   * Shows historical actuals (solid green curve) transitioning into 25-year projections (dashed line).
+   * Highlights the Break-Even point ($0 line intersection) with an interactive milestone marker.
+
+3. **3-Way Baseline Monthly Comparison (Chart 2 - Stacked Bar)**:
+   * Side-by-side monthly cost breakdown comparing:
+     1. Bill without Solar/Battery (Grey)
+     2. Bill with Solar Only (Amber)
+     3. Actual Bill with Solar + Battery (Teal)
+   * Visually reveals winter vs. summer savings dynamics.
+
+4. **Hourly Dispatch & Price Heatmap (Chart 3 - Interactive Time-Series)**:
+   * Dual-axis chart overlaying 15-min/hourly SE3 spot prices against battery state-of-charge (SoC), solar generation, and home load.
+   * Visually highlights how the battery charges during cheap hours and discharges during peak price spikes.
+
+5. **25-Year Detailed Financial Ledger Table**:
+   * Year-by-year tabular view: Solar Gen, Self-Consumption, Exported kWh, Imported kWh, Raw Bill, Solar Bill, Annual Savings, and Net Cumulative Balance.
+
+---
 
 ### Phase 2: Smart Strategy & Arbitrage Optimizer
 
@@ -180,10 +209,58 @@ $$R_{\text{export}}(t) = \text{SpotPrice}_{\text{SE3}}(t) + \text{Nätnytta}_{\t
 
 ---
 
-## 6. Implementation Roadmap & Milestones
+## 6. Implementation Roadmap & Verifiable Milestones
 
-1. **Milestone 1: Price Provider Module**: Implement the modular `PriceProvider` interface with adapters for Tibber API, Elering, Energy-Charts, and ENTSO-E (handling the 2025-10-01 hourly-to-quarterly transition).
-2. **Milestone 2: 2025 Full-Year ROI Engine**: Ingest `sonnen_energy_data_2025.csv`, match against 2025 SE3 prices, apply Tibber/EEM/Swedish tax rules, and compute 2025 realized savings.
-3. **Milestone 3: High-Resolution 30-Day Analyzer**: Ingest `sonnen_energy_data_Sun_Aug_16_2026.csv` for exact hourly/quarterly spot-price matching and compare against daily aggregated approximations.
-4. **Milestone 4: Interactive Web Dashboard**: Provide interactive charts for 3-way baseline comparisons, cumulative ROI, and hourly dispatch views.
-5. **Milestone 5: Home Assistant Integration / Phase 2 Optimization**: Setup continuous data logging and Phase 2 dispatch advice.
+To ensure high software quality and rapid feedback, development is divided into small, self-contained deliveries with explicit verification criteria:
+
+```mermaid
+flowchart LR
+    M1[M1: Price Providers & Cache] --> M2[M2: 2025 Financial Engine]
+    M2 --> M3[M3: High-Res 30-Day Analyzer]
+    M3 --> M4[M4: Dashboard Visualizations]
+    M4 --> M5[M5: HA Integration & Phase 2]
+```
+
+### Milestone 1: Price Ingestion & Provider Module
+* **Deliverables**:
+  * `1.1 PriceProvider Interface & Disk Cache`: Core TypeScript/Python interface and local file cache (`data/prices/`).
+  * `1.2 Elering Adapter`: Zero-auth public REST client fetching hourly SE3 spot prices.
+  * `1.3 ENTSO-E Adapter`: Authenticated client fetching official SE3 spot prices (hourly & 15-min).
+  * `1.4 Tibber GraphQL Adapter`: Authenticated client fetching actual household spot prices.
+* **Verification Gate**:
+  * Run a test script to fetch and compare a 7-day SE3 price series across providers, verifying price parity and caching behavior.
+
+### Milestone 2: 2025 Full-Year ROI & Baseline Engine
+* **Deliverables**:
+  * `2.1 Swedish Tariff Calculator`: Logic for EEM grid fees, energiskatt, moms, 60 öre skattereduktion, and Tibber fees.
+  * `2.2 3-Way Baseline Calculator`: Ingest `sonnen_energy_data_2025.csv`, compute synthetic hourly weights, and calculate realized vs. baseline costs.
+  * `2.3 Capex & Payback Calculator`: Compute cumulative savings and percentage of investment recouped.
+* **Verification Gate**:
+  * Output an audited JSON/CLI report of the 2025 financial ledger showing exact monthly and full-year SEK savings and battery marginal value.
+
+### Milestone 3: High-Resolution 30-Day & Multi-Resolution Engine
+* **Deliverables**:
+  * `3.1 30-Day Hourly Ingestion`: Ingest `sonnen_energy_data_Sun_Aug_16_2026.csv` (744 hours).
+  * `3.2 Resolution Matcher`: Align hourly energy logs with post-2025-10-01 15-minute spot prices.
+  * `3.3 Accuracy Comparison Analysis`: Compare exact hourly calculation vs. daily average estimation.
+* **Verification Gate**:
+  * Generate a delta report measuring the exact variance between daily-averaged vs. hourly-settled energy costs.
+
+### Milestone 4: Interactive Web Dashboard & Visualizations
+* **Deliverables**:
+  * `4.1 KPI Cards & Capex Progress Ring`: Display total savings, recouped investment %, and payback estimate.
+  * `4.2 Cumulative Payback S-Curve Chart`: Interactive Chart.js graph tracking cash flow across 25 years.
+  * `4.3 3-Way Baseline Bar Chart`: Monthly visual comparison of No Solar vs. Solar Only vs. Actual.
+  * `4.4 Hourly Dispatch & Price Overlay Chart`: 24h interactive dispatch viewer.
+  * `4.5 Interactive Financial Ledger Table & Capex Slider`: Live updating UI controls.
+* **Verification Gate**:
+  * End-to-end browser walkthrough verifying interactive responsiveness, slider calculations, and visual rendering.
+
+### Milestone 5: Home Assistant Integration & Phase 2 Optimizer
+* **Deliverables**:
+  * `5.1 Home Assistant Polling Integration`: Ingest live metrics from Sonnen/SMA HA entities.
+  * `5.2 Custom HA Sensor / Dashboard Cards`: Publish live ROI and daily savings to HA.
+  * `5.3 Phase 2 Grid Pre-Charging Advisor`: Implement the efficiency-gated dynamic charging recommendation engine.
+* **Verification Gate**:
+  * Publish a verified sensor state to Home Assistant advising optimal charging schedule for the next day.
+
