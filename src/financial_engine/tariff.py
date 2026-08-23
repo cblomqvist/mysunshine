@@ -24,8 +24,9 @@ class TariffConfig:
 
     # Grid Export variable components (SEK/kWh)
     eem_grid_benefit_sek_per_kwh: float = 0.080   # EEM nätnytta (~8.0 öre/kWh, tax-free for microproducers)
-    tax_reduction_sek_per_kwh: float = 0.600      # Skattereduktion för mikroproduktion (60 öre/kWh)
+    tax_reduction_sek_per_kwh: float = 0.600      # Skattereduktion för mikroproduktion (60 öre/kWh, 2021-2025)
     enable_tax_reduction: bool = True             # Toggle skattereduktion (60 öre/kWh)
+    tax_reduction_end_date: Optional[str] = "2026-01-01"  # Abolished effective 1 January 2026
 
     # Fixed monthly costs (SEK/month incl. moms)
     tibber_monthly_fee_sek: float = 49.0          # Tibber subscription (49 SEK/mo incl. moms)
@@ -61,17 +62,22 @@ class SwedishTariff:
         self,
         spot_price_sek_per_kwh: float,
         include_tax_reduction: Optional[bool] = None,
+        date_str: Optional[str] = None,
     ) -> float:
         """Calculate total export revenue per kWh in SEK/kWh.
 
         Formula:
-            SpotPrice + EEMGridBenefit + (Skattereduktion if enabled)
+            SpotPrice + EEMGridBenefit + (Skattereduktion if enabled and date < 2026-01-01)
         """
         use_reduction = (
             self.config.enable_tax_reduction
             if include_tax_reduction is None
             else include_tax_reduction
         )
+        if use_reduction and date_str and self.config.tax_reduction_end_date:
+            if date_str >= self.config.tax_reduction_end_date:
+                use_reduction = False
+
         tax_red = self.config.tax_reduction_sek_per_kwh if use_reduction else 0.0
         return spot_price_sek_per_kwh + self.config.eem_grid_benefit_sek_per_kwh + tax_red
 
@@ -79,10 +85,11 @@ class SwedishTariff:
         self,
         spot_price_ore_per_kwh: float,
         include_tax_reduction: Optional[bool] = None,
+        date_str: Optional[str] = None,
     ) -> float:
         """Calculate total export revenue in öre/kWh."""
         spot_sek = spot_price_ore_per_kwh / 100.0
-        return self.get_export_price(spot_sek, include_tax_reduction) * 100.0
+        return self.get_export_price(spot_sek, include_tax_reduction, date_str) * 100.0
 
     def calculate_import_cost(
         self,
@@ -97,10 +104,11 @@ class SwedishTariff:
         exported_kwh: float,
         spot_price_sek_per_kwh: float,
         include_tax_reduction: Optional[bool] = None,
+        date_str: Optional[str] = None,
     ) -> float:
         """Calculate total grid export revenue in SEK."""
         return exported_kwh * self.get_export_price(
-            spot_price_sek_per_kwh, include_tax_reduction
+            spot_price_sek_per_kwh, include_tax_reduction, date_str
         )
 
     def calculate_fixed_costs(self, months: float = 1.0) -> float:

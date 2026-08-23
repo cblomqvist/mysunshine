@@ -29,6 +29,13 @@ from .analyzer_30d import (
     VarianceMetric,
 )
 
+from .multi_year import (
+    HistoricalYearCalculator,
+    MultiYearEngine,
+    HardwareEra,
+    DEFAULT_HARDWARE_ERAS,
+)
+
 __all__ = [
     # Tariffs
     "SwedishTariff",
@@ -45,6 +52,11 @@ __all__ = [
     "MonthlyFinancialLedger",
     "DailyFinancialRecord",
     "CapexPaybackMetrics",
+    # Multi-Year Engine
+    "HistoricalYearCalculator",
+    "MultiYearEngine",
+    "HardwareEra",
+    "DEFAULT_HARDWARE_ERAS",
     # Multi-Resolution & Ingestion
     "HourlyEnergyRecord",
     "MatchedHourlyInterval",

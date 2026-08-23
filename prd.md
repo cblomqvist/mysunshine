@@ -160,7 +160,10 @@ $$C_{\text{import}}(t) = \left( \text{SpotPrice}_{\text{SE3}}(t) + \text{TibberM
 $$R_{\text{export}}(t) = \text{SpotPrice}_{\text{SE3}}(t) + \text{Nätnytta}_{\text{EEM}} + \text{Skattereduktion}_{60\text{öre}}$$
 * **SpotPrice**: Received spot price per exported kWh via Tibber.
 * **Nätnytta (EEM Grid Benefit)**: Payment from EEM for localized micro-production grid relief (~5–10 öre/kWh, tax-free).
-* **Skattereduktion (60 öre/kWh)**: Tax reduction for green micro-production (*skattereduktion för mikroproduktion av förnybar el*, inkomstskattelagen 67 kap). Active for 2025; configurable/toggleable for 2026+ calculations.
+* **Skattereduktion (60 öre/kWh)**: Tax reduction for green micro-production (*skattereduktion för mikroproduktion av förnybar el*, inkomstskattelagen 67 kap).
+  * **2021-01-01 to 2025-12-31**: Active at 60 öre/kWh.
+  * **2026-01-01 onwards**: **Abolished by Swedish law** (0 öre/kWh).
+  * **Economic Impact**: Abolition of the export tax reduction fundamentally alters home battery economics: without the 60 öre export subsidy, storing surplus solar in the battery is far more lucrative than exporting it to the grid for only spot + 8 öre nätnytta.
 
 ---
 

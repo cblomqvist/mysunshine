@@ -12,30 +12,29 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from .analyzer_30d import HighResAnalyzer
-from .calculator_2025 import Year2025Calculator
 from .multi_res import ResolutionMatcher, SonnenHourlyIngestor
+from .multi_year import MultiYearEngine
 from .tariff import SwedishTariff, TariffConfig
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 def generate_dashboard_dataset() -> Dict[str, Any]:
-    """Compile full 2025 annual data and 30-day high-resolution dispatch data."""
+    """Compile multi-year historical data (2023, 2024, 2025) and 30-day high-res dispatch data."""
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     data_dir = os.path.join(base_dir, "data")
+    prices_dir = os.path.join(data_dir, "prices")
 
-    # 1. 2025 Annual Financial Report
-    sonnen_2025_csv = os.path.join(data_dir, "sonnen_energy_data_2025.csv")
-    se3_2025_prices_json = os.path.join(data_dir, "prices", "se3_prices_2025.json")
-
-    logging.info("Calculating 2025 full-year ROI and 3-way baseline...")
+    # 1. Multi-Year Historical Financial Engine (2023, 2024, 2025)
+    logging.info("Executing Multi-Year Historical Engine (2023, 2024, 2025)...")
     tariff = SwedishTariff(config=TariffConfig())
-    calc_2025 = Year2025Calculator(
+    multi_year_engine = MultiYearEngine(
+        data_dir=data_dir,
+        prices_dir=prices_dir,
         tariff=tariff,
-        data_file=sonnen_2025_csv,
-        price_file=se3_2025_prices_json if os.path.exists(se3_2025_prices_json) else None,
     )
-    report_2025 = calc_2025.calculate_2025_report(capex_sek=315000.0)
+    multi_year_results = multi_year_engine.calculate_all_years(net_capex_sek=315000.0)
+    report_2025_dict = multi_year_results["years"].get(2025, {})
 
     # 2. 30-Day High Resolution Ingestion and Analysis
     sonnen_30d_csv = os.path.join(data_dir, "sonnen_energy_data_Sun_Aug_16_2026.csv")
@@ -154,7 +153,10 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
                 "cloudy_day": cloudy_day,
             }
         },
-        "year_2025": report_2025.to_dict(),
+        "multi_year": multi_year_results["multi_year_summary"],
+        "years": multi_year_results["years"],
+        "hardware_eras": multi_year_results["hardware_eras"],
+        "year_2025": report_2025_dict,
         "high_res_30d": {
             **report_30d_dict,
             "days_list": days_summary,

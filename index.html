@@ -89,9 +89,10 @@
                         <label class="switch-label">
                             <input type="checkbox" id="skattereduktion-toggle" checked>
                             <span class="slider-toggle"></span>
-                            <span class="switch-text">60 öre/kWh Skattereduktion</span>
+                            <span class="switch-text">60 öre/kWh Skattereduktion (2021–2025 Historical)</span>
                         </label>
                     </div>
+                    <p class="gron-hint">Active for 2021–2025 historical data; abolished by Swedish law on 1 Jan 2026.</p>
 
                     <div class="input-group">
                         <div class="label-wrapper">
@@ -123,6 +124,38 @@
                             <span class="value-display" id="tibber-fee-val">49 SEK</span>
                         </div>
                         <input type="range" id="tibber-fee" min="0" max="99" step="1" value="49" class="custom-slider">
+                    </div>
+                </div>
+
+                <!-- Historical Year Filter & Hardware Eras -->
+                <div class="panel-section">
+                    <h2 class="section-title"><i class="fa-solid fa-layer-group"></i> Historical Data Period</h2>
+                    <div class="input-group">
+                        <label for="history-year-select" class="visually-hidden">Select Historical Year</label>
+                        <select id="history-year-select" class="custom-select">
+                            <option value="all">All Historical Data (2023–2025 Cumulative)</option>
+                            <option value="2025" selected>2025 (Dual 22 kWh Sonnen 10)</option>
+                            <option value="2024">2024 (11 kWh &rarr; 22 kWh Expansion)</option>
+                            <option value="2023">2023 (11 kWh Sonnen 10 Install)</option>
+                        </select>
+                    </div>
+
+                    <div class="eras-timeline-card">
+                        <h3 class="eras-title"><i class="fa-solid fa-timeline"></i> Hardware Timeline</h3>
+                        <ul class="eras-list">
+                            <li>
+                                <span class="era-tag era-solar">Jan 2021</span>
+                                <span class="era-desc">Solar PV (SMA 8 kW)</span>
+                            </li>
+                            <li>
+                                <span class="era-tag era-batt1">Sep 2023</span>
+                                <span class="era-desc">Sonnen 11 kWh Installed</span>
+                            </li>
+                            <li>
+                                <span class="era-tag era-batt2">Sep 2024</span>
+                                <span class="era-desc">Expanded to 22 kWh</span>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
@@ -285,19 +318,20 @@
                 <div class="table-card">
                     <div class="table-tab-header">
                         <div class="tab-buttons">
-                            <button type="button" class="tab-btn active" data-tab="tab-monthly-ledger"><i class="fa-solid fa-calendar-days"></i> 2025 Monthly Actual Ledger</button>
+                            <button type="button" class="tab-btn active" data-tab="tab-monthly-ledger" id="tab-btn-monthly"><i class="fa-solid fa-calendar-days"></i> <span id="monthly-tab-title">Historical Monthly Ledger</span></button>
+                            <button type="button" class="tab-btn" data-tab="tab-multiyear-summary"><i class="fa-solid fa-layer-group"></i> Multi-Year Annual Summary</button>
                             <button type="button" class="tab-btn" data-tab="tab-25y-ledger"><i class="fa-solid fa-table-list"></i> 25-Year Projection Ledger</button>
                             <button type="button" class="tab-btn" data-tab="tab-variance-benchmark"><i class="fa-solid fa-microscope"></i> High-Res Estimation Variance</button>
                         </div>
                     </div>
 
-                    <!-- Tab 1: 2025 Monthly Actual Ledger -->
+                    <!-- Tab 1: Historical Monthly Actual Ledger -->
                     <div class="tab-content active" id="tab-monthly-ledger">
                         <div class="table-responsive">
                             <table class="ledger-table">
                                 <thead>
                                     <tr>
-                                        <th>Month</th>
+                                        <th>Month / Year</th>
                                         <th>Solar (kWh)</th>
                                         <th>Load (kWh)</th>
                                         <th>Import (kWh)</th>
@@ -312,7 +346,34 @@
                                     </tr>
                                 </thead>
                                 <tbody id="ledger-2025-body">
-                                    <!-- Populated by JS -->
+                                    <!-- Populated dynamically by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Multi-Year Annual Summary -->
+                    <div class="tab-content" id="tab-multiyear-summary">
+                        <div class="table-responsive">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Year / Period</th>
+                                        <th>Operational Hardware Era</th>
+                                        <th>Days</th>
+                                        <th>Solar Gen (kWh)</th>
+                                        <th>Load (kWh)</th>
+                                        <th>Grid Import (kWh)</th>
+                                        <th>Grid Export (kWh)</th>
+                                        <th>Battery Discharged (kWh)</th>
+                                        <th>No Solar Bill</th>
+                                        <th>Solar Only Bill</th>
+                                        <th>Actual Bill</th>
+                                        <th>Annual Savings</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-multiyear-body">
+                                    <!-- Populated dynamically by JS -->
                                 </tbody>
                             </table>
                         </div>
