@@ -17,7 +17,7 @@ from .baseline import (
     DEFAULT_DIURNAL_LOAD_WEIGHTS,
     DEFAULT_DIURNAL_SOLAR_WEIGHTS,
 )
-from .tariff import SwedishTariff, TariffConfig
+from .tariff import SwedishTariff
 
 
 @dataclass

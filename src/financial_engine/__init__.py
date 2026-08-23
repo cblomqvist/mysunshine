@@ -15,18 +15,45 @@ from .calculator_2025 import (
     DailyFinancialRecord,
     CapexPaybackMetrics,
 )
+from .multi_res import (
+    HourlyEnergyRecord,
+    MatchedHourlyInterval,
+    SonnenHourlyIngestor,
+    ResolutionMatcher,
+)
+from .analyzer_30d import (
+    HighResAnalyzer,
+    HighRes30DayReport,
+    HighResScenarioSummary,
+    VarianceAnalysisReport,
+    VarianceMetric,
+)
 
 __all__ = [
+    # Tariffs
     "SwedishTariff",
     "TariffConfig",
+    # Baseline Engine
     "BaselineEngine",
     "BaselineScenarioResult",
     "BaselineComparisonResult",
     "DEFAULT_DIURNAL_LOAD_WEIGHTS",
     "DEFAULT_DIURNAL_SOLAR_WEIGHTS",
+    # 2025 Annual Calculator
     "Year2025Calculator",
     "AnnualFinancialReport",
     "MonthlyFinancialLedger",
     "DailyFinancialRecord",
     "CapexPaybackMetrics",
+    # Multi-Resolution & Ingestion
+    "HourlyEnergyRecord",
+    "MatchedHourlyInterval",
+    "SonnenHourlyIngestor",
+    "ResolutionMatcher",
+    # 30-Day High-Resolution Analyzer
+    "HighResAnalyzer",
+    "HighRes30DayReport",
+    "HighResScenarioSummary",
+    "VarianceAnalysisReport",
+    "VarianceMetric",
 ]
