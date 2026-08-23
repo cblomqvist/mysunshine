@@ -1,9 +1,17 @@
 # MySunshine ☀️🔋
 
-A comprehensive system and interactive web application to track, simulate, and calculate the actual financial return on investment (ROI) for a household solar panel and home battery system in Sweden (SE3), with support for dynamic spot pricing, Swedish tariffs, multi-resolution timestamp matching, and estimation accuracy analysis.
+A comprehensive system and interactive web application to track, simulate, and calculate the actual financial return on investment (ROI) for a household solar panel and home battery system in Sweden (SE3), with support for dynamic spot pricing, Swedish tariffs, multi-resolution timestamp matching, 25-year cash flow projections, and high-resolution hourly dispatch overlays.
 
 ## Features & Modules
 
+- **Interactive Glassmorphic Web Dashboard** (`index.html`, `app.js`, `style.css`):
+  - **4.1 KPI Cards & Radial Progress Ring**: Real-time calculated total savings (SEK), animated SVG % Capex recouped ring, payback period in years, SonnenBatterie 10 marginal value, and avoided CO₂.
+  - **4.2 Cumulative Payback S-Curve Chart**: 25-Year cash flow curve with dynamic break-even indicator.
+  - **4.3 3-Way Baseline Bar Chart**: Side-by-side monthly cost breakdown comparing No Solar (Grey) vs. Solar Only (Amber) vs. Actual System (Teal).
+  - **4.4 Hourly Dispatch & Spot Price Overlay Chart**: 24h interactive dispatch viewer comparing Solar PV generation, Household Load, Battery SoC, and dynamic SE3 spot prices with a multi-day selector (Peak Solar Day, High Volatility Day, Cloudy Day).
+  - **4.5 Dynamic Swedish Tariff Controls & Financial Ledgers**: Client-side recalculations with Net Capex & *Grön Teknik* deduction toggles, 60 öre/kWh *skattereduktion*, energy tax, and inflation sliders across 2025 monthly, 25-year, and 30-day estimation variance tables.
+- **Automated GitHub Pages Continuous Deployment (CD)** (`.github/workflows/deploy.yml`):
+  - Automatically bakes consolidated static datasets and deploys the dashboard to GitHub Pages on merge to `main`.
 - **Modular Electricity Spot Price Engine** (`src/price_providers`):
   - Fetches and caches historical hourly and 15-minute spot prices for SE3 from ENTSO-E, Tibber, Elering, and Elprisetjustnu.
 - **Swedish Tariff & Tax Engine** (`src/financial_engine/tariff.py`):
@@ -15,19 +23,29 @@ A comprehensive system and interactive web application to track, simulate, and c
 - **High-Resolution 30-Day & Multi-Resolution Engine** (`src/financial_engine/multi_res.py`, `src/financial_engine/analyzer_30d.py`):
   - Ingests 744 hours of granular Sonnen data, aligns with 15-minute / quarterly spot prices, and benchmarks precision against daily-averaged estimations.
 
-## CLI Utilities
+## Web Dashboard & CLI Utilities
 
-### 1. Fetch & Inspect Spot Prices
+### 1. View Web Dashboard Locally
+```bash
+# Bake latest static data package
+python -m src.financial_engine.generate_dashboard_data
+
+# Start local server
+python -m http.server 8000
+# Open http://localhost:8000 in your browser
+```
+
+### 2. Fetch & Inspect Spot Prices
 ```bash
 python fetch_prices.py --start 2025-01-01 --end 2025-12-31 --zone SE3 -o data/prices/se3_prices_2025.json
 ```
 
-### 2. Full-Year 2025 ROI Calculator
+### 3. Full-Year 2025 ROI Calculator
 ```bash
-python calc_2025_roi.py --capex 328000 --output data/report_2025.json
+python calc_2025_roi.py --capex 112400 --output data/report_2025.json
 ```
 
-### 3. High-Resolution 30-Day Analyzer & Variance Benchmark
+### 4. High-Resolution 30-Day Analyzer & Variance Benchmark
 ```bash
 python calc_30d_roi.py --data data/sonnen_energy_data_Sun_Aug_16_2026.csv --output data/report_30d_2026.json
 ```
@@ -47,4 +65,3 @@ python run_checks.py --install-hook
 ```bash
 python -m pytest
 ```
-
