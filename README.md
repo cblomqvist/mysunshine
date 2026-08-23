@@ -32,7 +32,18 @@ python calc_2025_roi.py --capex 328000 --output data/report_2025.json
 python calc_30d_roi.py --data data/sonnen_energy_data_Sun_Aug_16_2026.csv --output data/report_30d_2026.json
 ```
 
-## Running Tests
+## Running Tests & Pre-Push Validation
+
+### Run Linting & Test Suite (Pre-Push Check)
+```bash
+# Run full lint + pytest checks
+python run_checks.py
+
+# Install automatic Git pre-push hook
+python run_checks.py --install-hook
+```
+
+### Run Tests Directly
 ```bash
 python -m pytest
 ```

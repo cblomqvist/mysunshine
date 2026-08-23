@@ -1,7 +1,6 @@
 """Unit and integration tests for the financial engine and Swedish tariff model."""
 
 import json
-import os
 import subprocess
 import sys
 import unittest

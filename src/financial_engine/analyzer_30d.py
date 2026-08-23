@@ -6,15 +6,14 @@ estimation models.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Union
 
 from .baseline import (
     DEFAULT_DIURNAL_LOAD_WEIGHTS,
     DEFAULT_DIURNAL_SOLAR_WEIGHTS,
 )
-from .multi_res import HourlyEnergyRecord, MatchedHourlyInterval, ResolutionMatcher, SonnenHourlyIngestor
-from .tariff import SwedishTariff, TariffConfig
+from .multi_res import MatchedHourlyInterval, ResolutionMatcher, SonnenHourlyIngestor
+from .tariff import SwedishTariff
 
 
 @dataclass
@@ -359,7 +358,6 @@ class HighResAnalyzer:
             est_b1_imp_cost += self.tariff.calculate_import_cost(day_consumed, day_avg_p)
 
             # Simple daily net without hourly profile (assuming solar direct offset up to daily load)
-            day_sc = min(day_produced, day_consumed)
             day_exp = max(0.0, day_produced - day_consumed)
             day_imp = max(0.0, day_consumed - day_produced)
 
@@ -447,12 +445,12 @@ class HighResAnalyzer:
                 est_b1_imp_cost += self.tariff.calculate_import_cost(l_h, p_h)
 
                 # B2
-                sc_h = min(pv_h, l_h)
                 exp_h = max(0.0, pv_h - l_h)
                 imp_h = max(0.0, l_h - pv_h)
 
                 est_b2_imp_cost += self.tariff.calculate_import_cost(imp_h, p_h)
                 est_b2_exp_rev += self.tariff.calculate_export_revenue(exp_h, p_h)
+
 
         est_b1_net = est_b1_imp_cost + fixed_costs
         est_b2_net = est_b2_imp_cost - est_b2_exp_rev + fixed_costs

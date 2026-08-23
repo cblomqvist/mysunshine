@@ -6,8 +6,6 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime
-from typing import Optional
 
 from src.financial_engine import (
     HighResAnalyzer,

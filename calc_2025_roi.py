@@ -107,8 +107,8 @@ def main():
 
     # Print Formatted CLI Report
     print("\n" + "=" * 78)
-    print(f"       MySunshine: 2025 Full-Year ROI & 3-Way Baseline Financial Report")
-    print(f"       Bidding Zone: SE3 | Retailer: Tibber | Grid Operator: EEM")
+    print("       MySunshine: 2025 Full-Year ROI & 3-Way Baseline Financial Report")
+    print("       Bidding Zone: SE3 | Retailer: Tibber | Grid Operator: EEM")
     print("=" * 78)
 
     e_tot = report.energy_totals

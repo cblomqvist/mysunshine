@@ -10,7 +10,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Union
 
 from ..price_providers.base import PricePoint
 
@@ -173,7 +173,6 @@ class ResolutionMatcher:
 
         for rec in energy_records:
             start_utc = cls._normalize_dt(rec.timestamp)
-            end_utc = start_utc + timedelta(hours=1)
 
             # Look for 15-minute price quarters: [start, start+15m, start+30m, start+45m]
             q_times = [start_utc + timedelta(minutes=15 * i) for i in range(4)]
