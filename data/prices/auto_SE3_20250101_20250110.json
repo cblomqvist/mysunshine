@@ -1,0 +1,2153 @@
+[
+  {
+    "timestamp": "2024-12-31T23:00:00+00:00",
+    "price_eur_mwh": 3.16,
+    "price_sek_kwh": 0.036182,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 3.6182
+  },
+  {
+    "timestamp": "2025-01-01T00:00:00+00:00",
+    "price_eur_mwh": 2.47,
+    "price_sek_kwh": 0.028034500000000004,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 2.8035
+  },
+  {
+    "timestamp": "2025-01-01T01:00:00+00:00",
+    "price_eur_mwh": 2.44,
+    "price_sek_kwh": 0.027693999999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 2.7694
+  },
+  {
+    "timestamp": "2025-01-01T02:00:00+00:00",
+    "price_eur_mwh": 1.98,
+    "price_sek_kwh": 0.022473,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 2.2473
+  },
+  {
+    "timestamp": "2025-01-01T03:00:00+00:00",
+    "price_eur_mwh": 1.79,
+    "price_sek_kwh": 0.0203165,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 2.0316
+  },
+  {
+    "timestamp": "2025-01-01T04:00:00+00:00",
+    "price_eur_mwh": 2.71,
+    "price_sek_kwh": 0.0307585,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 3.0758
+  },
+  {
+    "timestamp": "2025-01-01T05:00:00+00:00",
+    "price_eur_mwh": 1.78,
+    "price_sek_kwh": 0.020203000000000002,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 2.0203
+  },
+  {
+    "timestamp": "2025-01-01T06:00:00+00:00",
+    "price_eur_mwh": 2.03,
+    "price_sek_kwh": 0.023040499999999995,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 2.304
+  },
+  {
+    "timestamp": "2025-01-01T07:00:00+00:00",
+    "price_eur_mwh": 2.92,
+    "price_sek_kwh": 0.033142,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 3.3142
+  },
+  {
+    "timestamp": "2025-01-01T08:00:00+00:00",
+    "price_eur_mwh": 3.27,
+    "price_sek_kwh": 0.037114499999999995,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 3.7114
+  },
+  {
+    "timestamp": "2025-01-01T09:00:00+00:00",
+    "price_eur_mwh": 4.29,
+    "price_sek_kwh": 0.048691500000000006,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 4.8692
+  },
+  {
+    "timestamp": "2025-01-01T10:00:00+00:00",
+    "price_eur_mwh": 4.43,
+    "price_sek_kwh": 0.0502805,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 5.028
+  },
+  {
+    "timestamp": "2025-01-01T11:00:00+00:00",
+    "price_eur_mwh": 4.44,
+    "price_sek_kwh": 0.050394,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 5.0394
+  },
+  {
+    "timestamp": "2025-01-01T12:00:00+00:00",
+    "price_eur_mwh": 4.5,
+    "price_sek_kwh": 0.051074999999999995,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 5.1075
+  },
+  {
+    "timestamp": "2025-01-01T13:00:00+00:00",
+    "price_eur_mwh": 5.99,
+    "price_sek_kwh": 0.0679865,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 6.7987
+  },
+  {
+    "timestamp": "2025-01-01T14:00:00+00:00",
+    "price_eur_mwh": 12.26,
+    "price_sek_kwh": 0.139151,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 13.9151
+  },
+  {
+    "timestamp": "2025-01-01T15:00:00+00:00",
+    "price_eur_mwh": 18.84,
+    "price_sek_kwh": 0.213834,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 21.3834
+  },
+  {
+    "timestamp": "2025-01-01T16:00:00+00:00",
+    "price_eur_mwh": 20.69,
+    "price_sek_kwh": 0.2348315,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 23.4831
+  },
+  {
+    "timestamp": "2025-01-01T17:00:00+00:00",
+    "price_eur_mwh": 16.31,
+    "price_sek_kwh": 0.18511849999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 18.5118
+  },
+  {
+    "timestamp": "2025-01-01T18:00:00+00:00",
+    "price_eur_mwh": 10.0,
+    "price_sek_kwh": 0.1135,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 11.35
+  },
+  {
+    "timestamp": "2025-01-01T19:00:00+00:00",
+    "price_eur_mwh": 8.07,
+    "price_sek_kwh": 0.09159450000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 9.1595
+  },
+  {
+    "timestamp": "2025-01-01T20:00:00+00:00",
+    "price_eur_mwh": 6.88,
+    "price_sek_kwh": 0.07808799999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 7.8088
+  },
+  {
+    "timestamp": "2025-01-01T21:00:00+00:00",
+    "price_eur_mwh": 9.64,
+    "price_sek_kwh": 0.10941400000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 10.9414
+  },
+  {
+    "timestamp": "2025-01-01T22:00:00+00:00",
+    "price_eur_mwh": 7.04,
+    "price_sek_kwh": 0.079904,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 7.9904
+  },
+  {
+    "timestamp": "2025-01-01T23:00:00+00:00",
+    "price_eur_mwh": 3.4,
+    "price_sek_kwh": 0.03859,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 3.859
+  },
+  {
+    "timestamp": "2025-01-02T00:00:00+00:00",
+    "price_eur_mwh": 3.25,
+    "price_sek_kwh": 0.0368875,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 3.6887
+  },
+  {
+    "timestamp": "2025-01-02T01:00:00+00:00",
+    "price_eur_mwh": 4.0,
+    "price_sek_kwh": 0.0454,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 4.54
+  },
+  {
+    "timestamp": "2025-01-02T02:00:00+00:00",
+    "price_eur_mwh": 6.69,
+    "price_sek_kwh": 0.0759315,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 7.5931
+  },
+  {
+    "timestamp": "2025-01-02T03:00:00+00:00",
+    "price_eur_mwh": 10.71,
+    "price_sek_kwh": 0.1215585,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 12.1558
+  },
+  {
+    "timestamp": "2025-01-02T04:00:00+00:00",
+    "price_eur_mwh": 17.77,
+    "price_sek_kwh": 0.2016895,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 20.1689
+  },
+  {
+    "timestamp": "2025-01-02T05:00:00+00:00",
+    "price_eur_mwh": 40.18,
+    "price_sek_kwh": 0.456043,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 45.6043
+  },
+  {
+    "timestamp": "2025-01-02T06:00:00+00:00",
+    "price_eur_mwh": 93.98,
+    "price_sek_kwh": 1.066673,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 106.6673
+  },
+  {
+    "timestamp": "2025-01-02T07:00:00+00:00",
+    "price_eur_mwh": 118.65,
+    "price_sek_kwh": 1.3466775,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 134.6677
+  },
+  {
+    "timestamp": "2025-01-02T08:00:00+00:00",
+    "price_eur_mwh": 124.76,
+    "price_sek_kwh": 1.416026,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 141.6026
+  },
+  {
+    "timestamp": "2025-01-02T09:00:00+00:00",
+    "price_eur_mwh": 123.35,
+    "price_sek_kwh": 1.4000224999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 140.0022
+  },
+  {
+    "timestamp": "2025-01-02T10:00:00+00:00",
+    "price_eur_mwh": 110.5,
+    "price_sek_kwh": 1.254175,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 125.4175
+  },
+  {
+    "timestamp": "2025-01-02T11:00:00+00:00",
+    "price_eur_mwh": 100.84,
+    "price_sek_kwh": 1.144534,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 114.4534
+  },
+  {
+    "timestamp": "2025-01-02T12:00:00+00:00",
+    "price_eur_mwh": 106.1,
+    "price_sek_kwh": 1.204235,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 120.4235
+  },
+  {
+    "timestamp": "2025-01-02T13:00:00+00:00",
+    "price_eur_mwh": 112.56,
+    "price_sek_kwh": 1.2775560000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 127.7556
+  },
+  {
+    "timestamp": "2025-01-02T14:00:00+00:00",
+    "price_eur_mwh": 127.82,
+    "price_sek_kwh": 1.4507569999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 145.0757
+  },
+  {
+    "timestamp": "2025-01-02T15:00:00+00:00",
+    "price_eur_mwh": 135.32,
+    "price_sek_kwh": 1.535882,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 153.5882
+  },
+  {
+    "timestamp": "2025-01-02T16:00:00+00:00",
+    "price_eur_mwh": 150.01,
+    "price_sek_kwh": 1.7026135,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 170.2613
+  },
+  {
+    "timestamp": "2025-01-02T17:00:00+00:00",
+    "price_eur_mwh": 147.02,
+    "price_sek_kwh": 1.6686770000000002,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 166.8677
+  },
+  {
+    "timestamp": "2025-01-02T18:00:00+00:00",
+    "price_eur_mwh": 108.33,
+    "price_sek_kwh": 1.2295455,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 122.9545
+  },
+  {
+    "timestamp": "2025-01-02T19:00:00+00:00",
+    "price_eur_mwh": 103.54,
+    "price_sek_kwh": 1.175179,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 117.5179
+  },
+  {
+    "timestamp": "2025-01-02T20:00:00+00:00",
+    "price_eur_mwh": 76.35,
+    "price_sek_kwh": 0.8665725,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 86.6572
+  },
+  {
+    "timestamp": "2025-01-02T21:00:00+00:00",
+    "price_eur_mwh": 61.86,
+    "price_sek_kwh": 0.7021109999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 70.2111
+  },
+  {
+    "timestamp": "2025-01-02T22:00:00+00:00",
+    "price_eur_mwh": 49.16,
+    "price_sek_kwh": 0.557966,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 55.7966
+  },
+  {
+    "timestamp": "2025-01-02T23:00:00+00:00",
+    "price_eur_mwh": 43.01,
+    "price_sek_kwh": 0.4881635,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 48.8163
+  },
+  {
+    "timestamp": "2025-01-03T00:00:00+00:00",
+    "price_eur_mwh": 38.15,
+    "price_sek_kwh": 0.43300249999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 43.3002
+  },
+  {
+    "timestamp": "2025-01-03T01:00:00+00:00",
+    "price_eur_mwh": 35.22,
+    "price_sek_kwh": 0.399747,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 39.9747
+  },
+  {
+    "timestamp": "2025-01-03T02:00:00+00:00",
+    "price_eur_mwh": 33.43,
+    "price_sek_kwh": 0.3794305,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 37.943
+  },
+  {
+    "timestamp": "2025-01-03T03:00:00+00:00",
+    "price_eur_mwh": 29.73,
+    "price_sek_kwh": 0.3374355,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 33.7435
+  },
+  {
+    "timestamp": "2025-01-03T04:00:00+00:00",
+    "price_eur_mwh": 30.58,
+    "price_sek_kwh": 0.347083,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 34.7083
+  },
+  {
+    "timestamp": "2025-01-03T05:00:00+00:00",
+    "price_eur_mwh": 38.36,
+    "price_sek_kwh": 0.43538599999999994,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 43.5386
+  },
+  {
+    "timestamp": "2025-01-03T06:00:00+00:00",
+    "price_eur_mwh": 52.32,
+    "price_sek_kwh": 0.5938319999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 59.3832
+  },
+  {
+    "timestamp": "2025-01-03T07:00:00+00:00",
+    "price_eur_mwh": 80.9,
+    "price_sek_kwh": 0.918215,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 91.8215
+  },
+  {
+    "timestamp": "2025-01-03T08:00:00+00:00",
+    "price_eur_mwh": 80.17,
+    "price_sek_kwh": 0.9099295000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 90.993
+  },
+  {
+    "timestamp": "2025-01-03T09:00:00+00:00",
+    "price_eur_mwh": 76.13,
+    "price_sek_kwh": 0.8640754999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 86.4075
+  },
+  {
+    "timestamp": "2025-01-03T10:00:00+00:00",
+    "price_eur_mwh": 68.57,
+    "price_sek_kwh": 0.7782694999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 77.8269
+  },
+  {
+    "timestamp": "2025-01-03T11:00:00+00:00",
+    "price_eur_mwh": 55.04,
+    "price_sek_kwh": 0.6247039999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 62.4704
+  },
+  {
+    "timestamp": "2025-01-03T12:00:00+00:00",
+    "price_eur_mwh": 53.49,
+    "price_sek_kwh": 0.6071115,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 60.7112
+  },
+  {
+    "timestamp": "2025-01-03T13:00:00+00:00",
+    "price_eur_mwh": 53.96,
+    "price_sek_kwh": 0.612446,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 61.2446
+  },
+  {
+    "timestamp": "2025-01-03T14:00:00+00:00",
+    "price_eur_mwh": 73.75,
+    "price_sek_kwh": 0.8370624999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 83.7062
+  },
+  {
+    "timestamp": "2025-01-03T15:00:00+00:00",
+    "price_eur_mwh": 100.74,
+    "price_sek_kwh": 1.1433989999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 114.3399
+  },
+  {
+    "timestamp": "2025-01-03T16:00:00+00:00",
+    "price_eur_mwh": 106.39,
+    "price_sek_kwh": 1.2075265,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 120.7526
+  },
+  {
+    "timestamp": "2025-01-03T17:00:00+00:00",
+    "price_eur_mwh": 109.22,
+    "price_sek_kwh": 1.239647,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 123.9647
+  },
+  {
+    "timestamp": "2025-01-03T18:00:00+00:00",
+    "price_eur_mwh": 101.27,
+    "price_sek_kwh": 1.1494145,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 114.9415
+  },
+  {
+    "timestamp": "2025-01-03T19:00:00+00:00",
+    "price_eur_mwh": 84.49,
+    "price_sek_kwh": 0.9589614999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 95.8961
+  },
+  {
+    "timestamp": "2025-01-03T20:00:00+00:00",
+    "price_eur_mwh": 81.62,
+    "price_sek_kwh": 0.926387,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 92.6387
+  },
+  {
+    "timestamp": "2025-01-03T21:00:00+00:00",
+    "price_eur_mwh": 68.11,
+    "price_sek_kwh": 0.7730485,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 77.3049
+  },
+  {
+    "timestamp": "2025-01-03T22:00:00+00:00",
+    "price_eur_mwh": 68.6,
+    "price_sek_kwh": 0.7786099999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 77.861
+  },
+  {
+    "timestamp": "2025-01-03T23:00:00+00:00",
+    "price_eur_mwh": 51.1,
+    "price_sek_kwh": 0.579985,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 57.9985
+  },
+  {
+    "timestamp": "2025-01-04T00:00:00+00:00",
+    "price_eur_mwh": 47.81,
+    "price_sek_kwh": 0.5426435000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 54.2644
+  },
+  {
+    "timestamp": "2025-01-04T01:00:00+00:00",
+    "price_eur_mwh": 44.15,
+    "price_sek_kwh": 0.5011025,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 50.1103
+  },
+  {
+    "timestamp": "2025-01-04T02:00:00+00:00",
+    "price_eur_mwh": 44.17,
+    "price_sek_kwh": 0.5013295,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 50.133
+  },
+  {
+    "timestamp": "2025-01-04T03:00:00+00:00",
+    "price_eur_mwh": 42.97,
+    "price_sek_kwh": 0.4877095,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 48.7709
+  },
+  {
+    "timestamp": "2025-01-04T04:00:00+00:00",
+    "price_eur_mwh": 43.26,
+    "price_sek_kwh": 0.49100099999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 49.1001
+  },
+  {
+    "timestamp": "2025-01-04T05:00:00+00:00",
+    "price_eur_mwh": 58.13,
+    "price_sek_kwh": 0.6597755,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 65.9775
+  },
+  {
+    "timestamp": "2025-01-04T06:00:00+00:00",
+    "price_eur_mwh": 84.24,
+    "price_sek_kwh": 0.9561239999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 95.6124
+  },
+  {
+    "timestamp": "2025-01-04T07:00:00+00:00",
+    "price_eur_mwh": 100.2,
+    "price_sek_kwh": 1.13727,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 113.727
+  },
+  {
+    "timestamp": "2025-01-04T08:00:00+00:00",
+    "price_eur_mwh": 105.85,
+    "price_sek_kwh": 1.2013975,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 120.1397
+  },
+  {
+    "timestamp": "2025-01-04T09:00:00+00:00",
+    "price_eur_mwh": 106.43,
+    "price_sek_kwh": 1.2079805000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 120.7981
+  },
+  {
+    "timestamp": "2025-01-04T10:00:00+00:00",
+    "price_eur_mwh": 105.57,
+    "price_sek_kwh": 1.1982195,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 119.822
+  },
+  {
+    "timestamp": "2025-01-04T11:00:00+00:00",
+    "price_eur_mwh": 103.39,
+    "price_sek_kwh": 1.1734764999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 117.3476
+  },
+  {
+    "timestamp": "2025-01-04T12:00:00+00:00",
+    "price_eur_mwh": 78.06,
+    "price_sek_kwh": 0.885981,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 88.5981
+  },
+  {
+    "timestamp": "2025-01-04T13:00:00+00:00",
+    "price_eur_mwh": 112.13,
+    "price_sek_kwh": 1.2726754999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 127.2675
+  },
+  {
+    "timestamp": "2025-01-04T14:00:00+00:00",
+    "price_eur_mwh": 136.54,
+    "price_sek_kwh": 1.549729,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 154.9729
+  },
+  {
+    "timestamp": "2025-01-04T15:00:00+00:00",
+    "price_eur_mwh": 144.86,
+    "price_sek_kwh": 1.6441610000000002,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 164.4161
+  },
+  {
+    "timestamp": "2025-01-04T16:00:00+00:00",
+    "price_eur_mwh": 149.02,
+    "price_sek_kwh": 1.6913770000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 169.1377
+  },
+  {
+    "timestamp": "2025-01-04T17:00:00+00:00",
+    "price_eur_mwh": 142.99,
+    "price_sek_kwh": 1.6229365,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 162.2937
+  },
+  {
+    "timestamp": "2025-01-04T18:00:00+00:00",
+    "price_eur_mwh": 136.1,
+    "price_sek_kwh": 1.544735,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 154.4735
+  },
+  {
+    "timestamp": "2025-01-04T19:00:00+00:00",
+    "price_eur_mwh": 119.98,
+    "price_sek_kwh": 1.361773,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 136.1773
+  },
+  {
+    "timestamp": "2025-01-04T20:00:00+00:00",
+    "price_eur_mwh": 116.49,
+    "price_sek_kwh": 1.3221615,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 132.2161
+  },
+  {
+    "timestamp": "2025-01-04T21:00:00+00:00",
+    "price_eur_mwh": 75.03,
+    "price_sek_kwh": 0.8515904999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 85.159
+  },
+  {
+    "timestamp": "2025-01-04T22:00:00+00:00",
+    "price_eur_mwh": 62.59,
+    "price_sek_kwh": 0.7103965000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 71.0397
+  },
+  {
+    "timestamp": "2025-01-04T23:00:00+00:00",
+    "price_eur_mwh": 55.25,
+    "price_sek_kwh": 0.6270875,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 62.7088
+  },
+  {
+    "timestamp": "2025-01-05T00:00:00+00:00",
+    "price_eur_mwh": 55.99,
+    "price_sek_kwh": 0.6354865000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 63.5487
+  },
+  {
+    "timestamp": "2025-01-05T01:00:00+00:00",
+    "price_eur_mwh": 56.97,
+    "price_sek_kwh": 0.6466095,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 64.6609
+  },
+  {
+    "timestamp": "2025-01-05T02:00:00+00:00",
+    "price_eur_mwh": 58.94,
+    "price_sek_kwh": 0.6689689999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 66.8969
+  },
+  {
+    "timestamp": "2025-01-05T03:00:00+00:00",
+    "price_eur_mwh": 67.77,
+    "price_sek_kwh": 0.7691895,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 76.9189
+  },
+  {
+    "timestamp": "2025-01-05T04:00:00+00:00",
+    "price_eur_mwh": 69.12,
+    "price_sek_kwh": 0.784512,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 78.4512
+  },
+  {
+    "timestamp": "2025-01-05T05:00:00+00:00",
+    "price_eur_mwh": 82.95,
+    "price_sek_kwh": 0.9414824999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 94.1482
+  },
+  {
+    "timestamp": "2025-01-05T06:00:00+00:00",
+    "price_eur_mwh": 83.25,
+    "price_sek_kwh": 0.9448875,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 94.4887
+  },
+  {
+    "timestamp": "2025-01-05T07:00:00+00:00",
+    "price_eur_mwh": 86.89,
+    "price_sek_kwh": 0.9862015,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 98.6201
+  },
+  {
+    "timestamp": "2025-01-05T08:00:00+00:00",
+    "price_eur_mwh": 91.06,
+    "price_sek_kwh": 1.033531,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 103.3531
+  },
+  {
+    "timestamp": "2025-01-05T09:00:00+00:00",
+    "price_eur_mwh": 85.67,
+    "price_sek_kwh": 0.9723544999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 97.2354
+  },
+  {
+    "timestamp": "2025-01-05T10:00:00+00:00",
+    "price_eur_mwh": 91.94,
+    "price_sek_kwh": 1.0435189999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 104.3519
+  },
+  {
+    "timestamp": "2025-01-05T11:00:00+00:00",
+    "price_eur_mwh": 84.46,
+    "price_sek_kwh": 0.958621,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 95.8621
+  },
+  {
+    "timestamp": "2025-01-05T12:00:00+00:00",
+    "price_eur_mwh": 79.93,
+    "price_sek_kwh": 0.9072055,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 90.7206
+  },
+  {
+    "timestamp": "2025-01-05T13:00:00+00:00",
+    "price_eur_mwh": 69.27,
+    "price_sek_kwh": 0.7862144999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 78.6214
+  },
+  {
+    "timestamp": "2025-01-05T14:00:00+00:00",
+    "price_eur_mwh": 52.64,
+    "price_sek_kwh": 0.597464,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 59.7464
+  },
+  {
+    "timestamp": "2025-01-05T15:00:00+00:00",
+    "price_eur_mwh": 51.61,
+    "price_sek_kwh": 0.5857735,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 58.5773
+  },
+  {
+    "timestamp": "2025-01-05T16:00:00+00:00",
+    "price_eur_mwh": 67.31,
+    "price_sek_kwh": 0.7639685,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 76.3969
+  },
+  {
+    "timestamp": "2025-01-05T17:00:00+00:00",
+    "price_eur_mwh": 64.72,
+    "price_sek_kwh": 0.734572,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 73.4572
+  },
+  {
+    "timestamp": "2025-01-05T18:00:00+00:00",
+    "price_eur_mwh": 51.93,
+    "price_sek_kwh": 0.5894054999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 58.9405
+  },
+  {
+    "timestamp": "2025-01-05T19:00:00+00:00",
+    "price_eur_mwh": 37.01,
+    "price_sek_kwh": 0.4200635,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 42.0063
+  },
+  {
+    "timestamp": "2025-01-05T20:00:00+00:00",
+    "price_eur_mwh": 37.21,
+    "price_sek_kwh": 0.4223335,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 42.2333
+  },
+  {
+    "timestamp": "2025-01-05T21:00:00+00:00",
+    "price_eur_mwh": 34.86,
+    "price_sek_kwh": 0.395661,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 39.5661
+  },
+  {
+    "timestamp": "2025-01-05T22:00:00+00:00",
+    "price_eur_mwh": 27.76,
+    "price_sek_kwh": 0.31507599999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 31.5076
+  },
+  {
+    "timestamp": "2025-01-05T23:00:00+00:00",
+    "price_eur_mwh": 27.05,
+    "price_sek_kwh": 0.3070175,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 30.7018
+  },
+  {
+    "timestamp": "2025-01-06T00:00:00+00:00",
+    "price_eur_mwh": 23.35,
+    "price_sek_kwh": 0.26502250000000005,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 26.5023
+  },
+  {
+    "timestamp": "2025-01-06T01:00:00+00:00",
+    "price_eur_mwh": 19.45,
+    "price_sek_kwh": 0.22075749999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 22.0757
+  },
+  {
+    "timestamp": "2025-01-06T02:00:00+00:00",
+    "price_eur_mwh": 16.74,
+    "price_sek_kwh": 0.18999899999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 18.9999
+  },
+  {
+    "timestamp": "2025-01-06T03:00:00+00:00",
+    "price_eur_mwh": 15.57,
+    "price_sek_kwh": 0.1767195,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 17.6719
+  },
+  {
+    "timestamp": "2025-01-06T04:00:00+00:00",
+    "price_eur_mwh": 14.99,
+    "price_sek_kwh": 0.1701365,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 17.0136
+  },
+  {
+    "timestamp": "2025-01-06T05:00:00+00:00",
+    "price_eur_mwh": 24.55,
+    "price_sek_kwh": 0.2786425,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 27.8643
+  },
+  {
+    "timestamp": "2025-01-06T06:00:00+00:00",
+    "price_eur_mwh": 30.0,
+    "price_sek_kwh": 0.34049999999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 34.05
+  },
+  {
+    "timestamp": "2025-01-06T07:00:00+00:00",
+    "price_eur_mwh": 37.66,
+    "price_sek_kwh": 0.42744099999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 42.7441
+  },
+  {
+    "timestamp": "2025-01-06T08:00:00+00:00",
+    "price_eur_mwh": 35.17,
+    "price_sek_kwh": 0.39917949999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 39.9179
+  },
+  {
+    "timestamp": "2025-01-06T09:00:00+00:00",
+    "price_eur_mwh": 34.24,
+    "price_sek_kwh": 0.38862399999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 38.8624
+  },
+  {
+    "timestamp": "2025-01-06T10:00:00+00:00",
+    "price_eur_mwh": 32.42,
+    "price_sek_kwh": 0.36796700000000004,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 36.7967
+  },
+  {
+    "timestamp": "2025-01-06T11:00:00+00:00",
+    "price_eur_mwh": 30.5,
+    "price_sek_kwh": 0.34617499999999995,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 34.6175
+  },
+  {
+    "timestamp": "2025-01-06T12:00:00+00:00",
+    "price_eur_mwh": 28.12,
+    "price_sek_kwh": 0.319162,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 31.9162
+  },
+  {
+    "timestamp": "2025-01-06T13:00:00+00:00",
+    "price_eur_mwh": 24.73,
+    "price_sek_kwh": 0.28068550000000003,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 28.0686
+  },
+  {
+    "timestamp": "2025-01-06T14:00:00+00:00",
+    "price_eur_mwh": 25.49,
+    "price_sek_kwh": 0.2893115,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 28.9311
+  },
+  {
+    "timestamp": "2025-01-06T15:00:00+00:00",
+    "price_eur_mwh": 26.08,
+    "price_sek_kwh": 0.296008,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 29.6008
+  },
+  {
+    "timestamp": "2025-01-06T16:00:00+00:00",
+    "price_eur_mwh": 31.09,
+    "price_sek_kwh": 0.3528715,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 35.2871
+  },
+  {
+    "timestamp": "2025-01-06T17:00:00+00:00",
+    "price_eur_mwh": 31.05,
+    "price_sek_kwh": 0.3524175,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 35.2417
+  },
+  {
+    "timestamp": "2025-01-06T18:00:00+00:00",
+    "price_eur_mwh": 27.04,
+    "price_sek_kwh": 0.30690399999999995,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 30.6904
+  },
+  {
+    "timestamp": "2025-01-06T19:00:00+00:00",
+    "price_eur_mwh": 21.83,
+    "price_sek_kwh": 0.24777049999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 24.777
+  },
+  {
+    "timestamp": "2025-01-06T20:00:00+00:00",
+    "price_eur_mwh": 12.82,
+    "price_sek_kwh": 0.145507,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 14.5507
+  },
+  {
+    "timestamp": "2025-01-06T21:00:00+00:00",
+    "price_eur_mwh": 14.42,
+    "price_sek_kwh": 0.163667,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 16.3667
+  },
+  {
+    "timestamp": "2025-01-06T22:00:00+00:00",
+    "price_eur_mwh": 8.11,
+    "price_sek_kwh": 0.09204849999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 9.2048
+  },
+  {
+    "timestamp": "2025-01-06T23:00:00+00:00",
+    "price_eur_mwh": 10.0,
+    "price_sek_kwh": 0.1135,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 11.35
+  },
+  {
+    "timestamp": "2025-01-07T00:00:00+00:00",
+    "price_eur_mwh": 6.96,
+    "price_sek_kwh": 0.078996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 7.8996
+  },
+  {
+    "timestamp": "2025-01-07T01:00:00+00:00",
+    "price_eur_mwh": 5.42,
+    "price_sek_kwh": 0.061517,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 6.1517
+  },
+  {
+    "timestamp": "2025-01-07T02:00:00+00:00",
+    "price_eur_mwh": 4.35,
+    "price_sek_kwh": 0.04937249999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 4.9372
+  },
+  {
+    "timestamp": "2025-01-07T03:00:00+00:00",
+    "price_eur_mwh": 5.08,
+    "price_sek_kwh": 0.057658,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 5.7658
+  },
+  {
+    "timestamp": "2025-01-07T04:00:00+00:00",
+    "price_eur_mwh": 5.7,
+    "price_sek_kwh": 0.064695,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 6.4695
+  },
+  {
+    "timestamp": "2025-01-07T05:00:00+00:00",
+    "price_eur_mwh": 27.85,
+    "price_sek_kwh": 0.3160975,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 31.6097
+  },
+  {
+    "timestamp": "2025-01-07T06:00:00+00:00",
+    "price_eur_mwh": 36.07,
+    "price_sek_kwh": 0.40939449999999994,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 40.9394
+  },
+  {
+    "timestamp": "2025-01-07T07:00:00+00:00",
+    "price_eur_mwh": 37.32,
+    "price_sek_kwh": 0.42358199999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 42.3582
+  },
+  {
+    "timestamp": "2025-01-07T08:00:00+00:00",
+    "price_eur_mwh": 35.0,
+    "price_sek_kwh": 0.39725000000000005,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 39.725
+  },
+  {
+    "timestamp": "2025-01-07T09:00:00+00:00",
+    "price_eur_mwh": 34.26,
+    "price_sek_kwh": 0.38885099999999995,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 38.8851
+  },
+  {
+    "timestamp": "2025-01-07T10:00:00+00:00",
+    "price_eur_mwh": 34.64,
+    "price_sek_kwh": 0.39316399999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 39.3164
+  },
+  {
+    "timestamp": "2025-01-07T11:00:00+00:00",
+    "price_eur_mwh": 33.27,
+    "price_sek_kwh": 0.3776145,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 37.7615
+  },
+  {
+    "timestamp": "2025-01-07T13:00:00+00:00",
+    "price_eur_mwh": 31.54,
+    "price_sek_kwh": 0.357979,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 35.7979
+  },
+  {
+    "timestamp": "2025-01-07T14:00:00+00:00",
+    "price_eur_mwh": 32.44,
+    "price_sek_kwh": 0.36819399999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 36.8194
+  },
+  {
+    "timestamp": "2025-01-07T15:00:00+00:00",
+    "price_eur_mwh": 29.02,
+    "price_sek_kwh": 0.329377,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 32.9377
+  },
+  {
+    "timestamp": "2025-01-07T16:00:00+00:00",
+    "price_eur_mwh": 29.49,
+    "price_sek_kwh": 0.3347115,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 33.4712
+  },
+  {
+    "timestamp": "2025-01-07T17:00:00+00:00",
+    "price_eur_mwh": 26.87,
+    "price_sek_kwh": 0.3049745,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 30.4974
+  },
+  {
+    "timestamp": "2025-01-07T18:00:00+00:00",
+    "price_eur_mwh": 20.55,
+    "price_sek_kwh": 0.23324250000000002,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 23.3243
+  },
+  {
+    "timestamp": "2025-01-07T19:00:00+00:00",
+    "price_eur_mwh": 14.78,
+    "price_sek_kwh": 0.16775299999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 16.7753
+  },
+  {
+    "timestamp": "2025-01-07T20:00:00+00:00",
+    "price_eur_mwh": 6.15,
+    "price_sek_kwh": 0.0698025,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 6.9803
+  },
+  {
+    "timestamp": "2025-01-07T21:00:00+00:00",
+    "price_eur_mwh": 4.92,
+    "price_sek_kwh": 0.055841999999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 5.5842
+  },
+  {
+    "timestamp": "2025-01-07T22:00:00+00:00",
+    "price_eur_mwh": 4.03,
+    "price_sek_kwh": 0.0457405,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 4.5741
+  },
+  {
+    "timestamp": "2025-01-07T23:00:00+00:00",
+    "price_eur_mwh": 10.01,
+    "price_sek_kwh": 0.11361349999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 11.3613
+  },
+  {
+    "timestamp": "2025-01-08T00:00:00+00:00",
+    "price_eur_mwh": 10.38,
+    "price_sek_kwh": 0.117813,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 11.7813
+  },
+  {
+    "timestamp": "2025-01-08T01:00:00+00:00",
+    "price_eur_mwh": 13.98,
+    "price_sek_kwh": 0.158673,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 15.8673
+  },
+  {
+    "timestamp": "2025-01-08T02:00:00+00:00",
+    "price_eur_mwh": 13.41,
+    "price_sek_kwh": 0.1522035,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 15.2203
+  },
+  {
+    "timestamp": "2025-01-08T03:00:00+00:00",
+    "price_eur_mwh": 16.02,
+    "price_sek_kwh": 0.181827,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 18.1827
+  },
+  {
+    "timestamp": "2025-01-08T04:00:00+00:00",
+    "price_eur_mwh": 18.47,
+    "price_sek_kwh": 0.2096345,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 20.9635
+  },
+  {
+    "timestamp": "2025-01-08T05:00:00+00:00",
+    "price_eur_mwh": 20.63,
+    "price_sek_kwh": 0.23415049999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 23.415
+  },
+  {
+    "timestamp": "2025-01-08T06:00:00+00:00",
+    "price_eur_mwh": 41.16,
+    "price_sek_kwh": 0.4671659999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 46.7166
+  },
+  {
+    "timestamp": "2025-01-08T07:00:00+00:00",
+    "price_eur_mwh": 54.95,
+    "price_sek_kwh": 0.6236825,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 62.3683
+  },
+  {
+    "timestamp": "2025-01-08T08:00:00+00:00",
+    "price_eur_mwh": 63.36,
+    "price_sek_kwh": 0.719136,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 71.9136
+  },
+  {
+    "timestamp": "2025-01-08T09:00:00+00:00",
+    "price_eur_mwh": 67.58,
+    "price_sek_kwh": 0.767033,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 76.7033
+  },
+  {
+    "timestamp": "2025-01-08T10:00:00+00:00",
+    "price_eur_mwh": 71.06,
+    "price_sek_kwh": 0.806531,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 80.6531
+  },
+  {
+    "timestamp": "2025-01-08T11:00:00+00:00",
+    "price_eur_mwh": 69.97,
+    "price_sek_kwh": 0.7941595,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 79.4159
+  },
+  {
+    "timestamp": "2025-01-08T12:00:00+00:00",
+    "price_eur_mwh": 75.0,
+    "price_sek_kwh": 0.85125,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 85.125
+  },
+  {
+    "timestamp": "2025-01-08T13:00:00+00:00",
+    "price_eur_mwh": 81.88,
+    "price_sek_kwh": 0.9293379999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 92.9338
+  },
+  {
+    "timestamp": "2025-01-08T14:00:00+00:00",
+    "price_eur_mwh": 106.54,
+    "price_sek_kwh": 1.209229,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 120.9229
+  },
+  {
+    "timestamp": "2025-01-08T15:00:00+00:00",
+    "price_eur_mwh": 133.99,
+    "price_sek_kwh": 1.5207864999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 152.0786
+  },
+  {
+    "timestamp": "2025-01-08T16:00:00+00:00",
+    "price_eur_mwh": 149.95,
+    "price_sek_kwh": 1.7019324999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 170.1932
+  },
+  {
+    "timestamp": "2025-01-08T17:00:00+00:00",
+    "price_eur_mwh": 141.05,
+    "price_sek_kwh": 1.6009175,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 160.0917
+  },
+  {
+    "timestamp": "2025-01-08T18:00:00+00:00",
+    "price_eur_mwh": 139.72,
+    "price_sek_kwh": 1.585822,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 158.5822
+  },
+  {
+    "timestamp": "2025-01-08T19:00:00+00:00",
+    "price_eur_mwh": 106.31,
+    "price_sek_kwh": 1.2066185,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 120.6619
+  },
+  {
+    "timestamp": "2025-01-08T20:00:00+00:00",
+    "price_eur_mwh": 93.57,
+    "price_sek_kwh": 1.0620195,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 106.2019
+  },
+  {
+    "timestamp": "2025-01-08T21:00:00+00:00",
+    "price_eur_mwh": 75.78,
+    "price_sek_kwh": 0.860103,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 86.0103
+  },
+  {
+    "timestamp": "2025-01-08T22:00:00+00:00",
+    "price_eur_mwh": 49.53,
+    "price_sek_kwh": 0.5621655,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 56.2165
+  },
+  {
+    "timestamp": "2025-01-08T23:00:00+00:00",
+    "price_eur_mwh": 32.96,
+    "price_sek_kwh": 0.37409600000000004,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 37.4096
+  },
+  {
+    "timestamp": "2025-01-09T00:00:00+00:00",
+    "price_eur_mwh": 30.85,
+    "price_sek_kwh": 0.3501475,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 35.0147
+  },
+  {
+    "timestamp": "2025-01-09T01:00:00+00:00",
+    "price_eur_mwh": 30.24,
+    "price_sek_kwh": 0.343224,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 34.3224
+  },
+  {
+    "timestamp": "2025-01-09T02:00:00+00:00",
+    "price_eur_mwh": 30.84,
+    "price_sek_kwh": 0.35003399999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 35.0034
+  },
+  {
+    "timestamp": "2025-01-09T03:00:00+00:00",
+    "price_eur_mwh": 32.72,
+    "price_sek_kwh": 0.371372,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 37.1372
+  },
+  {
+    "timestamp": "2025-01-09T04:00:00+00:00",
+    "price_eur_mwh": 43.35,
+    "price_sek_kwh": 0.4920225,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 49.2022
+  },
+  {
+    "timestamp": "2025-01-09T05:00:00+00:00",
+    "price_eur_mwh": 68.49,
+    "price_sek_kwh": 0.7773614999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 77.7361
+  },
+  {
+    "timestamp": "2025-01-09T06:00:00+00:00",
+    "price_eur_mwh": 148.72,
+    "price_sek_kwh": 1.6879719999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 168.7972
+  },
+  {
+    "timestamp": "2025-01-09T07:00:00+00:00",
+    "price_eur_mwh": 162.48,
+    "price_sek_kwh": 1.8441479999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 184.4148
+  },
+  {
+    "timestamp": "2025-01-09T08:00:00+00:00",
+    "price_eur_mwh": 154.56,
+    "price_sek_kwh": 1.754256,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 175.4256
+  },
+  {
+    "timestamp": "2025-01-09T09:00:00+00:00",
+    "price_eur_mwh": 145.85,
+    "price_sek_kwh": 1.6553975,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 165.5397
+  },
+  {
+    "timestamp": "2025-01-09T10:00:00+00:00",
+    "price_eur_mwh": 142.63,
+    "price_sek_kwh": 1.6188505,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 161.8851
+  },
+  {
+    "timestamp": "2025-01-09T11:00:00+00:00",
+    "price_eur_mwh": 130.27,
+    "price_sek_kwh": 1.4785644999999998,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 147.8564
+  },
+  {
+    "timestamp": "2025-01-09T12:00:00+00:00",
+    "price_eur_mwh": 123.19,
+    "price_sek_kwh": 1.3982065,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 139.8207
+  },
+  {
+    "timestamp": "2025-01-09T13:00:00+00:00",
+    "price_eur_mwh": 126.05,
+    "price_sek_kwh": 1.4306675,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 143.0667
+  },
+  {
+    "timestamp": "2025-01-09T14:00:00+00:00",
+    "price_eur_mwh": 131.55,
+    "price_sek_kwh": 1.4930925,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 149.3092
+  },
+  {
+    "timestamp": "2025-01-09T15:00:00+00:00",
+    "price_eur_mwh": 133.04,
+    "price_sek_kwh": 1.510004,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 151.0004
+  },
+  {
+    "timestamp": "2025-01-09T16:00:00+00:00",
+    "price_eur_mwh": 135.67,
+    "price_sek_kwh": 1.5398544999999997,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 153.9854
+  },
+  {
+    "timestamp": "2025-01-09T17:00:00+00:00",
+    "price_eur_mwh": 139.29,
+    "price_sek_kwh": 1.5809415,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 158.0942
+  },
+  {
+    "timestamp": "2025-01-09T18:00:00+00:00",
+    "price_eur_mwh": 127.59,
+    "price_sek_kwh": 1.4481465,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 144.8147
+  },
+  {
+    "timestamp": "2025-01-09T19:00:00+00:00",
+    "price_eur_mwh": 119.99,
+    "price_sek_kwh": 1.3618865,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 136.1886
+  },
+  {
+    "timestamp": "2025-01-09T20:00:00+00:00",
+    "price_eur_mwh": 102.52,
+    "price_sek_kwh": 1.163602,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 116.3602
+  },
+  {
+    "timestamp": "2025-01-09T21:00:00+00:00",
+    "price_eur_mwh": 97.85,
+    "price_sek_kwh": 1.1105975,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 111.0597
+  },
+  {
+    "timestamp": "2025-01-09T22:00:00+00:00",
+    "price_eur_mwh": 68.53,
+    "price_sek_kwh": 0.7778155000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 77.7816
+  },
+  {
+    "timestamp": "2025-01-09T23:00:00+00:00",
+    "price_eur_mwh": 67.28,
+    "price_sek_kwh": 0.7636280000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 76.3628
+  },
+  {
+    "timestamp": "2025-01-10T00:00:00+00:00",
+    "price_eur_mwh": 54.97,
+    "price_sek_kwh": 0.6239095,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 62.391
+  },
+  {
+    "timestamp": "2025-01-10T01:00:00+00:00",
+    "price_eur_mwh": 51.7,
+    "price_sek_kwh": 0.5867950000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 58.6795
+  },
+  {
+    "timestamp": "2025-01-10T02:00:00+00:00",
+    "price_eur_mwh": 48.0,
+    "price_sek_kwh": 0.5448,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 54.48
+  },
+  {
+    "timestamp": "2025-01-10T03:00:00+00:00",
+    "price_eur_mwh": 49.75,
+    "price_sek_kwh": 0.5646625,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 56.4662
+  },
+  {
+    "timestamp": "2025-01-10T04:00:00+00:00",
+    "price_eur_mwh": 58.98,
+    "price_sek_kwh": 0.669423,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 66.9423
+  },
+  {
+    "timestamp": "2025-01-10T05:00:00+00:00",
+    "price_eur_mwh": 97.12,
+    "price_sek_kwh": 1.102312,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 110.2312
+  },
+  {
+    "timestamp": "2025-01-10T06:00:00+00:00",
+    "price_eur_mwh": 124.64,
+    "price_sek_kwh": 1.414664,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 141.4664
+  },
+  {
+    "timestamp": "2025-01-10T07:00:00+00:00",
+    "price_eur_mwh": 140.24,
+    "price_sek_kwh": 1.591724,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 159.1724
+  },
+  {
+    "timestamp": "2025-01-10T08:00:00+00:00",
+    "price_eur_mwh": 136.56,
+    "price_sek_kwh": 1.5499560000000001,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 154.9956
+  },
+  {
+    "timestamp": "2025-01-10T09:00:00+00:00",
+    "price_eur_mwh": 123.9,
+    "price_sek_kwh": 1.406265,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 140.6265
+  },
+  {
+    "timestamp": "2025-01-10T10:00:00+00:00",
+    "price_eur_mwh": 114.24,
+    "price_sek_kwh": 1.296624,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 129.6624
+  },
+  {
+    "timestamp": "2025-01-10T11:00:00+00:00",
+    "price_eur_mwh": 108.53,
+    "price_sek_kwh": 1.2318155,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 123.1816
+  },
+  {
+    "timestamp": "2025-01-10T12:00:00+00:00",
+    "price_eur_mwh": 105.05,
+    "price_sek_kwh": 1.1923175,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 119.2317
+  },
+  {
+    "timestamp": "2025-01-10T13:00:00+00:00",
+    "price_eur_mwh": 109.46,
+    "price_sek_kwh": 1.242371,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 124.2371
+  },
+  {
+    "timestamp": "2025-01-10T14:00:00+00:00",
+    "price_eur_mwh": 125.66,
+    "price_sek_kwh": 1.4262409999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 142.6241
+  },
+  {
+    "timestamp": "2025-01-10T15:00:00+00:00",
+    "price_eur_mwh": 130.34,
+    "price_sek_kwh": 1.479359,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 147.9359
+  },
+  {
+    "timestamp": "2025-01-10T16:00:00+00:00",
+    "price_eur_mwh": 138.11,
+    "price_sek_kwh": 1.5675485,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 156.7549
+  },
+  {
+    "timestamp": "2025-01-10T17:00:00+00:00",
+    "price_eur_mwh": 135.91,
+    "price_sek_kwh": 1.5425785,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 154.2579
+  },
+  {
+    "timestamp": "2025-01-10T18:00:00+00:00",
+    "price_eur_mwh": 96.0,
+    "price_sek_kwh": 1.0896,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 108.96
+  },
+  {
+    "timestamp": "2025-01-10T19:00:00+00:00",
+    "price_eur_mwh": 54.98,
+    "price_sek_kwh": 0.6240229999999999,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 62.4023
+  },
+  {
+    "timestamp": "2025-01-10T20:00:00+00:00",
+    "price_eur_mwh": 45.89,
+    "price_sek_kwh": 0.5208515,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 52.0851
+  },
+  {
+    "timestamp": "2025-01-10T21:00:00+00:00",
+    "price_eur_mwh": 40.19,
+    "price_sek_kwh": 0.45615649999999996,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 45.6156
+  },
+  {
+    "timestamp": "2025-01-10T22:00:00+00:00",
+    "price_eur_mwh": 33.06,
+    "price_sek_kwh": 0.375231,
+    "bidding_zone": "SE3",
+    "resolution_minutes": 60,
+    "provider": "ENTSO-E",
+    "price_ore_kwh": 37.5231
+  }
+]
