@@ -2,6 +2,8 @@
 
 A comprehensive system and interactive web application to track, simulate, and calculate the actual financial return on investment (ROI) for a household solar panel and home battery system in Sweden (SE3), with support for dynamic spot pricing, Swedish tariffs, multi-resolution timestamp matching, 25-year cash flow projections, and high-resolution hourly dispatch overlays.
 
+🚀 **Live Interactive Web Dashboard**: [**https://cblomqvist.github.io/mysunshine/**](https://cblomqvist.github.io/mysunshine/)
+
 ## Features & Modules
 
 - **Interactive Glassmorphic Web Dashboard** (`index.html`, `app.js`, `style.css`):
