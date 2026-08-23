@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MySunshine - Solar Panel & Battery ROI Simulator</title>
-    <meta name="description" content="Calculate your solar panel and home battery payoff period, lifetime savings, and environmental impact with our interactive hourly energy simulation.">
+    <title>MySunshine - Solar & Battery Financial ROI Dashboard (SE3 Sweden)</title>
+    <meta name="description" content="Calculate and visualize true financial ROI, 3-way baselines, 25-year cash flows, and high-resolution hourly dispatch overlays for solar panels and home battery in Sweden (SE3).">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="style.css">
     
     <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -26,99 +26,71 @@
         <header class="app-header">
             <div class="logo-container">
                 <div class="logo-icon">
-                    <i class="fa-solid fa-sun-plant-wilt"></i>
+                    <i class="fa-solid fa-sun"></i>
                 </div>
                 <div>
-                    <h1>MySunshine</h1>
-                    <p class="tagline">Solar & Battery ROI Simulator</p>
+                    <div class="brand-row">
+                        <h1>MySunshine</h1>
+                        <span class="badge badge-accent"><i class="fa-solid fa-bolt"></i> SE3 Sweden</span>
+                        <span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Live Engine</span>
+                    </div>
+                    <p class="tagline">Solar PV & Home Battery Financial ROI & High-Resolution Dispatch Analyzer</p>
                 </div>
             </div>
-            <div class="header-actions">
-                <span class="badge badge-success"><i class="fa-solid fa-bolt"></i> Live Simulator</span>
+            <div class="header-specs">
+                <div class="spec-pill">
+                    <i class="fa-solid fa-solar-panel"></i>
+                    <span>Solar PV (Jan 2021, SMA 8.0 kW)</span>
+                </div>
+                <div class="spec-pill">
+                    <i class="fa-solid fa-battery-full"></i>
+                    <span>Sonnen 22 kWh (Sep 2023 + Sep 2024, ~150k SEK)</span>
+                </div>
+                <div class="spec-pill">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Tibber + EEM</span>
+                </div>
             </div>
         </header>
 
         <!-- Main Workspace -->
         <main class="app-main">
-            <!-- Sidebar Panel: Inputs -->
+            <!-- Sidebar Panel: Dynamic Controls -->
             <aside class="sidebar-panel">
+                <!-- Investment & Capex Controls -->
                 <div class="panel-section">
-                    <h2 class="section-title"><i class="fa-solid fa-solar-panel"></i> Solar Settings</h2>
+                    <h2 class="section-title"><i class="fa-solid fa-wallet"></i> Investment & Capex</h2>
                     
                     <div class="input-group">
                         <div class="label-wrapper">
-                            <label for="solar-capacity">Solar Capacity</label>
-                            <span class="value-display" id="solar-capacity-val">6.0 kW</span>
+                            <label for="net-capex">Net System Capex</label>
+                            <span class="value-display" id="net-capex-val">315,000 SEK</span>
                         </div>
-                        <input type="range" id="solar-capacity" min="0" max="20" step="0.5" value="6.0" class="custom-slider">
+                        <input type="range" id="net-capex" min="50000" max="600000" step="2500" value="315000" class="custom-slider">
                     </div>
 
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="solar-cost">Solar Cost (Installed)</label>
+                    <div class="gron-teknik-box">
+                        <div class="gron-row">
+                            <label class="switch-label">
+                                <input type="checkbox" id="gron-teknik-toggle" checked>
+                                <span class="slider-toggle"></span>
+                                <span class="switch-text">Apply Grön Teknik Subsidy</span>
+                            </label>
                         </div>
-                        <div class="input-addon-wrapper">
-                            <span class="input-addon">$</span>
-                            <input type="number" id="solar-cost" value="5500" min="0" step="100" class="custom-input">
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="sun-hours">Average Daily Sun Hours</label>
-                            <span class="value-display" id="sun-hours-val">4.5 hrs</span>
-                        </div>
-                        <input type="range" id="sun-hours" min="1" max="10" step="0.1" value="4.5" class="custom-slider">
+                        <p class="gron-hint">Net out-of-pocket: 165k SEK Solar (Jan 2021) + 150k SEK Battery (Sep 2023/2024) = 315,000 SEK net (from ~506k gross).</p>
                     </div>
                 </div>
 
+                <!-- Swedish Tariff & Market Settings -->
                 <div class="panel-section">
-                    <h2 class="section-title"><i class="fa-solid fa-battery-three-quarters"></i> Battery Settings</h2>
+                    <h2 class="section-title"><i class="fa-solid fa-receipt"></i> Swedish Tariff (SE3)</h2>
                     
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="battery-capacity">Battery Capacity</label>
-                            <span class="value-display" id="battery-capacity-val">10.0 kWh</span>
-                        </div>
-                        <input type="range" id="battery-capacity" min="0" max="30" step="0.5" value="10.0" class="custom-slider">
-                    </div>
-
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="battery-cost">Battery Cost (Installed)</label>
-                        </div>
-                        <div class="input-addon-wrapper">
-                            <span class="input-addon">$</span>
-                            <input type="number" id="battery-cost" value="8500" min="0" step="100" class="custom-input">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h2 class="section-title"><i class="fa-solid fa-house-chimney-user"></i> Usage & Grid</h2>
-                    
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="daily-usage">Daily Electricity Usage</label>
-                            <span class="value-display" id="daily-usage-val">18.0 kWh</span>
-                        </div>
-                        <input type="range" id="daily-usage" min="5" max="50" step="1" value="18" class="custom-slider">
-                    </div>
-
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="grid-rate">Grid Rate (Buy)</label>
-                            <span class="value-display" id="grid-rate-val">$0.32 /kWh</span>
-                        </div>
-                        <input type="range" id="grid-rate" min="0.05" max="0.80" step="0.01" value="0.32" class="custom-slider">
-                    </div>
-
-                    <div class="input-group">
-                        <div class="label-wrapper">
-                            <label for="feed-in-tariff">Feed-in Tariff (Sell)</label>
-                            <span class="value-display" id="feed-in-tariff-val">$0.08 /kWh</span>
-                        </div>
-                        <input type="range" id="feed-in-tariff" min="0.00" max="0.40" step="0.01" value="0.08" class="custom-slider">
+                    <div class="switch-row">
+                        <label class="switch-label">
+                            <input type="checkbox" id="skattereduktion-toggle" checked>
+                            <span class="slider-toggle"></span>
+                            <span class="switch-text">60 öre/kWh Skattereduktion</span>
+                        </label>
                     </div>
 
                     <div class="input-group">
@@ -126,148 +98,291 @@
                             <label for="inflation-rate">Annual Energy Price Inflation</label>
                             <span class="value-display" id="inflation-rate-val">4.0%</span>
                         </div>
-                        <input type="range" id="inflation-rate" min="0" max="15" step="0.5" value="4.0" class="custom-slider">
+                        <input type="range" id="inflation-rate" min="0" max="12" step="0.5" value="4.0" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="energiskatt-rate">Energiskatt (ex moms)</label>
+                            <span class="value-display" id="energiskatt-rate-val">42.8 öre/kWh</span>
+                        </div>
+                        <input type="range" id="energiskatt-rate" min="20" max="60" step="0.5" value="42.8" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="eem-transfer-rate">EEM Överföringsavgift</label>
+                            <span class="value-display" id="eem-transfer-rate-val">17.6 öre/kWh</span>
+                        </div>
+                        <input type="range" id="eem-transfer-rate" min="10" max="35" step="0.5" value="17.6" class="custom-slider">
+                    </div>
+
+                    <div class="input-group">
+                        <div class="label-wrapper">
+                            <label for="tibber-fee">Tibber Monthly Fee</label>
+                            <span class="value-display" id="tibber-fee-val">49 SEK</span>
+                        </div>
+                        <input type="range" id="tibber-fee" min="0" max="99" step="1" value="49" class="custom-slider">
+                    </div>
+                </div>
+
+                <!-- High-Resolution Dispatch Day Selector -->
+                <div class="panel-section">
+                    <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> 24h Dispatch Day</h2>
+                    <div class="input-group">
+                        <label for="dispatch-day-select" class="visually-hidden">Select Dispatch Day</label>
+                        <select id="dispatch-day-select" class="custom-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="preset-buttons">
+                        <button type="button" class="btn-preset active" id="btn-preset-peak-solar"><i class="fa-solid fa-sun"></i> Peak Solar</button>
+                        <button type="button" class="btn-preset" id="btn-preset-volatility"><i class="fa-solid fa-arrow-trend-up"></i> Price Volatility</button>
+                        <button type="button" class="btn-preset" id="btn-preset-cloudy"><i class="fa-solid fa-cloud"></i> Cloudy Day</button>
+                    </div>
+                </div>
+
+                <!-- Diagnostics Summary -->
+                <div class="sidebar-diagnostics">
+                    <div class="diag-item">
+                        <span class="diag-label">Solar Self-Consumption</span>
+                        <span class="diag-val" id="diag-sc-pct">59.5%</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label">Sonnen Roundtrip η</span>
+                        <span class="diag-val" id="diag-eff-pct">77.0%</span>
+                    </div>
+                    <div class="diag-item">
+                        <span class="diag-label">Annual Solar Generation</span>
+                        <span class="diag-val" id="diag-annual-gen">8,210 kWh</span>
                     </div>
                 </div>
             </aside>
 
             <!-- Results Viewport -->
             <section class="results-viewport">
-                <!-- KPI Dashboard Cards -->
+                <!-- 4.1 KPI Dashboard Cards & Progress Ring -->
                 <div class="kpi-grid">
+                    <!-- Total Savings -->
+                    <div class="kpi-card highlight-card" id="kpi-savings">
+                        <div class="kpi-header">
+                            <h3>Total Realized Savings</h3>
+                            <i class="fa-solid fa-piggy-bank kpi-icon"></i>
+                        </div>
+                        <div class="kpi-value" id="val-total-savings">9,805 SEK</div>
+                        <p class="kpi-sub" id="sub-savings-baseline">vs. 11,940 SEK No-Solar baseline (2025)</p>
+                    </div>
+
+                    <!-- Capex Recouped Radial Ring -->
+                    <div class="kpi-card ring-card" id="kpi-capex-ring">
+                        <div class="ring-content">
+                            <div class="kpi-header">
+                                <h3>Capex Recouped</h3>
+                                <i class="fa-solid fa-chart-pie kpi-icon"></i>
+                            </div>
+                            <div class="kpi-value" id="val-recouped-pct">8.7%</div>
+                            <p class="kpi-sub" id="val-recouped-sek">9,805 / 112,400 SEK</p>
+                        </div>
+                        <div class="ring-svg-wrapper">
+                            <svg class="progress-ring" width="80" height="80" viewBox="0 0 80 80">
+                                <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="7" fill="transparent" r="32" cx="40" cy="40"/>
+                                <circle id="progress-ring-circle" class="progress-ring-fill" stroke="url(#ringGradient)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="183.5" stroke-linecap="round" fill="transparent" r="32" cx="40" cy="40"/>
+                                <defs>
+                                    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#10b981" />
+                                        <stop offset="100%" stop-color="#06b6d4" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Payback Estimate -->
                     <div class="kpi-card" id="kpi-payback">
                         <div class="kpi-header">
                             <h3>Payback Period</h3>
                             <i class="fa-solid fa-calendar-check kpi-icon"></i>
                         </div>
                         <div class="kpi-value">
-                            <span id="val-payback">--</span> <span class="unit">Years</span>
+                            <span id="val-payback">9.4</span> <span class="unit">Years</span>
                         </div>
-                        <p class="kpi-sub" id="sub-payback">Initial investment break-even</p>
+                        <p class="kpi-sub" id="sub-payback-detail">Inflation-adjusted break-even</p>
                     </div>
 
-                    <div class="kpi-card highlight-card" id="kpi-savings">
+                    <!-- Marginal Battery Value -->
+                    <div class="kpi-card" id="kpi-battery-val">
                         <div class="kpi-header">
-                            <h3>25-Yr Net Savings</h3>
-                            <i class="fa-solid fa-piggy-bank kpi-icon"></i>
+                            <h3>Battery Marginal Value</h3>
+                            <i class="fa-solid fa-battery-three-quarters kpi-icon"></i>
                         </div>
-                        <div class="kpi-value" id="val-savings">--</div>
-                        <p class="kpi-sub" id="sub-savings">Cumulative profit after payoff</p>
+                        <div class="kpi-value" id="val-battery-marginal">-292 SEK</div>
+                        <p class="kpi-sub" id="sub-battery-detail">Sonnen 10 delta vs Solar Only</p>
                     </div>
 
-                    <div class="kpi-card" id="kpi-cost">
-                        <div class="kpi-header">
-                            <h3>Net System Cost</h3>
-                            <i class="fa-solid fa-receipt kpi-icon"></i>
-                        </div>
-                        <div class="kpi-value" id="val-net-cost">--</div>
-                        <p class="kpi-sub" id="sub-net-cost">Solar + Battery combined cost</p>
-                    </div>
-
+                    <!-- Avoided CO2 -->
                     <div class="kpi-card" id="kpi-co2">
                         <div class="kpi-header">
-                            <h3>Annual CO₂ Saved</h3>
+                            <h3>Annual Avoided CO₂</h3>
                             <i class="fa-solid fa-leaf kpi-icon"></i>
                         </div>
                         <div class="kpi-value">
-                            <span id="val-co2">--</span> <span class="unit">Tons</span>
+                            <span id="val-co2">3.28</span> <span class="unit">Tons</span>
                         </div>
-                        <p class="kpi-sub" id="sub-co2">Equivalent to ~50 trees planted</p>
+                        <p class="kpi-sub">Clean energy generated in SE3</p>
                     </div>
                 </div>
 
                 <!-- Interactive Charts Section -->
-                <div class="charts-container">
+                <div class="charts-section">
+                    <!-- Chart 1: Cumulative Payback S-Curve -->
                     <div class="chart-wrapper main-chart">
                         <div class="chart-header">
                             <div class="chart-title">
-                                <h3><i class="fa-solid fa-chart-line"></i> Cumulative Lifetime Savings (25 Years)</h3>
-                                <p>Shows payback time and long-term financial payoff</p>
+                                <h3><i class="fa-solid fa-chart-line"></i> Cumulative Cash Flow & Payback S-Curve (25 Years)</h3>
+                                <p>Historical year 1 performance transitioning into 25-year projected returns with PV degradation and tariff inflation</p>
+                            </div>
+                            <div class="chart-badges">
+                                <span class="badge badge-breakeven" id="breakeven-badge"><i class="fa-solid fa-flag-checkered"></i> Break-Even: Year 9.4</span>
                             </div>
                         </div>
                         <div class="chart-canvas-container">
-                            <canvas id="savings-chart"></canvas>
+                            <canvas id="chart-payback-scurve"></canvas>
                         </div>
                     </div>
 
+                    <!-- Secondary Charts Grid -->
                     <div class="charts-grid-secondary">
+                        <!-- Chart 2: 3-Way Baseline Bar Chart -->
                         <div class="chart-wrapper">
                             <div class="chart-header">
                                 <div class="chart-title">
-                                    <h3><i class="fa-solid fa-chart-area"></i> Hourly Energy Flow Simulator</h3>
-                                    <p>Typical 24h cycle: Solar gen vs. household load & battery SoC</p>
+                                    <h3><i class="fa-solid fa-chart-column"></i> 3-Way Baseline Monthly Comparison</h3>
+                                    <p>No Solar (Grey) vs. Solar Only (Amber) vs. Actual System (Teal)</p>
                                 </div>
                             </div>
                             <div class="chart-canvas-container">
-                                <canvas id="energy-flow-chart"></canvas>
+                                <canvas id="chart-monthly-baselines"></canvas>
                             </div>
                         </div>
 
-                        <!-- System Specs Summary Card -->
-                        <div class="specs-card">
-                            <h3><i class="fa-solid fa-microchip"></i> System Performance Specs</h3>
-                            <ul class="specs-list">
-                                <li>
-                                    <span class="spec-label">Solar Self-Consumption</span>
-                                    <span class="spec-value" id="spec-self-consumption">--%</span>
-                                </li>
-                                <li>
-                                    <span class="spec-label">Battery Utilization Rate</span>
-                                    <span class="spec-value" id="spec-battery-util">--%</span>
-                                </li>
-                                <li>
-                                    <span class="spec-label">Energy Grid Independence</span>
-                                    <span class="spec-value" id="spec-grid-indep">--%</span>
-                                </li>
-                                <li>
-                                    <span class="spec-label">Annual Solar Output</span>
-                                    <span class="spec-value" id="spec-annual-gen">-- kWh</span>
-                                </li>
-                                <li>
-                                    <span class="spec-label">Annual Grid Purchase</span>
-                                    <span class="spec-value" id="spec-annual-import">-- kWh</span>
-                                </li>
-                            </ul>
+                        <!-- Chart 3: Hourly Dispatch & Price Overlay -->
+                        <div class="chart-wrapper">
+                            <div class="chart-header">
+                                <div class="chart-title">
+                                    <h3><i class="fa-solid fa-bolt"></i> 24h Hourly Dispatch & Spot Price Overlay</h3>
+                                    <p id="dispatch-chart-subtitle">Showing: Aug 02, 2026 (Peak Solar Day)</p>
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="chart-hourly-dispatch"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Annual Detailed Breakdown Table -->
+                <!-- Financial Ledger & Tables Section -->
                 <div class="table-card">
-                    <div class="table-header">
-                        <h3><i class="fa-solid fa-table-list"></i> 25-Year Detailed Financial Ledger</h3>
-                        <p>Year-by-year cash flows, grid savings, and cumulative ROI</p>
+                    <div class="table-tab-header">
+                        <div class="tab-buttons">
+                            <button type="button" class="tab-btn active" data-tab="tab-monthly-ledger"><i class="fa-solid fa-calendar-days"></i> 2025 Monthly Actual Ledger</button>
+                            <button type="button" class="tab-btn" data-tab="tab-25y-ledger"><i class="fa-solid fa-table-list"></i> 25-Year Projection Ledger</button>
+                            <button type="button" class="tab-btn" data-tab="tab-variance-benchmark"><i class="fa-solid fa-microscope"></i> High-Res Estimation Variance</button>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="ledger-table">
-                            <thead>
-                                <tr>
-                                    <th>Year</th>
-                                    <th>Solar Gen (kWh)</th>
-                                    <th>Self-Consumed (kWh)</th>
-                                    <th>Exported (kWh)</th>
-                                    <th>Imported (kWh)</th>
-                                    <th>Bill w/o Solar</th>
-                                    <th>Bill w/ Solar</th>
-                                    <th>Annual Savings</th>
-                                    <th>Net Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ledger-body">
-                                <!-- Populated dynamically by app.js -->
-                            </tbody>
-                        </table>
+
+                    <!-- Tab 1: 2025 Monthly Actual Ledger -->
+                    <div class="tab-content active" id="tab-monthly-ledger">
+                        <div class="table-responsive">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Solar (kWh)</th>
+                                        <th>Load (kWh)</th>
+                                        <th>Import (kWh)</th>
+                                        <th>Export (kWh)</th>
+                                        <th>Spot Price (öre)</th>
+                                        <th>No Solar Bill</th>
+                                        <th>Solar Only Bill</th>
+                                        <th>Actual Bill</th>
+                                        <th>Solar Savings</th>
+                                        <th>Battery Value</th>
+                                        <th>Total Savings</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-2025-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: 25-Year Long-Term Ledger -->
+                    <div class="tab-content" id="tab-25y-ledger">
+                        <div class="table-responsive">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Year</th>
+                                        <th>Solar Gen (kWh)</th>
+                                        <th>Self-Consumed (kWh)</th>
+                                        <th>Grid Export (kWh)</th>
+                                        <th>Grid Import (kWh)</th>
+                                        <th>No Solar Bill</th>
+                                        <th>Solar+Batt Bill</th>
+                                        <th>Annual Savings</th>
+                                        <th>Net Cumulative Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-25y-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Estimation Variance Benchmark -->
+                    <div class="tab-content" id="tab-variance-benchmark">
+                        <div class="variance-summary-box">
+                            <h4><i class="fa-solid fa-circle-info"></i> High-Resolution vs. Daily-Averaged Estimation Benchmark</h4>
+                            <p>Demonstrates the financial impact of 15-minute / hourly spot price settlement compared to simplified daily net averages on a 30-day high-resolution dataset (744 hours).</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Financial Metric</th>
+                                        <th>Exact High-Res Settlement</th>
+                                        <th>Simple Daily Average Estimation</th>
+                                        <th>Variance / Delta (SEK)</th>
+                                        <th>Percentage Error</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-variance-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
         </main>
 
+        <!-- Footer -->
         <footer class="app-footer">
-            <p>MySunshine Solar Calculator &copy; 2026. Made with ❤️ for a greener future. All calculations are simulations based on standard energy models.</p>
+            <div class="footer-content">
+                <p>MySunshine &copy; 2026. Automated Swedish (SE3) Solar & Battery Financial ROI Simulator. Verified against Tibber dynamic spot rates, EEM distribution tariffs, and Skatteverket green energy regulations.</p>
+                <div class="footer-links">
+                    <span><i class="fa-brands fa-github"></i> Continuous Deployment via GitHub Actions & Pages</span>
+                </div>
+            </div>
         </footer>
     </div>
 
-    <!-- Application Script -->
+    <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
+    <script src="data/dashboard_data.js"></script>
+    <!-- Application Logic & Charts -->
     <script src="app.js"></script>
 </body>
 </html>

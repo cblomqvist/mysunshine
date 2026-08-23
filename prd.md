@@ -6,20 +6,23 @@ A comprehensive system to track, simulate, and calculate the actual financial re
 
 ## 1. Objectives
 
-### Core Objective (Phase 1: Historical ROI & Value Analysis)
-Calculate the **true financial ROI and savings** of the existing solar and battery installation using real historical electricity price data (Nordpool SE3 / Tibber) and actual consumption/production logs.
-- Quantify total savings against realistic baselines (No Solar/Battery, Solar-only).
-- Isolate the **marginal financial contribution** of the SonnenBatterie 10.
+### Core Objective (Phase 1: Multi-Year Historical ROI & Calculation Validation)
+Calculate, verify, and validate the **true financial ROI and savings** of the solar and battery installation using real historical electricity price data (Nordpool SE3 / Tibber) and actual multi-year consumption/production logs (2021–2026).
+- Ingest and cross-validate multi-year Sonnen data: **2023** (from September 11 kWh battery install), **2024** (full year with 11 kWh to 22 kWh expansion on Sep 9), **2025** (full year with dual 22 kWh battery), and **2026** (high-resolution hourly/quarterly logs).
+- Quantify total savings against realistic 3-way baselines (No Solar/Battery, Solar-only).
+- Isolate the **marginal financial contribution** of the SonnenBatterie 10 across both single-module (11 kWh) and dual-module (22 kWh) configurations.
 - Account for Swedish electricity market specifics: spot prices (both hourly and 15-minute/quarterly), energy tax (*energiskatt*), grid fees (*nätavgift*), grid benefit (*nätnytta*), 25% VAT (*moms*), Tibber fees, and micro-production tax deduction (*skattereduktion* 60 öre/kWh).
+- Ensure calculations, graphs, and energy balances are thoroughly validated and audited against actual utility bills before undertaking automated control.
 
-### Future Objective (Phase 2: Smart Strategy & Arbitrage Optimizer)
-Implement predictive battery control strategies and dynamic charging recommendations:
-- **Low-Price Grid Pre-charging**: Charge the battery from the grid during cheap night hours when solar generation is forecast to be low, winter load is high, and SoC is below target threshold.
-- **Spot Price Arbitrage**: Strategically charge low and discharge during high-demand/peak-price hours while factoring in the ~77% round-trip efficiency hurdle, 15-minute price volatility, and grid transfer fees.
+### Future Objective (Phase 2: Predictive Forecasting & Shadow Recommendation Engine)
+Postpone active battery hardware control until historical calculations and predictive models have been validated over time. Focus on predictive metrics and shadow evaluation:
+- **Next-Day Cost & Savings Forecast**: Provide a forecast of expected electricity cost and savings for the coming day based on historical consumption patterns, tomorrow's published day-ahead spot prices, and local weather forecasts.
+- **Dynamic Charging Recommendation Engine (Shadow Mode / Metrics Only)**: Produce recommendations for optimal grid pre-charging or dispatch without physically manipulating battery hardware.
+- **Predictive vs. Actual Backtesting**: Automatically evaluate predictions the following day (e.g., *"The recommendation engine would have saved/lost X SEK compared to actual dispatch"*), measuring theoretical optimization upside against real-world performance.
 
 ---
 
-## 2. System Hardware & Environmental Configuration
+## 2. System Hardware, Capex & Environmental Configuration
 
 * **Bidding Zone**: **SE3** (Sweden - Stockholm / Central Sweden, Nordpool market).
 * **Electricity Retailer (Elhandelsbolag)**: **Tibber** (`https://tibber.com/se`).
@@ -27,11 +30,25 @@ Implement predictive battery control strategies and dynamic charging recommendat
   * **Pricing Resolution Transition Date**: **2025-10-01** (Switched from 60-min hourly prices to 15-min quarterly prices).
   * Fixed Subscription: 49 SEK / month (incl. moms).
 * **Grid Operator (Elnätsbolag)**: **Eskilstuna Energi & Miljö (EEM)** (`https://eem.se`).
-* **Solar Inverter**: **SMA Inverter model STP8.0-3AV-40** (3-phase, 8.0 kW AC rating).
-* **Battery Storage**: **SonnenBatterie 10 performance** with 4 modules:
-  * Nominal Capacity: ~22 kWh (~20 kWh usable).
+* **Solar PV System**:
+  * Inverter: **SMA Inverter model STP8.0-3AV-40** (3-phase, 8.0 kW AC rating).
+  * **Installation Date**: **January 2021** (Starting point of the investment).
+  * **Solar Panels Net Capex**: ~**165,000 SEK** (Net out-of-pocket after *Grön Teknik* deduction; ~206,250 SEK gross).
+* **Battery Storage**: **SonnenBatterie 10 performance**:
+  * **Phase 1 Installation Date**: **September 2023** (11 kWh module).
+  * **Phase 2 Expansion Date**: **September 9, 2024** (Additional 11 kWh module added -> Total ~22 kWh nominal / ~20 kWh usable).
+  * **Total Battery Net Capex**: ~**150,000 SEK** (Net out-of-pocket after 50% *Grön Teknik* deduction; ~300,000 SEK gross).
   * Continuous Power: Up to 7.0–8.0 kW.
   * Observed Round-Trip Efficiency: ~76.7% – 77.0%.
+* **Combined Investment Totals**:
+  * **Total Net Capex (Actual Out-of-Pocket)**: ~**315,000 SEK** (165,000 SEK Solar Net + 150,000 SEK Battery Net).
+  * **Gross Total System Cost (Pre-Subsidy)**: ~**506,250 SEK** (~206,250 SEK Solar Gross + ~300,000 SEK Battery Gross).
+* **Historical Data Coverage**:
+  * **2021–2023 (Aug)**: Solar Only period.
+  * **2023 (Sep–Dec)**: 11 kWh SonnenBatterie 10 (`data/sonnen_energy_data_2023.csv`).
+  * **2024 (Full Year)**: 11 kWh (Jan–Aug) transitioning to 22 kWh (Sep 9+) (`data/sonnen_energy_data_2024.csv`).
+  * **2025 (Full Year)**: 22 kWh dual module full year (`data/sonnen_energy_data_2025.csv`).
+  * **2026 (Recent High-Res)**: 30-day 15-min/hourly export (`data/sonnen_energy_data_Sun_Aug_16_2026.csv`).
 * **Execution & Data Hub**:
   * Primary: **Home Assistant Green** (local polling, long-term statistics storage, automation hub).
   * Fallback / Analysis Host: Dedicated Ubuntu laptop running 24/7.
@@ -194,87 +211,88 @@ The web interface will feature a modern dark-theme dashboard with interactive vi
 
 ---
 
-### Phase 2: Smart Strategy & Arbitrage Optimizer
+### Phase 2: Predictive Forecasting & Shadow Recommendation Engine
 
-1. **Solar & Consumption Forecasting**:
-   * Integrate solar generation forecasts (via SMA Inverter data or Forecast.Solar) and household consumption patterns.
-   * Model battery autonomy (current battery lasts ~24h on full charge in summer, slightly less in winter).
-2. **Dynamic Grid Pre-Charging Recommendation Engine**:
-   * Evaluate next-day 15-minute spot prices and solar forecast.
-   * Recommend force-charging the battery during cheap night hours when next-day solar is forecast to be low and peak daytime prices are high.
-3. **Arbitrage Feasibility & Efficiency Gate**:
-   * Gate arbitrage actions behind the efficiency threshold:
+1. **Next-Day Cost & Savings Forecasting**:
+   * Ingest day-ahead hourly/15-minute spot prices (published daily at ~13:00 CET by Nordpool/Tibber).
+   * Integrate solar generation forecasts (via SMA Inverter data, Open-Meteo, or Forecast.Solar) and local weather forecasts (irradiance, temperature).
+   * Project estimated household consumption profile and next-day electricity bill/savings against the "No Solar" baseline.
+
+2. **Dynamic Grid Pre-Charging & Arbitrage Advisor (Shadow Mode / Metrics Only)**:
+   * Evaluate tomorrow's price curve against predicted household load and forecasted solar generation.
+   * Model whether pre-charging the battery during cheap night hours would yield positive financial return under the efficiency gate:
      $$\Delta \text{Price} > \frac{C_{\text{import}}}{\eta_{\text{roundtrip}}} - R_{\text{export}} + \text{LossMargin}$$
-     Ensures battery is never cycled for arbitrage unless the net spread guarantees profit after accounting for the ~23% round-trip conversion loss.
+   * Output explicit actionable recommendations without actively controlling the hardware (e.g. *"Pre-charge 10 kWh between 02:00–05:00 at avg 18 öre/kWh to cover morning peak spike at 145 öre/kWh"*).
+
+3. **Prediction vs. Actual Backtesting & Value Delta Tracking**:
+   * Log daily recommendations and expected financial impact.
+   * Compare projected outcomes against actual realized energy logs the next day.
+   * Compute exact benchmark metric: *"The recommendation engine would have saved/lost X SEK compared to actual dispatch"*, verifying algorithm value before enabling physical control.
 
 ---
 
 ## 6. Implementation Roadmap & Verifiable Milestones
 
-Development is organized around **Milestone Branches** (`feat/mX-...`) that merge into `main` via GitHub Pull Requests, with CI/CD automation established starting from Milestone 1:
+Development is organized around **Milestone Branches** (`feat/mX-...`) that merge into `main` via GitHub Pull Requests, with CI/CD automation:
 
 ```mermaid
 flowchart TD
-    subgraph Git Workflow
-        m1_branch["feat/m1-price-providers"] -->|PR + CI Check| main["main (trunk)"]
-        m2_branch["feat/m2-financial-engine"] -->|PR + CI Check| main
-        m3_branch["feat/m3-high-res-analyzer"] -->|PR + CI Check| main
-        m4_branch["feat/m4-dashboard-ui"] -->|PR + CI Check| main
-        main -->|Auto Deploy (M4+)| pages["GitHub Pages Live App"]
+    subgraph Phase 1: Historical Ingestion & Verification
+        m1_branch["feat/m1-price-providers"] -->|Done| main["main (trunk)"]
+        m2_branch["feat/m2-financial-engine"] -->|Done| main
+        m3_branch["feat/m3-high-res-analyzer"] -->|Done| main
+        m4_branch["feat/m4-dashboard-ui"] -->|Done| main
+        m5_branch["feat/m5-multi-year-validation"] -->|Next| main
     end
+
+    subgraph Phase 2: Predictive Forecasting & Shadow Metrics
+        m6_branch["feat/m6-next-day-forecast"] --> main
+    end
+
+    main -->|Auto Deploy| pages["GitHub Pages Live App"]
 ```
 
-### Milestone 1: Price Ingestion, Provider Module & CI Foundation
+### Milestone 1: Price Ingestion, Provider Module & CI Foundation (Completed)
 * **Branch**: `feat/m1-price-providers`
-* **Deliverables**:
-  * `1.1 CI Foundation`: Establish `.github/workflows/ci.yml` with **Gitleaks secret scanner**, linter, and automated test harness.
-  * `1.2 PriceProvider Interface & Disk Cache`: Core modular interface and local file cache (`data/prices/`).
-  * `1.3 Elering Adapter`: Zero-auth public REST client fetching hourly SE3 spot prices.
-  * `1.4 ENTSO-E Adapter`: Authenticated client fetching official SE3 spot prices (hourly & 15-min).
-  * `1.5 Tibber GraphQL Adapter`: Authenticated client fetching actual household spot prices.
-* **Verification Gate**:
-  * CI pipeline passes: Gitleaks scan is clean, and automated test suite validates price fetching and caching across providers.
+* **Deliverables**: Pluggable `PriceProvider` interface, caching, Elering/ENTSO-E/Tibber providers, and CI with Gitleaks & Flake8.
 
-### Milestone 2: 2025 Full-Year ROI & Baseline Engine
+### Milestone 2: 2025 Full-Year ROI & Baseline Engine (Completed)
 * **Branch**: `feat/m2-financial-engine`
-* **Deliverables**:
-  * `2.1 Swedish Tariff Calculator`: Logic for EEM grid fees, energiskatt, moms, 60 öre skattereduktion, and Tibber fees.
-  * `2.2 3-Way Baseline Calculator`: Ingest `sonnen_energy_data_2025.csv`, compute synthetic hourly weights, and calculate realized vs. baseline costs.
-  * `2.3 Capex & Payback Calculator`: Compute cumulative savings and percentage of investment recouped.
-  * `2.4 CI Tariff Tests`: Add automated test vectors for Swedish tax/fee equations to CI.
-* **Verification Gate**:
-  * Audited JSON/CLI report of the 2025 financial ledger showing exact monthly/annual SEK savings and battery marginal value; CI tests pass.
+* **Deliverables**: Swedish tariff calculator (EEM fees, tax reduction, moms), 3-way baseline engine, Capex payback calculator, and CLI tool.
 
-### Milestone 3: High-Resolution 30-Day & Multi-Resolution Engine
+### Milestone 3: High-Resolution 30-Day & Multi-Resolution Engine (Completed)
 * **Branch**: `feat/m3-high-res-analyzer`
-* **Deliverables**:
-  * `3.1 30-Day Hourly Ingestion`: Ingest `sonnen_energy_data_Sun_Aug_16_2026.csv` (744 hours).
-  * `3.2 Resolution Matcher`: Align hourly energy logs with post-2025-10-01 15-minute spot prices.
-  * `3.3 Accuracy Comparison Analysis`: Compare exact hourly calculation vs. daily average estimation.
-  * `3.4 CI Multi-Res Tests`: Add resolution alignment tests to CI.
-* **Verification Gate**:
-  * Accuracy delta report measuring variance between daily-averaged vs. hourly-settled energy costs; CI tests pass.
+* **Deliverables**: 744-hour high-res ingestion, multi-res matching (15-min to hourly), and daily-average estimation variance benchmarks.
 
-### Milestone 4: Interactive Web Dashboard & GitHub Pages CD
+### Milestone 4: Interactive Web Dashboard & GitHub Pages CD (Completed)
 * **Branch**: `feat/m4-dashboard-ui`
-* **Deliverables**:
-  * `4.1 KPI Cards & Capex Progress Ring`: Display total savings, recouped investment %, and payback estimate.
-  * `4.2 Cumulative Payback S-Curve Chart`: Interactive Chart.js graph tracking cash flow across 25 years.
-  * `4.3 3-Way Baseline Bar Chart`: Monthly visual comparison of No Solar vs. Solar Only vs. Actual.
-  * `4.4 Hourly Dispatch & Price Overlay Chart`: 24h interactive dispatch viewer.
-  * `4.5 Interactive Financial Ledger Table & Capex Slider`: Live updating UI controls.
-  * `4.6 Automated CD Workflow`: Add `.github/workflows/deploy.yml` for automated GitHub Pages continuous deployment on merge to `main`.
-* **Verification Gate**:
-  * Merging PR to `main` automatically deploys the live, responsive web app to GitHub Pages with zero secret leakage.
+* **Deliverables**: Modern dark-theme glassmorphic UI, 25-year calendar S-Curve (2021-2045), 3-way baseline bar chart, 24h dispatch overlay, static data baking pipeline, and automated GitHub Pages CD workflow (`.github/workflows/deploy.yml`).
 
-### Milestone 5: Home Assistant Integration & Phase 2 Optimizer
-* **Branch**: `feat/m5-ha-integration`
+### Milestone 5: Multi-Year Historical Expansion (2023–2025) & Calculation Validation
+* **Branch**: `feat/m5-multi-year-validation`
 * **Deliverables**:
-  * `5.1 Home Assistant Polling Integration`: Ingest live metrics from Sonnen/SMA HA entities.
-  * `5.2 Custom HA Sensor / Dashboard Cards`: Publish live ROI and daily savings to HA.
-  * `5.3 Phase 2 Grid Pre-Charging Advisor`: Implement the efficiency-gated dynamic charging recommendation engine.
+  * `5.1 Multi-Year Sonnen CSV Ingestion`: Ingest `sonnen_energy_data_2023.csv` (Sep–Dec 2023) and `sonnen_energy_data_2024.csv` (Full Year 2024).
+  * `5.2 Hardware Transition Modeling`:
+    * Model Transition 1: Solar Only (Jan 2021 – Aug 2023).
+    * Model Transition 2: 11 kWh SonnenBatterie 10 (Sep 2023 – Sep 8, 2024).
+    * Model Transition 3: 22 kWh SonnenBatterie 10 Expansion (Sep 9, 2024 – Present).
+  * `5.3 Historical Spot Price Ingestion & Matching`: Fetch and cache full 2023 and 2024 SE3 spot prices.
+  * `5.4 Multi-Year Verification & Web Dashboard Integration`: Validate historical calculation integrity, verify monthly/annual savings, and add multi-year selector to the dashboard.
 * **Verification Gate**:
-  * Publish a verified sensor state to Home Assistant advising optimal charging schedule for the next day.
+  * Audited multi-year financial ledger showing exact energy balances and savings across 2023, 2024, and 2025; all pre-push checks pass.
+
+### Milestone 6: Next-Day Forecasting & Shadow Recommendation Engine
+* **Branch**: `feat/m6-next-day-forecast`
+* **Deliverables**:
+  * `6.1 Day-Ahead Price & Weather Ingestion`: Ingest tomorrow's published spot prices and local weather/solar irradiance forecast.
+  * `6.2 Next-Day Cost & Savings Projection`: Model expected consumption and calculate tomorrow's projected bill and savings.
+  * `6.3 Dynamic Charging Advisor (Shadow Mode)`: Generate pre-charging/dispatch advice without physical control.
+  * `6.4 Prediction vs. Actual Backtesting`: Track and report predicted vs. actual delta (*"Engine would have saved/lost X SEK"*).
+* **Verification Gate**:
+  * Automated forecast pipeline and backtesting accuracy metrics report; CI tests pass.
+
+### Phase 3 (Future): Home Assistant Custom Integration & Active Control
+* **Deliverables**: Home Assistant custom sensors, long-term statistics entity, and optional automated battery dispatch after predictive model verification.
 
 ---
 
