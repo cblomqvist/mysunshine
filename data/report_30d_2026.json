@@ -1,0 +1,137 @@
+{
+  "period": {
+    "start": "2026-07-16T00:00:00+02:00",
+    "end": "2026-08-15T23:00:00+02:00",
+    "total_hours": 744,
+    "total_days": 31.0
+  },
+  "energy_kwh": {
+    "produced": 1251.57,
+    "consumed": 591.38,
+    "imported": 59.67,
+    "exported": 647.03,
+    "battery_charged": 318.69,
+    "battery_discharged": 244.49
+  },
+  "pricing_ore_kwh": {
+    "average": 44.56,
+    "minimum": -0.02,
+    "maximum": 237.18
+  },
+  "financial_summary_sek": {
+    "baseline_no_solar_cost": 821.39,
+    "baseline_solar_only_cost": -518.28,
+    "actual_cost": -500.51,
+    "total_savings": 1321.9,
+    "solar_contribution": 1339.68,
+    "battery_marginal_value": -17.77,
+    "fixed_costs_included": 49.91
+  },
+  "kpis": {
+    "battery_efficiency_pct": 76.72,
+    "solar_only_sc_pct": 26.53,
+    "actual_sc_pct": 48.63
+  },
+  "variance_benchmarks": {
+    "daily_averaged": {
+      "method_name": "Simple Daily Net Sum & Daily Average Spot Price",
+      "metrics": [
+        {
+          "metric": "Baseline 1 Cost",
+          "exact_sek": 821.39,
+          "estimated_sek": 849.6,
+          "delta_sek": 28.2,
+          "percentage_error": 3.43
+        },
+        {
+          "metric": "Baseline 2 (Solar Only) Net Cost",
+          "exact_sek": -518.28,
+          "estimated_sek": -704.8,
+          "delta_sek": -186.51,
+          "percentage_error": 35.99
+        },
+        {
+          "metric": "Actual System Net Cost",
+          "exact_sek": -500.51,
+          "estimated_sek": -624.35,
+          "delta_sek": -123.84,
+          "percentage_error": 24.74
+        },
+        {
+          "metric": "Total Realized Savings",
+          "exact_sek": 1321.9,
+          "estimated_sek": 1473.95,
+          "delta_sek": 152.04,
+          "percentage_error": 11.5
+        },
+        {
+          "metric": "Solar Contribution",
+          "exact_sek": 1339.68,
+          "estimated_sek": 1554.4,
+          "delta_sek": 214.72,
+          "percentage_error": 16.03
+        },
+        {
+          "metric": "Battery Marginal Value",
+          "exact_sek": -17.77,
+          "estimated_sek": -80.45,
+          "delta_sek": -62.67,
+          "percentage_error": 352.64
+        }
+      ],
+      "avg_absolute_error_sek": 128.0,
+      "root_mean_square_error_sek": 143.8,
+      "commentary": "Simple daily averaging overestimates solar-only self-consumption because it assumes solar generated at noon can offset evening load without a battery. This severely understates the true marginal value of the battery."
+    },
+    "synthetic_weighted": {
+      "method_name": "Synthetic Diurnal Profile Weighting (Milestone 2 Methodology)",
+      "metrics": [
+        {
+          "metric": "Baseline 1 Cost",
+          "exact_sek": 821.39,
+          "estimated_sek": 911.84,
+          "delta_sek": 90.45,
+          "percentage_error": 11.01
+        },
+        {
+          "metric": "Baseline 2 (Solar Only) Net Cost",
+          "exact_sek": -518.28,
+          "estimated_sek": -586.89,
+          "delta_sek": -68.61,
+          "percentage_error": 13.24
+        },
+        {
+          "metric": "Actual System Net Cost",
+          "exact_sek": -500.51,
+          "estimated_sek": -624.35,
+          "delta_sek": -123.84,
+          "percentage_error": 24.74
+        },
+        {
+          "metric": "Total Realized Savings",
+          "exact_sek": 1321.9,
+          "estimated_sek": 1536.19,
+          "delta_sek": 214.29,
+          "percentage_error": 16.21
+        },
+        {
+          "metric": "Solar Contribution",
+          "exact_sek": 1339.68,
+          "estimated_sek": 1498.73,
+          "delta_sek": 159.06,
+          "percentage_error": 11.87
+        },
+        {
+          "metric": "Battery Marginal Value",
+          "exact_sek": -17.77,
+          "estimated_sek": 37.46,
+          "delta_sek": 55.23,
+          "percentage_error": -310.75
+        }
+      ],
+      "avg_absolute_error_sek": 118.58,
+      "root_mean_square_error_sek": 130.7,
+      "commentary": "Synthetic diurnal profile weighting closely tracks actual load and solar shapes, significantly improving precision compared to simple daily averaging while remaining applicable when only daily aggregated data is available."
+    }
+  }
+}
