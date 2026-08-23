@@ -104,6 +104,20 @@ A pluggable adapter interface (`PriceProvider`) to fetch and cache historical SE
 | **Energy-Charts API (Fraunhofer ISE)** | European Day-Ahead Spot | Hourly | None (Public REST) | Robust secondary fallback |
 | **Local Cache / Static File Adapter** | User-supplied or pre-fetched | Any | Local file | Offline & rapid test execution |
 
+### C. Configuration, Endpoints & Secrets Management
+
+All external API endpoints, local hardware URLs, and private security tokens are managed via a local, git-ignored `.env` file:
+* **External Price APIs**:
+  * `ENTSOE_API_URL` & `ENTSOE_API_KEY`: ENTSO-E Transparency Platform endpoint & security token.
+  * `TIBBER_API_URL` & `TIBBER_API_TOKEN`: Tibber GraphQL endpoint & personal access token.
+  * `ELERING_API_URL`: Elering public spot price API endpoint.
+  * `ENERGY_CHARTS_API_URL`: Fraunhofer Energy-Charts API endpoint.
+* **Local Hardware & Hub Endpoints**:
+  * `HA_URL` & `HA_TOKEN`: Home Assistant Green base URL and optional Long-Lived Access Token.
+  * `SONNEN_URL` & `SONNEN_API_TOKEN`: SonnenBatterie 10 local API base URL & token.
+  * `SMA_URL`: SMA Inverter Webconnect URL.
+* A template [` .env.example `](file:///C:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/.env.example) is committed to version control to provide the full configuration schema.
+
 ---
 
 ## 4. Swedish Electricity Pricing & Tariff Model (Tibber + EEM / SE3)
