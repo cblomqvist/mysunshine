@@ -109,7 +109,13 @@ A pluggable adapter interface (`PriceProvider`) to fetch and cache historical SE
 All external API endpoints, local hardware URLs, and private security tokens are managed via a local, git-ignored `.env` file:
 * **External Price APIs**:
   * `ENTSOE_API_URL` & `ENTSOE_API_KEY`: ENTSO-E Transparency Platform endpoint & security token.
-  * `TIBBER_API_URL` & `TIBBER_API_TOKEN`: Tibber GraphQL endpoint & personal access token.
+  * `TIBBER_API_URL` Tibber GraphQL endpoint. 
+  * `TIBBER_API_TOKEN`: Tibber GraphQL token for these scopes:
+    * tibber_graph
+    * user
+    * homes
+    * price
+    * consumption
   * `ELERING_API_URL`: Elering public spot price API endpoint.
   * `ENERGY_CHARTS_API_URL`: Fraunhofer Energy-Charts API endpoint.
 * **Local Hardware & Hub Endpoints**:
