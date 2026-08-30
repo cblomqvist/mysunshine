@@ -6,7 +6,7 @@ from src.financial_engine.multi_year import (
 
 
 def test_get_available_years():
-    """Verify that MultiYearEngine discovers 2023, 2024, and 2025 dataset files."""
+    """Verify that MultiYearEngine discovers 2023, 2024, 2025, and 2026 dataset files."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, "data")
     prices_dir = os.path.join(data_dir, "prices")
@@ -17,7 +17,8 @@ def test_get_available_years():
     assert 2023 in years
     assert 2024 in years
     assert 2025 in years
-    assert len(years) == 3
+    assert 2026 in years
+    assert len(years) == 4
 
 
 def test_historical_year_2023_partial():
@@ -60,6 +61,25 @@ def test_historical_year_2024_full_leap():
     assert len(report.monthly_ledgers) == 12
 
 
+def test_historical_year_2026_ytd():
+    """Verify that 2026 YTD calculates properly without skattereduktion."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(base_dir, "data")
+    prices_dir = os.path.join(data_dir, "prices")
+
+    calc = HistoricalYearCalculator(
+        year=2026,
+        data_file=os.path.join(data_dir, "sonnen_energy_data_2026.csv"),
+        price_file=os.path.join(prices_dir, "se3_prices_2026.json"),
+    )
+    report = calc.calculate_annual_report(capex_sek=315000.0)
+
+    assert report.year == 2026
+    assert report.total_days >= 240
+    assert report.energy_totals["produced_kwh"] > 7000
+    assert report.financial_totals["total_savings_sek"] > 0
+
+
 def test_multi_year_engine_aggregation():
     """Verify that MultiYearEngine combines all historical years accurately."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,11 +91,11 @@ def test_multi_year_engine_aggregation():
 
     assert "multi_year_summary" in results
     summary = results["multi_year_summary"]
-    assert summary["total_recorded_years"] == 3
-    assert summary["total_days"] == 110 + 366 + 365
-    assert summary["energy_totals"]["produced_kwh"] > 17000
+    assert summary["total_recorded_years"] == 4
+    assert summary["total_days"] >= 1080
+    assert summary["energy_totals"]["produced_kwh"] > 24000
     assert summary["financial_totals"]["total_savings_sek"] > 0
-    assert len(summary["annual_comparison"]) == 3
+    assert len(summary["annual_comparison"]) == 4
 
     assert "hardware_eras" in results
     assert len(results["hardware_eras"]) == 3
@@ -102,3 +122,4 @@ def test_multi_year_cli():
     assert "2023" in data["years"]
     assert "2024" in data["years"]
     assert "2025" in data["years"]
+    assert "2026" in data["years"]

@@ -268,7 +268,7 @@ function updateSimulation() {
     const energiskattSek = parseFloat(energiskattInput.value) / 100.0;
     const eemTransferSek = parseFloat(eemTransferInput.value) / 100.0;
     const tibberFee = parseFloat(tibberFeeInput.value);
-    const selectedPeriod = historyYearSelect ? historyYearSelect.value : '2025';
+    const selectedPeriod = historyYearSelect ? historyYearSelect.value : 'all';
 
     // 1. Process all available historical years
     const rawYearsData = dashboardData.years || (dashboardData.year_2025 ? { 2025: dashboardData.year_2025 } : {});
@@ -299,6 +299,7 @@ function updateSimulation() {
         let eraName = "Sonnen 22 kWh (Dual)";
         if (yrStr === "2023") eraName = "Sonnen 11 kWh Installed (Sep)";
         else if (yrStr === "2024") eraName = "11 kWh → 22 kWh Expansion (Sep 9)";
+        else if (yrStr === "2026") eraName = "Sonnen 22 kWh (No Skattereduktion)";
 
         annualSummaries.push({
             year: parseInt(yrStr, 10),
@@ -326,6 +327,9 @@ function updateSimulation() {
     let kpiSolarGen = 0;
     let kpiSubTitle = '';
 
+    const firstYear = availableYearKeys[0] || '2023';
+    const lastYear = availableYearKeys[availableYearKeys.length - 1] || '2026';
+
     if (selectedPeriod === 'all') {
         availableYearKeys.forEach(yk => {
             displayMonths = displayMonths.concat(recalculatedYears[yk]);
@@ -334,8 +338,8 @@ function updateSimulation() {
         kpiActual = annualSummaries.reduce((a, y) => a + y.actual_cost_sek, 0);
         kpiSolarOnly = annualSummaries.reduce((a, y) => a + y.baseline_solar_only_sek, 0);
         kpiSolarGen = annualSummaries.reduce((a, y) => a + y.produced_kwh, 0);
-        kpiSubTitle = `vs. ${formatSEK(kpiNoSolar)} No-Solar baseline (2023–2025 Cumulative)`;
-        if (monthlyTabTitle) monthlyTabTitle.innerText = `All Historical Months (2023–2025)`;
+        kpiSubTitle = `vs. ${formatSEK(kpiNoSolar)} No-Solar baseline (${firstYear}–${lastYear} Cumulative)`;
+        if (monthlyTabTitle) monthlyTabTitle.innerText = `All Historical Months (${firstYear}–${lastYear})`;
     } else {
         displayMonths = recalculatedYears[selectedPeriod] || recalculatedYears['2025'] || [];
         const yrSummary = annualSummaries.find(y => y.year === parseInt(selectedPeriod, 10));
