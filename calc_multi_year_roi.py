@@ -25,7 +25,7 @@ def main():
     parser.add_argument(
         "--year",
         type=int,
-        choices=[2023, 2024, 2025],
+        choices=[2023, 2024, 2025, 2026],
         default=None,
         help="Specific year to calculate (default: all available years)",
     )
