@@ -44,11 +44,11 @@ Postpone active battery hardware control until historical calculations and predi
   * **Total Net Capex (Actual Out-of-Pocket)**: ~**315,000 SEK** (165,000 SEK Solar Net + 150,000 SEK Battery Net).
   * **Gross Total System Cost (Pre-Subsidy)**: ~**506,250 SEK** (~206,250 SEK Solar Gross + ~300,000 SEK Battery Gross).
 * **Historical Data Coverage**:
-  * **2021–2023 (Aug)**: Solar Only period.
+  * **2021–2023 (Aug)**: Solar Only period (`data/sunnyportal-sma-inverter-data-2026-10-24.csv` and `data/EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv`).
   * **2023 (Sep–Dec)**: 11 kWh SonnenBatterie 10 (`data/sonnen_energy_data_2023.csv`).
-  * **2024 (Full Year)**: 11 kWh (Jan–Aug) transitioning to 22 kWh (Sep 9+) (`data/sonnen_energy_data_2024.csv`).
+  * **2024 (Full Year)**: 11 kWh (Jan–Aug) transitioning to 22 kWh (Sep 9+) (`data/sonnen_energy_data_2024.csv` and `data/eem-yearly-costs-2024-2026.csv`).
   * **2025 (Full Year)**: 22 kWh dual module full year (`data/sonnen_energy_data_2025.csv`).
-  * **2026 (Recent High-Res)**: 30-day 15-min/hourly export (`data/sonnen_energy_data_Sun_Aug_16_2026.csv`).
+  * **2026 (Full YTD + 94-day High-Res)**: 242-day continuous operational record + 94-day high-resolution hourly/quarterly time-series (July 16 – Oct 17, 2026).
 * **Execution & Data Hub**:
   * Primary: **Home Assistant Green** (local polling, long-term statistics storage, automation hub).
   * Fallback / Analysis Host: Dedicated Ubuntu laptop running 24/7.
@@ -271,18 +271,32 @@ flowchart TD
 * **Branch**: `feat/m4-dashboard-ui`
 * **Deliverables**: Modern dark-theme glassmorphic UI, 25-year calendar S-Curve (2021-2045), 3-way baseline bar chart, 24h dispatch overlay, static data baking pipeline, and automated GitHub Pages CD workflow (`.github/workflows/deploy.yml`).
 
-### Milestone 5: Multi-Year Historical Expansion (2023–2025) & Calculation Validation
-* **Branch**: `feat/m5-multi-year-validation`
+### Milestone 5: Multi-Year Historical Expansion (2023–2026) & Calculation Validation (Completed)
+* **Branch**: `feat/m5-multi-year-validation` (Merged & Committed: `6e6e00c`)
 * **Deliverables**:
-  * `5.1 Multi-Year Sonnen CSV Ingestion`: Ingest `sonnen_energy_data_2023.csv` (Sep–Dec 2023) and `sonnen_energy_data_2024.csv` (Full Year 2024).
-  * `5.2 Hardware Transition Modeling`:
-    * Model Transition 1: Solar Only (Jan 2021 – Aug 2023).
-    * Model Transition 2: 11 kWh SonnenBatterie 10 (Sep 2023 – Sep 8, 2024).
-    * Model Transition 3: 22 kWh SonnenBatterie 10 Expansion (Sep 9, 2024 – Present).
-  * `5.3 Historical Spot Price Ingestion & Matching`: Fetch and cache full 2023 and 2024 SE3 spot prices.
-  * `5.4 Multi-Year Verification & Web Dashboard Integration`: Validate historical calculation integrity, verify monthly/annual savings, and add multi-year selector to the dashboard.
+  * `5.1 Multi-Year Sonnen CSV Ingestion`: Ingested `sonnen_energy_data_2023.csv` (Sep–Dec 2023), `sonnen_energy_data_2024.csv` (Full Year 2024), `sonnen_energy_data_2025.csv` (Full Year 2025), and 2026 YTD with automated deduplication across overlapping files.
+  * `5.2 Hardware Transition Modeling`: Modeled Era 1 (Solar Only), Era 2 (11 kWh SonnenBatterie 10 Sep 2023 – Sep 8, 2024), and Era 3 (22 kWh SonnenBatterie 10 Expansion Sep 9, 2024 – Present).
+  * `5.3 Historical Spot Price Ingestion & Matching`: Ingested and cached full SE3 spot prices across 2023, 2024, 2025, and 2026 with sub-hourly (15-min) pricing resolution support in Swedish local time (CET/CEST).
+  * `5.4 Calculation Engine Fixes & Verification`:
+    * Normalized diurnal profile weights (`DEFAULT_DIURNAL_LOAD_WEIGHTS` and `DEFAULT_DIURNAL_SOLAR_WEIGHTS`) so hourly coefficients sum strictly to 1.0.
+    * Implemented date-aware Skattereduktion terminating the 60 öre/kWh subsidy on 2026-01-01.
+    * Re-baked static dashboard package (`dashboard_data.json` and `dashboard_data.js`).
+  * `5.5 3-Way Baseline Chart Augmentations`:
+    * Augmented Chart 2 with diagonal hatched pattern depicting the exact Skattereduktion subsidy share on affected columns during valid years (2021–2025).
+    * Dynamic title toggle between "3-Way Baseline Yearly Comparison" (All Historical Data) and "3-Way Baseline Monthly Comparison" (single-year views).
 * **Verification Gate**:
-  * Audited multi-year financial ledger showing exact energy balances and savings across 2023, 2024, and 2025; all pre-push checks pass.
+  * 38/38 unit and multi-resolution integration tests passing; all pre-push checks green.
+
+### Milestone 5.5: Full Day-1 Historical Expansion (2021–2023 Solar Era) & Utility Audit (In Progress)
+* **Branch**: `feat/m5.5-day1-historical-expansion`
+* **Deliverables**:
+  * `5.5.1 SMA Inverter Solar Yield Ingestion`: Ingest monthly production logs from `data/sunnyportal-sma-inverter-data-2026-10-24.csv` (8,381.5 kWh in 2021, 9,038.1 kWh in 2022, 8,532.4 kWh in 2023).
+  * `5.5.2 EEM Utility Meter Readings Ingestion`: Ingest official monthly export meter readings from `data/EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv` (5,695.3 kWh exported in 2021, 6,998.0 kWh exported in 2022).
+  * `5.5.3 Empirical Solar-Only Baseline 2 Calibration`: Calibrate Baseline 2 using actual empirical self-consumption rates (32.0% in 2021, 22.6% in 2022) and compute exact financial returns during the 2021–2022 energy crisis.
+  * `5.5.4 Utility Billing Benchmark`: Audit `SwedishTariff` fixed and variable fees against actual utility billed amounts in `data/eem-yearly-costs-2024-2026.csv`.
+  * `5.5.5 Item 4 Granular Actual Export Arbitrage`: Enhance actual system revenue calculations using granular hourly dispatch records.
+* **Verification Gate**:
+  * Complete 2021–2026 historical financial ledger starting from Day 1 installation date; verified cumulative capex recoupment.
 
 ### Milestone 6: Next-Day Forecasting & Shadow Recommendation Engine
 * **Branch**: `feat/m6-next-day-forecast`
@@ -329,14 +343,33 @@ flowchart LR
 > [!CAUTION]
 > **Strict Security Boundary**: Private API keys (`ENTSOE_API_KEY`, `TIBBER_API_TOKEN`, Home Assistant tokens) **must NEVER be shipped to, embedded in, or called directly from client-side JavaScript** deployed on public GitHub Pages.
 
-1. **Build-Time / Local Data Pipeline (Static Data Baking)**:
-   * Data fetching using authenticated APIs (ENTSO-E / Tibber) runs **strictly server-side** (locally on your machine or inside ephemeral GitHub Actions runners).
-   * The pipeline processes and normalizes the historical price data into sanitized, static JSON data files (`data/prices/se3_prices_2025.json`).
-   * The static web app on GitHub Pages merely loads these pre-computed JSON files. **No API tokens exist in the browser bundle or client network requests.**
-2. **Zero-Auth Fallbacks for Client Runtime**:
-   * If the browser needs live day-ahead spot prices at runtime without a backend server, it exclusively queries **unauthenticated public APIs** (such as Elering public REST or Energy-Charts) that do not require any secret tokens.
-3. **GitHub Secrets for CI Automation**:
-   * API tokens used in automated build or test workflows are stored as encrypted **GitHub Repository Secrets** (`Settings -> Secrets and variables -> Actions`). They are injected into ephemeral GitHub Actions runners during build time and are never exposed in build artifacts or public web pages.
+### 4. Mandatory Pre-Commit & Pre-Push Verification Routine
+
+To guarantee zero CI failures and ensure git pushes are never blocked by local hooks:
+1. Execute the full validation suite before completing any task or making a commit:
+   ```bash
+   bash .git/hooks/pre-push
+   # or
+   python run_checks.py
+   ```
+2. Verify all verification stages pass:
+   * **Stage 1**: Flake8 critical syntax & undefined names (`E9, F63, F7, F82`).
+   * **Stage 2**: Flake8 style & line length (`--max-line-length=120`).
+   * **Stage 3**: Automated pytest unit and integration test suite (100% green).
+3. If new data files are added or calculation logic changes, always re-bake static dashboard datasets:
+   ```bash
+   python -m src.financial_engine.generate_dashboard_data
+   ```
+
+---
+
+## 8. Cross-Session Handover Protocol
+
+To maintain complete continuity across new chat conversations and minimize token overhead:
+* **Single Source of Truth**: Maintain a dedicated [`HANDOVER.md`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/HANDOVER.md) file at the repository root.
+* **Session Close**: At the conclusion of each milestone or when starting a new session, update `HANDOVER.md` with current branch, commit hash, completed work, active blockers/findings, and next actionable steps.
+* **Session Start**: Any new chat session begins by reading `HANDOVER.md` and `prd.md` to immediately restore exact project state without redundant re-analysis.
+
 
 
 
