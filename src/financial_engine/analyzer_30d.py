@@ -151,7 +151,9 @@ class HighRes30DayReport:
             },
             "variance_benchmarks": {
                 "daily_averaged": self.daily_averaged_variance.to_dict() if self.daily_averaged_variance else None,
-                "synthetic_weighted": self.synthetic_weighted_variance.to_dict() if self.synthetic_weighted_variance else None,
+                "synthetic_weighted": (
+                    self.synthetic_weighted_variance.to_dict() if self.synthetic_weighted_variance else None
+                ),
             },
         }
 
@@ -215,15 +217,16 @@ class HighResAnalyzer:
             instant_exp = max(0.0, e.produced_kwh - e.consumed_kwh)
             instant_imp = max(0.0, e.consumed_kwh - e.produced_kwh)
 
+            d_str = e.timestamp.strftime("%Y-%m-%d")
             b2_sc_tot += instant_sc
             b2_exp_tot += instant_exp
             b2_imp_tot += instant_imp
             b2_imp_cost += self.tariff.calculate_import_cost(instant_imp, p)
-            b2_exp_rev += self.tariff.calculate_export_revenue(instant_exp, p)
+            b2_exp_rev += self.tariff.calculate_export_revenue(instant_exp, p, date_str=d_str)
 
             # Actual System: Solar + Battery
             act_imp_cost += self.tariff.calculate_import_cost(e.grid_purchase_kwh, p)
-            act_exp_rev += self.tariff.calculate_export_revenue(e.grid_feedin_kwh, p)
+            act_exp_rev += self.tariff.calculate_export_revenue(e.grid_feedin_kwh, p, date_str=d_str)
             act_sc_tot += max(0.0, e.produced_kwh - e.grid_feedin_kwh)
 
         # Baseline Summaries
@@ -362,11 +365,11 @@ class HighResAnalyzer:
             day_imp = max(0.0, day_consumed - day_produced)
 
             est_b2_imp_cost += self.tariff.calculate_import_cost(day_imp, day_avg_p)
-            est_b2_exp_rev += self.tariff.calculate_export_revenue(day_exp, day_avg_p)
+            est_b2_exp_rev += self.tariff.calculate_export_revenue(day_exp, day_avg_p, date_str=day_str)
 
             # Actual
             est_act_imp_cost += self.tariff.calculate_import_cost(day_act_imp, day_avg_p)
-            est_act_exp_rev += self.tariff.calculate_export_revenue(day_act_exp, day_avg_p)
+            est_act_exp_rev += self.tariff.calculate_export_revenue(day_act_exp, day_avg_p, date_str=day_str)
 
         est_b1_net = est_b1_imp_cost + fixed_costs
         est_b2_net = est_b2_imp_cost - est_b2_exp_rev + fixed_costs
@@ -430,7 +433,7 @@ class HighResAnalyzer:
 
             # Actual with daily average price
             est_act_imp_cost += self.tariff.calculate_import_cost(day_act_imp, day_avg_p)
-            est_act_exp_rev += self.tariff.calculate_export_revenue(day_act_exp, day_avg_p)
+            est_act_exp_rev += self.tariff.calculate_export_revenue(day_act_exp, day_avg_p, date_str=day_str)
 
             # Distribute with standard diurnal weights across 24h
             n_h = len(day_intervals)
@@ -449,8 +452,7 @@ class HighResAnalyzer:
                 imp_h = max(0.0, l_h - pv_h)
 
                 est_b2_imp_cost += self.tariff.calculate_import_cost(imp_h, p_h)
-                est_b2_exp_rev += self.tariff.calculate_export_revenue(exp_h, p_h)
-
+                est_b2_exp_rev += self.tariff.calculate_export_revenue(exp_h, p_h, date_str=day_str)
 
         est_b1_net = est_b1_imp_cost + fixed_costs
         est_b2_net = est_b2_imp_cost - est_b2_exp_rev + fixed_costs

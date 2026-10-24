@@ -208,20 +208,22 @@ function populateDispatchDays() {
 }
 
 // Helper: Recalculate financial costs for a list of monthly ledgers given current tariff settings
-function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek, taxRedEnabled, tibberFee) {
+function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek, taxRedEnabled, tibberFee, defaultYear = 2025) {
     return monthlyLedgers.map(m => {
         const spotSek = (m.avg_spot_price_ore_kwh || m.avg_spot_price_ore || 50.0) / 100.0;
+        const year = m.year || defaultYear;
         
         // Import cost per kWh
         const importCostPerKwh = (spotSek + energiskattSek + eemTransferSek) * (1.0 + MOMS_RATE);
         
-        // Export revenue per kWh
-        const taxRedSek = taxRedEnabled ? 0.60 : 0.0;
+        // Export revenue per kWh (Skattereduktion 60 öre/kWh ended 2026-01-01)
+        const isTaxRedValid = taxRedEnabled && (year < 2026);
+        const taxRedSek = isTaxRedValid ? 0.60 : 0.0;
         const eemNatnyttaSek = 0.08; // 8 öre/kWh standard grid benefit
         const exportRevPerKwh = spotSek + eemNatnyttaSek + taxRedSek;
         
         // Monthly fixed cost
-        const daysInMonth = m.days_count || 30;
+        const daysInMonth = m.days_count || m.days || 30;
         const monthFraction = daysInMonth / 30.4375;
         const fixedCost = (tibberFee + 100.0) * monthFraction;
 
@@ -233,9 +235,11 @@ function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek,
         const solarDirectSC = Math.min(m.consumed_kwh, m.produced_kwh * scPct);
         const solarOnlyImport = Math.max(0, m.consumed_kwh - solarDirectSC);
         const solarOnlyExport = Math.max(0, m.produced_kwh - solarDirectSC);
+        const solarOnlyTaxRed = solarOnlyExport * taxRedSek;
         const solarOnlyCost = (solarOnlyImport * importCostPerKwh) - (solarOnlyExport * exportRevPerKwh) + fixedCost;
 
         // Actual System (Solar + SonnenBatterie 10)
+        const actualTaxRed = m.exported_kwh * taxRedSek;
         const actualImportCost = m.imported_kwh * importCostPerKwh;
         const actualExportRev = m.exported_kwh * exportRevPerKwh;
         const actualCost = actualImportCost - actualExportRev + fixedCost;
@@ -247,7 +251,11 @@ function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek,
         return {
             ...m,
             month: m.month_name || m.month,
-            year: m.year || 2025,
+            year: year,
+            is_tax_red_valid: isTaxRedValid,
+            solar_only_tax_red_sek: solarOnlyTaxRed,
+            actual_tax_red_sek: actualTaxRed,
+            solar_only_export_kwh: solarOnlyExport,
             baseline_no_solar_sek: noSolarCost,
             baseline_solar_only_sek: solarOnlyCost,
             actual_cost_sek: actualCost,
@@ -279,8 +287,9 @@ function updateSimulation() {
 
     availableYearKeys.forEach(yrStr => {
         const yrData = rawYearsData[yrStr];
+        const yrInt = parseInt(yrStr, 10);
         const months = yrData.monthly_ledgers || [];
-        const recalcedMonths = recalculateLedgerMonths(months, energiskattSek, eemTransferSek, taxRedEnabled, tibberFee);
+        const recalcedMonths = recalculateLedgerMonths(months, energiskattSek, eemTransferSek, taxRedEnabled, tibberFee, yrInt);
         recalculatedYears[yrStr] = recalcedMonths;
 
         const totProd = recalcedMonths.reduce((a, m) => a + m.produced_kwh, 0);
@@ -294,7 +303,9 @@ function updateSimulation() {
         const totSav = totNoSol - totAct;
         const totSolSav = totNoSol - totSolOnly;
         const totBatSav = totSav - totSolSav;
-        const daysCount = recalcedMonths.reduce((a, m) => a + (m.days_count || 30), 0);
+        const daysCount = recalcedMonths.reduce((a, m) => a + (m.days_count || m.days || 30), 0);
+        const totSolTaxRed = recalcedMonths.reduce((a, m) => a + (m.solar_only_tax_red_sek || 0), 0);
+        const totActTaxRed = recalcedMonths.reduce((a, m) => a + (m.actual_tax_red_sek || 0), 0);
 
         let eraName = "Sonnen 22 kWh (Dual)";
         if (yrStr === "2023") eraName = "Sonnen 11 kWh Installed (Sep)";
@@ -302,8 +313,9 @@ function updateSimulation() {
         else if (yrStr === "2026") eraName = "Sonnen 22 kWh (No Skattereduktion)";
 
         annualSummaries.push({
-            year: parseInt(yrStr, 10),
+            year: yrInt,
             era: eraName,
+            is_tax_red_valid: yrInt < 2026 && taxRedEnabled,
             days: daysCount,
             produced_kwh: totProd,
             consumed_kwh: totCons,
@@ -315,7 +327,9 @@ function updateSimulation() {
             actual_cost_sek: totAct,
             total_savings_sek: totSav,
             solar_savings_sek: totSolSav,
-            battery_savings_sek: totBatSav
+            battery_savings_sek: totBatSav,
+            solar_only_tax_red_sek: totSolTaxRed,
+            actual_tax_red_sek: totActTaxRed
         });
     });
 
@@ -412,9 +426,32 @@ function updateSimulation() {
     renderPaybackSCurveChart(projection25y);
 
     // 6. Render Chart 2 (3-Way Baseline Comparison - Annual Comparison if 'all', Monthly if specific year)
+    const baselineChartTitleText = document.getElementById('baseline-chart-title-text');
+    const baselineChartSubtitleText = document.getElementById('baseline-chart-subtitle-text');
+    const skatBadge = document.getElementById('skattereduktion-chart-badge');
+    const skatBadgeText = document.getElementById('skattereduktion-badge-text');
+
     if (selectedPeriod === 'all') {
+        if (baselineChartTitleText) baselineChartTitleText.innerText = '3-Way Baseline Yearly Comparison';
+        if (baselineChartSubtitleText) baselineChartSubtitleText.innerText = `Annual Totals (${firstYear}–${lastYear}): No Solar (Grey) vs. Solar Only (Amber) vs. Actual System (Teal)`;
+        if (skatBadge && skatBadgeText) {
+            skatBadge.className = 'badge badge-accent';
+            skatBadgeText.innerText = 'Hatched Area = Skattereduktion (2021–2025; 0 kr in 2026)';
+        }
         renderAnnualComparisonChart(annualSummaries);
     } else {
+        if (baselineChartTitleText) baselineChartTitleText.innerText = `${selectedPeriod} 3-Way Baseline Monthly Comparison`;
+        if (baselineChartSubtitleText) baselineChartSubtitleText.innerText = `${selectedPeriod} Monthly: No Solar (Grey) vs. Solar Only (Amber) vs. Actual System (Teal)`;
+        if (skatBadge && skatBadgeText) {
+            const is2026OrLater = parseInt(selectedPeriod, 10) >= 2026;
+            if (is2026OrLater || !taxRedEnabled) {
+                skatBadge.className = 'badge badge-muted';
+                skatBadgeText.innerText = is2026OrLater ? 'Skattereduktion: 0 öre/kWh (Abolished 2026)' : 'Skattereduktion: Disabled';
+            } else {
+                skatBadge.className = 'badge badge-accent';
+                skatBadgeText.innerText = 'Hatched Area = Skattereduktion (60 öre/kWh)';
+            }
+        }
         renderMonthlyBaselinesChart(displayMonths);
     }
 
@@ -583,6 +620,89 @@ function renderPaybackSCurveChart(projection) {
     });
 }
 
+// Plugin to augment 3-way baseline comparison columns with hatched pattern showing Skattereduktion portion
+const skattereduktionBarPlugin = {
+    id: 'skattereduktionBarPlugin',
+    afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+
+        // Build striped diagonal pattern
+        const pCanvas = document.createElement('canvas');
+        pCanvas.width = 10;
+        pCanvas.height = 10;
+        const pCtx = pCanvas.getContext('2d');
+        pCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        pCtx.lineWidth = 2.5;
+        pCtx.beginPath();
+        pCtx.moveTo(0, 10);
+        pCtx.lineTo(10, 0);
+        pCtx.stroke();
+        const stripePattern = ctx.createPattern(pCanvas, 'repeat');
+
+        // Affected columns are dataset 1 (Solar Only) and dataset 2 (Actual System)
+        [1, 2].forEach(dsIndex => {
+            const meta = chart.getDatasetMeta(dsIndex);
+            if (!meta || meta.hidden) return;
+            const dataset = chart.data.datasets[dsIndex];
+            const skatArray = dataset.skattereduktionData || [];
+
+            meta.data.forEach((bar, idx) => {
+                const skatSek = skatArray[idx] || 0;
+                if (skatSek <= 0) return; // Abolished in 2026 or 0 export
+
+                const val = dataset.data[idx];
+                const left = bar.x - bar.width / 2;
+                const width = bar.width;
+                const top = Math.min(bar.y, bar.base);
+                const bottom = Math.max(bar.y, bar.base);
+                const totalHeight = bottom - top;
+                if (totalHeight <= 2) return;
+
+                // Proportion of column represented by skattereduktion:
+                // For positive cost (val >= 0), gross cost without subsidy is val + skatSek
+                // For negative bill (val < 0), skatSek generated the negative credit below zero
+                const grossImpact = Math.abs(val) + (val >= 0 ? skatSek : 0);
+                const portion = Math.min(1.0, Math.max(0.08, skatSek / (grossImpact || 1)));
+                const portionHeight = Math.round(totalHeight * portion);
+
+                ctx.save();
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(left, top, width, totalHeight, 4);
+                } else {
+                    ctx.rect(left, top, width, totalHeight);
+                }
+                ctx.clip();
+
+                ctx.fillStyle = stripePattern;
+                if (val >= 0) {
+                    // Subsidy reduced net cost from the top
+                    ctx.fillRect(left, top, width, portionHeight);
+                    // Subtle dashed separation line
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([2, 2]);
+                    ctx.beginPath();
+                    ctx.moveTo(left, top + portionHeight);
+                    ctx.lineTo(left + width, top + portionHeight);
+                    ctx.stroke();
+                } else {
+                    // Subsidy created negative revenue down from 0
+                    ctx.fillRect(left, bottom - portionHeight, width, portionHeight);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([2, 2]);
+                    ctx.beginPath();
+                    ctx.moveTo(left, bottom - portionHeight);
+                    ctx.lineTo(left + width, bottom - portionHeight);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+        });
+    }
+};
+
 // Chart 2 - Monthly Breakdown
 function renderMonthlyBaselinesChart(months) {
     const canvas = document.getElementById('chart-monthly-baselines');
@@ -601,6 +721,10 @@ function renderMonthlyBaselinesChart(months) {
     const solarOnlyData = months.map(m => Math.round(m.baseline_solar_only_sek));
     const actualData = months.map(m => Math.round(m.actual_cost_sek));
 
+    const solarTaxRedData = months.map(m => Math.round(m.solar_only_tax_red_sek || 0));
+    const actualTaxRedData = months.map(m => Math.round(m.actual_tax_red_sek || 0));
+    const taxRedValidList = months.map(m => !!m.is_tax_red_valid);
+
     chartMonthlyBaselinesInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -617,15 +741,20 @@ function renderMonthlyBaselinesChart(months) {
                     data: solarOnlyData,
                     backgroundColor: '#f59e0b',
                     borderRadius: 4,
+                    skattereduktionData: solarTaxRedData,
+                    isTaxRedValid: taxRedValidList,
                 },
                 {
                     label: 'Actual System (Teal)',
                     data: actualData,
                     backgroundColor: '#06b6d4',
                     borderRadius: 4,
+                    skattereduktionData: actualTaxRedData,
+                    isTaxRedValid: taxRedValidList,
                 }
             ]
         },
+        plugins: [skattereduktionBarPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -643,11 +772,27 @@ function renderMonthlyBaselinesChart(months) {
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
                     padding: 12,
                     callbacks: {
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${formatSEK(context.parsed.y)}`;
+                            const ds = context.dataset;
+                            const idx = context.dataIndex;
+                            const val = context.parsed.y;
+                            const skat = ds.skattereduktionData ? ds.skattereduktionData[idx] : null;
+                            const isValid = ds.isTaxRedValid ? ds.isTaxRedValid[idx] : false;
+
+                            let str = ` ${ds.label}: ${formatSEK(val)}`;
+                            if (skat !== null && skat !== undefined) {
+                                if (isValid && skat > 0) {
+                                    const gross = Math.abs(val) + (val >= 0 ? skat : 0);
+                                    const pct = gross > 0 ? ((skat / gross) * 100).toFixed(0) : 0;
+                                    str += ` (incl. -${formatCurrencyNoUnit(skat)} kr Skatt, ~${pct}% of column)`;
+                                } else if (!isValid) {
+                                    str += ` (Skattereduktion: 0 kr - Abolished 2026)`;
+                                }
+                            }
+                            return str;
                         }
                     }
                 }
@@ -690,6 +835,10 @@ function renderAnnualComparisonChart(annualSummaries) {
     const solarOnlyData = annualSummaries.map(y => Math.round(y.baseline_solar_only_sek));
     const actualData = annualSummaries.map(y => Math.round(y.actual_cost_sek));
 
+    const solarTaxRedData = annualSummaries.map(y => Math.round(y.solar_only_tax_red_sek || 0));
+    const actualTaxRedData = annualSummaries.map(y => Math.round(y.actual_tax_red_sek || 0));
+    const taxRedValidList = annualSummaries.map(y => !!y.is_tax_red_valid);
+
     chartMonthlyBaselinesInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -706,15 +855,20 @@ function renderAnnualComparisonChart(annualSummaries) {
                     data: solarOnlyData,
                     backgroundColor: '#f59e0b',
                     borderRadius: 4,
+                    skattereduktionData: solarTaxRedData,
+                    isTaxRedValid: taxRedValidList,
                 },
                 {
                     label: 'Actual System (Teal)',
                     data: actualData,
                     backgroundColor: '#06b6d4',
                     borderRadius: 4,
+                    skattereduktionData: actualTaxRedData,
+                    isTaxRedValid: taxRedValidList,
                 }
             ]
         },
+        plugins: [skattereduktionBarPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -732,11 +886,27 @@ function renderAnnualComparisonChart(annualSummaries) {
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
                     padding: 12,
                     callbacks: {
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${formatSEK(context.parsed.y)}`;
+                            const ds = context.dataset;
+                            const idx = context.dataIndex;
+                            const val = context.parsed.y;
+                            const skat = ds.skattereduktionData ? ds.skattereduktionData[idx] : null;
+                            const isValid = ds.isTaxRedValid ? ds.isTaxRedValid[idx] : false;
+
+                            let str = ` ${ds.label}: ${formatSEK(val)}`;
+                            if (skat !== null && skat !== undefined) {
+                                if (isValid && skat > 0) {
+                                    const gross = Math.abs(val) + (val >= 0 ? skat : 0);
+                                    const pct = gross > 0 ? ((skat / gross) * 100).toFixed(0) : 0;
+                                    str += ` (incl. -${formatCurrencyNoUnit(skat)} SEK Skattereduktion, ~${pct}% of column)`;
+                                } else if (!isValid) {
+                                    str += ` (Skattereduktion: 0 SEK - Abolished 2026)`;
+                                }
+                            }
+                            return str;
                         }
                     }
                 }

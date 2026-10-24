@@ -265,20 +265,27 @@ class TestHighResAnalyzer:
 
         # B2:
         # Hour 1: PV 5.0, Load 1.0 -> self_cons = 1.0, export = 4.0 at 0.50 SEK
-        # Export rev = 4.0 * (0.50 + 0.08 + 0.60) = 4.0 * 1.18 = 4.72 SEK. Import cost = 0.
+        # In 2026, skattereduktion is abolished:
+        # Export rev = 4.0 * (0.50 + 0.08) = 4.0 * 0.58 = 2.32 SEK. Import cost = 0.
         # Hour 2: PV 0.0, Load 2.0 -> self_cons = 0.0, export = 0, import = 2.0 at 1.00 SEK -> 4.06 SEK.
         assert pytest.approx(report.baseline_solar_only.import_cost_sek, 0.001) == 4.06
-        assert pytest.approx(report.baseline_solar_only.export_revenue_sek, 0.001) == 4.72
+        assert pytest.approx(report.baseline_solar_only.export_revenue_sek, 0.001) == 2.32
 
         # Actual:
-        # Hour 1: Import 0, Export 2.0 -> Export rev = 2.0 * 1.18 = 2.36 SEK
+        # Hour 1: Import 0, Export 2.0 -> Export rev = 2.0 * 0.58 = 1.16 SEK
         # Hour 2: Import 0.5 at 1.00 SEK -> 0.5 * 2.03 = 1.015 SEK, Export 0.
         assert pytest.approx(report.actual_system.import_cost_sek, 0.001) == 1.015
-        assert pytest.approx(report.actual_system.export_revenue_sek, 0.001) == 2.36
+        assert pytest.approx(report.actual_system.export_revenue_sek, 0.001) == 1.16
 
         # Savings
         assert report.total_savings_sek == report.baseline_no_solar.net_cost_sek - report.actual_system.net_cost_sek
         assert report.battery_marginal_value_sek == report.total_savings_sek - report.solar_contribution_sek
+
+    def test_diurnal_weights_sum_to_one(self):
+        """Verify that diurnal residential load and solar profile weights sum strictly to 1.0."""
+        from src.financial_engine.baseline import DEFAULT_DIURNAL_LOAD_WEIGHTS, DEFAULT_DIURNAL_SOLAR_WEIGHTS
+        assert pytest.approx(sum(DEFAULT_DIURNAL_LOAD_WEIGHTS), 1e-6) == 1.0
+        assert pytest.approx(sum(DEFAULT_DIURNAL_SOLAR_WEIGHTS), 1e-6) == 1.0
 
     def test_full_30d_analysis(self, sample_tariff):
         csv_path = "data/sonnen_energy_data_Sun_Aug_16_2026.csv"

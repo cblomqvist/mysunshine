@@ -8,7 +8,7 @@ import csv
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
 from .baseline import (
@@ -108,6 +108,7 @@ class AnnualFinancialReport:
                 {
                     "month": m.month_name,
                     "month_number": m.month_number,
+                    "year": m.year,
                     "days": m.days_count,
                     "produced_kwh": round(m.produced_kwh, 2),
                     "consumed_kwh": round(m.consumed_kwh, 2),
@@ -161,9 +162,30 @@ class Year2025Calculator:
         self.data_file = data_file
         self.price_file = price_file
 
+    @staticmethod
+    def _to_swedish_local(dt: datetime) -> datetime:
+        """Convert a UTC or timezone-aware datetime to Swedish local time (CET/CEST)."""
+        if dt.tzinfo is not None:
+            utc_dt = dt.astimezone(timezone.utc)
+        else:
+            utc_dt = dt.replace(tzinfo=timezone.utc)
+        year = utc_dt.year
+        # Last Sunday of March (01:00 UTC)
+        m31 = datetime(year, 3, 31, 1, 0, tzinfo=timezone.utc)
+        last_sun_mar = m31 - timedelta(days=(m31.weekday() + 1) % 7)
+        # Last Sunday of October (01:00 UTC)
+        o31 = datetime(year, 10, 31, 1, 0, tzinfo=timezone.utc)
+        last_sun_oct = o31 - timedelta(days=(o31.weekday() + 1) % 7)
+        offset = timedelta(hours=2) if (last_sun_mar <= utc_dt < last_sun_oct) else timedelta(hours=1)
+        return utc_dt + offset
+
     def _load_prices_by_date(self) -> Dict[str, List[float]]:
-        """Load spot prices grouped by date string (YYYY-MM-DD) in SEK/kWh."""
-        prices_by_date: Dict[str, List[float]] = {}
+        """Load spot prices grouped by date string (YYYY-MM-DD) in SEK/kWh.
+
+        Normalizes timezones to Swedish local time (CET/CEST) and aggregates
+        sub-hourly (e.g. 15-minute) price points into 24 hourly averages per day.
+        """
+        prices_by_date_hourly: Dict[str, Dict[int, List[float]]] = {}
 
         if self.price_file and os.path.exists(self.price_file):
             with open(self.price_file, "r", encoding="utf-8") as f:
@@ -173,12 +195,32 @@ class Year2025Calculator:
                     if not ts_str:
                         continue
                     dt = datetime.fromisoformat(ts_str)
-                    date_key = dt.strftime("%Y-%m-%d")
+                    loc_dt = self._to_swedish_local(dt)
+                    date_key = loc_dt.strftime("%Y-%m-%d")
+                    h_int = loc_dt.hour
                     p_sek = item.get("price_sek_kwh")
                     if p_sek is None and "price_eur_mwh" in item:
                         p_sek = SwedishTariff().config.energiskatt_sek_per_kwh  # fallback
                     if p_sek is not None:
-                        prices_by_date.setdefault(date_key, []).append(float(p_sek))
+                        if date_key not in prices_by_date_hourly:
+                            prices_by_date_hourly[date_key] = {h: [] for h in range(24)}
+                        prices_by_date_hourly[date_key][h_int].append(float(p_sek))
+
+        prices_by_date: Dict[str, List[float]] = {}
+        for d_key, hours_dict in prices_by_date_hourly.items():
+            all_points = [p for p_list in hours_dict.values() for p in p_list]
+            if not all_points:
+                continue
+            day_avg = sum(all_points) / len(all_points)
+            hourly = []
+            for h in range(24):
+                if hours_dict[h]:
+                    hourly.append(sum(hours_dict[h]) / len(hours_dict[h]))
+                elif hourly:
+                    hourly.append(hourly[-1])
+                else:
+                    hourly.append(day_avg)
+            prices_by_date[d_key] = hourly
 
         return prices_by_date
 
@@ -251,11 +293,15 @@ class Year2025Calculator:
                         b2_imp_tot += imp_h
 
                         b2_imp_cost += self.tariff.calculate_import_cost(imp_h, p_h)
-                        b2_exp_rev += self.tariff.calculate_export_revenue(exp_h, p_h)
+                        b2_exp_rev += self.tariff.calculate_export_revenue(
+                            exp_h, p_h, date_str=date_key
+                        )
 
                     # Actual system
                     act_imp_cost = self.tariff.calculate_import_cost(purchase_kwh, avg_spot)
-                    act_exp_rev = self.tariff.calculate_export_revenue(feedin_kwh, avg_spot)
+                    act_exp_rev = self.tariff.calculate_export_revenue(
+                        feedin_kwh, avg_spot, date_str=date_key
+                    )
                     act_sc = max(0.0, produced_kwh - feedin_kwh)
 
                     from .baseline import BaselineScenarioResult
@@ -331,6 +377,7 @@ class Year2025Calculator:
                         battery_discharged_kwh=batt_dis_kwh,
                         spot_price_sek_per_kwh=avg_spot,
                         months_fraction=0.0,
+                        date_str=date_key,
                     )
 
                 daily_records.append(

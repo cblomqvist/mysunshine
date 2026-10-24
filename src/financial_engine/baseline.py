@@ -15,20 +15,24 @@ from .tariff import SwedishTariff
 
 # Standard residential diurnal load weights (normalized sum = 1.0)
 # Reflects Swedish single-family home with morning & evening peaks
-DEFAULT_DIURNAL_LOAD_WEIGHTS = [
+_RAW_LOAD_WEIGHTS = [
     0.028, 0.026, 0.025, 0.026, 0.030, 0.038,  # 00:00 - 05:00 (Night base)
     0.052, 0.060, 0.054, 0.045, 0.040, 0.039,  # 06:00 - 11:00 (Morning peak)
     0.038, 0.037, 0.039, 0.044, 0.055, 0.066,  # 12:00 - 17:00 (Afternoon ramp)
     0.072, 0.068, 0.058, 0.048, 0.038, 0.032   # 18:00 - 23:00 (Evening peak)
 ]
+_LOAD_SUM = sum(_RAW_LOAD_WEIGHTS)
+DEFAULT_DIURNAL_LOAD_WEIGHTS = [w / _LOAD_SUM for w in _RAW_LOAD_WEIGHTS]
 
 # Standard solar generation diurnal bell curve (normalized sum = 1.0)
-DEFAULT_DIURNAL_SOLAR_WEIGHTS = [
+_RAW_SOLAR_WEIGHTS = [
     0.000, 0.000, 0.000, 0.000, 0.002, 0.012,  # 00:00 - 05:00
     0.035, 0.068, 0.105, 0.135, 0.155, 0.160,  # 06:00 - 11:00 (Ramp to noon)
     0.150, 0.125, 0.095, 0.062, 0.035, 0.015,  # 12:00 - 17:00 (Afternoon drop)
     0.003, 0.000, 0.000, 0.000, 0.000, 0.000   # 18:00 - 23:00
 ]
+_SOLAR_SUM = sum(_RAW_SOLAR_WEIGHTS)
+DEFAULT_DIURNAL_SOLAR_WEIGHTS = [w / _SOLAR_SUM for w in _RAW_SOLAR_WEIGHTS]
 
 
 @dataclass
@@ -130,6 +134,7 @@ class BaselineEngine:
         battery_discharged_kwh: float,
         spot_price_sek_per_kwh: float,
         months_fraction: float = 0.0,
+        date_str: Optional[str] = None,
     ) -> BaselineComparisonResult:
         """Evaluate a single daily interval (or aggregated period) with average spot price."""
         # 1. Baseline 1: No Solar, No Battery
@@ -160,7 +165,9 @@ class BaselineEngine:
             consumed_kwh, produced_kwh
         )
         b2_imp_cost = self.tariff.calculate_import_cost(b2_imported, spot_price_sek_per_kwh)
-        b2_exp_rev = self.tariff.calculate_export_revenue(b2_exported, spot_price_sek_per_kwh)
+        b2_exp_rev = self.tariff.calculate_export_revenue(
+            b2_exported, spot_price_sek_per_kwh, date_str=date_str
+        )
         b2_fixed = self.tariff.calculate_fixed_costs(months_fraction)
         b2_net_cost = b2_imp_cost - b2_exp_rev + b2_fixed
         b2_savings = b1_net_cost - b2_net_cost
@@ -182,7 +189,9 @@ class BaselineEngine:
         # 3. Actual System: Solar + SonnenBatterie 10
         act_sc = max(0.0, produced_kwh - actual_exported_kwh)
         act_imp_cost = self.tariff.calculate_import_cost(actual_imported_kwh, spot_price_sek_per_kwh)
-        act_exp_rev = self.tariff.calculate_export_revenue(actual_exported_kwh, spot_price_sek_per_kwh)
+        act_exp_rev = self.tariff.calculate_export_revenue(
+            actual_exported_kwh, spot_price_sek_per_kwh, date_str=date_str
+        )
         act_fixed = self.tariff.calculate_fixed_costs(months_fraction)
         act_net_cost = act_imp_cost - act_exp_rev + act_fixed
         act_savings = b1_net_cost - act_net_cost

@@ -10,7 +10,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from .baseline import (
@@ -94,11 +94,32 @@ class HistoricalYearCalculator:
         self.tariff = tariff or SwedishTariff()
         self.engine = BaselineEngine(tariff=self.tariff)
 
+    @staticmethod
+    def _to_swedish_local(dt: datetime) -> datetime:
+        """Convert a UTC or timezone-aware datetime to Swedish local time (CET/CEST)."""
+        if dt.tzinfo is not None:
+            utc_dt = dt.astimezone(timezone.utc)
+        else:
+            utc_dt = dt.replace(tzinfo=timezone.utc)
+        year = utc_dt.year
+        # Last Sunday of March (01:00 UTC)
+        m31 = datetime(year, 3, 31, 1, 0, tzinfo=timezone.utc)
+        last_sun_mar = m31 - timedelta(days=(m31.weekday() + 1) % 7)
+        # Last Sunday of October (01:00 UTC)
+        o31 = datetime(year, 10, 31, 1, 0, tzinfo=timezone.utc)
+        last_sun_oct = o31 - timedelta(days=(o31.weekday() + 1) % 7)
+        offset = timedelta(hours=2) if (last_sun_mar <= utc_dt < last_sun_oct) else timedelta(hours=1)
+        return utc_dt + offset
+
     def load_spot_prices_by_date(self) -> Dict[str, List[float]]:
-        """Load hourly spot prices indexed by date string (YYYY-MM-DD)."""
-        prices_by_date: Dict[str, List[float]] = {}
+        """Load hourly spot prices indexed by date string (YYYY-MM-DD).
+
+        Normalizes timezones to Swedish local time (CET/CEST) and aggregates
+        sub-hourly (e.g. 15-minute) price points into 24 hourly averages per day.
+        """
+        prices_by_date_hourly: Dict[str, Dict[int, List[float]]] = {}
         if not self.price_file or not os.path.exists(self.price_file):
-            return prices_by_date
+            return {}
 
         try:
             with open(self.price_file, "r", encoding="utf-8") as f:
@@ -113,12 +134,32 @@ class HistoricalYearCalculator:
                     p_sek = (p_ore / 100.0) if p_ore is not None else 0.0
                 if ts_str:
                     dt = datetime.fromisoformat(ts_str)
-                    d_key = dt.strftime("%Y-%m-%d")
-                    if d_key not in prices_by_date:
-                        prices_by_date[d_key] = []
-                    prices_by_date[d_key].append(p_sek)
+                    loc_dt = self._to_swedish_local(dt)
+                    d_key = loc_dt.strftime("%Y-%m-%d")
+                    h_int = loc_dt.hour
+                    if d_key not in prices_by_date_hourly:
+                        prices_by_date_hourly[d_key] = {h: [] for h in range(24)}
+                    prices_by_date_hourly[d_key][h_int].append(p_sek)
         except Exception as e:
             logging.warning("Error reading price file %s: %s", self.price_file, e)
+
+        # Convert to daily 24-hour average lists
+        prices_by_date: Dict[str, List[float]] = {}
+        for d_key, hours_dict in prices_by_date_hourly.items():
+            all_points = [p for p_list in hours_dict.values() for p in p_list]
+            if not all_points:
+                continue
+            day_avg = sum(all_points) / len(all_points)
+            # Create exactly 24 hourly values
+            hourly = []
+            for h in range(24):
+                if hours_dict[h]:
+                    hourly.append(sum(hours_dict[h]) / len(hours_dict[h]))
+                elif hourly:
+                    hourly.append(hourly[-1])
+                else:
+                    hourly.append(day_avg)
+            prices_by_date[d_key] = hourly
 
         return prices_by_date
 
@@ -180,10 +221,14 @@ class HistoricalYearCalculator:
                         b2_imp_tot += imp_h
 
                         b2_imp_cost += self.tariff.calculate_import_cost(imp_h, p_h)
-                        b2_exp_rev += self.tariff.calculate_export_revenue(exp_h, p_h)
+                        b2_exp_rev += self.tariff.calculate_export_revenue(
+                            exp_h, p_h, date_str=date_key
+                        )
 
                     act_imp_cost = self.tariff.calculate_import_cost(purchase_kwh, avg_spot)
-                    act_exp_rev = self.tariff.calculate_export_revenue(feedin_kwh, avg_spot)
+                    act_exp_rev = self.tariff.calculate_export_revenue(
+                        feedin_kwh, avg_spot, date_str=date_key
+                    )
                     act_sc = max(0.0, produced_kwh - feedin_kwh)
 
                     b1 = BaselineScenarioResult(
@@ -258,6 +303,7 @@ class HistoricalYearCalculator:
                         battery_discharged_kwh=batt_dis_kwh,
                         spot_price_sek_per_kwh=avg_spot,
                         months_fraction=0.0,
+                        date_str=date_key,
                     )
 
                 daily_records_dict[date_key] = DailyFinancialRecord(
