@@ -107,7 +107,10 @@ class HistoricalYearCalculator:
             points = data.get("price_points", data) if isinstance(data, dict) else data
             for pt in points:
                 ts_str = pt.get("timestamp")
-                p_sek = pt.get("price_sek_per_kwh", pt.get("price_ore_per_kwh", 0.0) / 100.0)
+                p_sek = pt.get("price_sek_kwh", pt.get("price_sek_per_kwh"))
+                if p_sek is None:
+                    p_ore = pt.get("price_ore_kwh", pt.get("price_ore_per_kwh"))
+                    p_sek = (p_ore / 100.0) if p_ore is not None else 0.0
                 if ts_str:
                     dt = datetime.fromisoformat(ts_str)
                     d_key = dt.strftime("%Y-%m-%d")
