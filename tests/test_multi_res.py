@@ -54,6 +54,41 @@ class TestSonnenHourlyIngestor:
         last = records[-1]
         assert last.timestamp.isoformat().startswith("2026-08-15T23:00:00")
 
+    def test_parse_multiple_overlapping_csvs(self):
+        csv_aug = "data/sonnen_energy_data_Sun_Aug_16_2026.csv"
+        csv_sep = "data/sonnen_energy_data_Tue_Sep_08_2026.csv"
+        if not (os.path.exists(csv_aug) and os.path.exists(csv_sep)):
+            pytest.skip("Test CSV files not present")
+
+        records_aug = SonnenHourlyIngestor.parse_csv(csv_aug)
+        records_sep = SonnenHourlyIngestor.parse_csv(csv_sep)
+        assert len(records_aug) == 744
+        assert len(records_sep) == 744
+
+        # Parse both together with deduplication
+        merged = SonnenHourlyIngestor.parse_csvs([csv_aug, csv_sep])
+        # From 2026-07-16 00:00:00 to 2026-09-07 23:00:00 = 54 days (1296 hours)
+        assert len(merged) == 1296
+        assert len(merged) < (len(records_aug) + len(records_sep))  # Successfully eliminated overlap
+
+        # Verify strict timestamp ordering and uniqueness
+        for i in range(len(merged) - 1):
+            assert merged[i].timestamp < merged[i + 1].timestamp
+
+    def test_find_hourly_files(self):
+        files = SonnenHourlyIngestor.find_hourly_files("data")
+        assert len(files) >= 2
+        # Ensure yearly files (e.g. sonnen_energy_data_2024.csv) are excluded
+        for f in files:
+            basename = os.path.basename(f)
+            assert basename.startswith("sonnen_energy_data_")
+            suffix = basename.replace("sonnen_energy_data_", "").replace(".csv", "")
+            assert not (suffix.isdigit() and len(suffix) == 4)
+
+    def test_parse_directory(self):
+        records = SonnenHourlyIngestor.parse_directory("data")
+        assert len(records) >= 1296
+
     def test_file_not_found(self):
         with pytest.raises(FileNotFoundError):
             SonnenHourlyIngestor.parse_csv("non_existent_file.csv")
@@ -223,8 +258,8 @@ class TestHighResAnalyzer:
         report = analyzer.analyze_matched_intervals([int1, int2])
 
         # B1: Total load = 1.0 + 2.0 = 3.0 kWh
-        # Hour 1 load 1.0 at 0.50 SEK: import price = (0.50+0.428+0.176+0.02)*1.25 = 1.124 * 1.25 = 1.405 SEK
-        # Hour 2 load 2.0 at 1.00 SEK: import price = (1.00+0.428+0.176+0.02)*1.25 = 1.624 * 1.25 = 2.030 SEK * 2 = 4.06 SEK
+        # Hour 1: import price = (0.50+0.428+0.176+0.02)*1.25 = 1.124 * 1.25 = 1.405 SEK
+        # Hour 2: import price = (1.00+0.428+0.176+0.02)*1.25 = 1.624 * 1.25 = 2.030 SEK * 2 = 4.06 SEK
         # Total B1 imp cost = 1.405 + 4.06 = 5.465 SEK
         assert pytest.approx(report.baseline_no_solar.import_cost_sek, 0.001) == 5.465
 

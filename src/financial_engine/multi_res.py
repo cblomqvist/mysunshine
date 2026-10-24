@@ -51,54 +51,104 @@ class MatchedHourlyInterval:
 
 
 class SonnenHourlyIngestor:
-    """Parses and validates Sonnen high-resolution hourly CSV exports."""
+    """Parses, validates, and deduplicates Sonnen high-resolution hourly CSV exports."""
 
     @staticmethod
-    def parse_csv(file_path: str) -> List[HourlyEnergyRecord]:
-        """Parse a Sonnen hourly CSV export file into a list of HourlyEnergyRecord objects.
+    def _normalize_dt(dt: datetime) -> datetime:
+        """Convert datetime to UTC aware for reliable comparison and deduplication."""
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
 
+    @classmethod
+    def parse_csv(cls, file_path: str) -> List[HourlyEnergyRecord]:
+        """Parse a single Sonnen hourly CSV export file into a list of HourlyEnergyRecord objects.
+
+        Deduplicates records within the file if duplicate timestamps are present.
         Energy values in the CSV are in Watt-hours (Wh) and are converted to kilowatt-hours (kWh).
-        Timestamps are parsed with timezone awareness.
         """
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Sonnen high-resolution export not found: {file_path}")
+        return cls.parse_csvs([file_path])
 
-        records: List[HourlyEnergyRecord] = []
+    @classmethod
+    def parse_csvs(cls, file_paths: List[str]) -> List[HourlyEnergyRecord]:
+        """Parse multiple Sonnen hourly CSV export files, merging and deduplicating by timestamp.
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            required_cols = {
-                "timestamp",
-                "measurements_count",
-                "produced_energy",
-                "consumed_energy",
-                "battery_charged_energy",
-                "battery_discharged_energy",
-                "grid_feedin_energy",
-                "grid_purchase_energy",
-            }
-            if not required_cols.issubset(set(reader.fieldnames or [])):
-                missing = required_cols - set(reader.fieldnames or [])
-                raise ValueError(f"CSV missing required columns: {missing}")
+        Handles overlapping time ranges across multiple export files seamlessly.
+        When duplicate timestamps occur across overlapping files, the record with the
+        highest measurements_count (or the latest file's record) is retained.
+        """
+        records_by_utc: Dict[datetime, HourlyEnergyRecord] = {}
 
-            for row in reader:
-                ts_str = row["timestamp"]
-                ts = datetime.fromisoformat(ts_str)
+        for file_path in file_paths:
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Sonnen high-resolution export not found: {file_path}")
 
-                # Wh to kWh conversion (/ 1000.0)
-                record = HourlyEnergyRecord(
-                    timestamp=ts,
-                    measurements_count=int(row.get("measurements_count", 60)),
-                    produced_kwh=float(row.get("produced_energy", 0.0)) / 1000.0,
-                    consumed_kwh=float(row.get("consumed_energy", 0.0)) / 1000.0,
-                    battery_charged_kwh=float(row.get("battery_charged_energy", 0.0)) / 1000.0,
-                    battery_discharged_kwh=float(row.get("battery_discharged_energy", 0.0)) / 1000.0,
-                    grid_feedin_kwh=float(row.get("grid_feedin_energy", 0.0)) / 1000.0,
-                    grid_purchase_kwh=float(row.get("grid_purchase_energy", 0.0)) / 1000.0,
-                )
-                records.append(record)
+            with open(file_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                required_cols = {
+                    "timestamp",
+                    "measurements_count",
+                    "produced_energy",
+                    "consumed_energy",
+                    "battery_charged_energy",
+                    "battery_discharged_energy",
+                    "grid_feedin_energy",
+                    "grid_purchase_energy",
+                }
+                if not required_cols.issubset(set(reader.fieldnames or [])):
+                    missing = required_cols - set(reader.fieldnames or [])
+                    raise ValueError(f"CSV missing required columns in {file_path}: {missing}")
 
-        return sorted(records, key=lambda r: r.timestamp)
+                for row in reader:
+                    ts_str = row["timestamp"]
+                    ts = datetime.fromisoformat(ts_str)
+                    norm_utc = cls._normalize_dt(ts)
+                    m_count = int(row.get("measurements_count", 60))
+
+                    # Wh to kWh conversion (/ 1000.0)
+                    record = HourlyEnergyRecord(
+                        timestamp=ts,
+                        measurements_count=m_count,
+                        produced_kwh=float(row.get("produced_energy", 0.0)) / 1000.0,
+                        consumed_kwh=float(row.get("consumed_energy", 0.0)) / 1000.0,
+                        battery_charged_kwh=float(row.get("battery_charged_energy", 0.0)) / 1000.0,
+                        battery_discharged_kwh=float(row.get("battery_discharged_energy", 0.0)) / 1000.0,
+                        grid_feedin_kwh=float(row.get("grid_feedin_energy", 0.0)) / 1000.0,
+                        grid_purchase_kwh=float(row.get("grid_purchase_energy", 0.0)) / 1000.0,
+                    )
+
+                    if norm_utc in records_by_utc:
+                        # Prefer record with higher measurement count or latest file
+                        if m_count >= records_by_utc[norm_utc].measurements_count:
+                            records_by_utc[norm_utc] = record
+                    else:
+                        records_by_utc[norm_utc] = record
+
+        # Return sorted chronologically by timestamp
+        return [records_by_utc[k] for k in sorted(records_by_utc.keys())]
+
+    @classmethod
+    def find_hourly_files(cls, data_dir: str) -> List[str]:
+        """Find all hourly Sonnen export files in data_dir (excluding annual daily files)."""
+        if not os.path.exists(data_dir):
+            return []
+        hourly_files = []
+        for fn in sorted(os.listdir(data_dir)):
+            if fn.startswith("sonnen_energy_data_") and fn.endswith(".csv"):
+                # Exclude purely annual files like sonnen_energy_data_2023.csv (4 digits)
+                suffix = fn.replace("sonnen_energy_data_", "").replace(".csv", "")
+                if suffix.isdigit() and len(suffix) == 4:
+                    continue
+                hourly_files.append(os.path.join(data_dir, fn))
+        return hourly_files
+
+    @classmethod
+    def parse_directory(cls, data_dir: str) -> List[HourlyEnergyRecord]:
+        """Scan directory for all high-resolution hourly files and merge/deduplicate them."""
+        files = cls.find_hourly_files(data_dir)
+        if not files:
+            return []
+        return cls.parse_csvs(files)
 
 
 class ResolutionMatcher:

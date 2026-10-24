@@ -125,7 +125,7 @@ class HistoricalYearCalculator:
             raise FileNotFoundError(f"Data file not found: {self.data_file}")
 
         prices_by_date = self.load_spot_prices_by_date()
-        daily_records: List[DailyFinancialRecord] = []
+        daily_records_dict: Dict[str, DailyFinancialRecord] = {}
         default_spot_price = 0.50  # 50 öre/kWh fallback
 
         with open(self.data_file, "r", encoding="utf-8") as f:
@@ -257,19 +257,19 @@ class HistoricalYearCalculator:
                         months_fraction=0.0,
                     )
 
-                daily_records.append(
-                    DailyFinancialRecord(
-                        date_str=date_key,
-                        produced_kwh=produced_kwh,
-                        consumed_kwh=consumed_kwh,
-                        imported_kwh=purchase_kwh,
-                        exported_kwh=feedin_kwh,
-                        battery_charged_kwh=batt_chg_kwh,
-                        battery_discharged_kwh=batt_dis_kwh,
-                        avg_spot_price_sek_kwh=avg_spot,
-                        comparison=comp,
-                    )
+                daily_records_dict[date_key] = DailyFinancialRecord(
+                    date_str=date_key,
+                    produced_kwh=produced_kwh,
+                    consumed_kwh=consumed_kwh,
+                    imported_kwh=purchase_kwh,
+                    exported_kwh=feedin_kwh,
+                    battery_charged_kwh=batt_chg_kwh,
+                    battery_discharged_kwh=batt_dis_kwh,
+                    avg_spot_price_sek_kwh=avg_spot,
+                    comparison=comp,
                 )
+
+        daily_records = [daily_records_dict[k] for k in sorted(daily_records_dict.keys())]
 
         # Monthly aggregation
         months_dict: Dict[int, List[DailyFinancialRecord]] = {}

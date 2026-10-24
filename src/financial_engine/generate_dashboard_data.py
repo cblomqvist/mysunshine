@@ -36,24 +36,27 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
     multi_year_results = multi_year_engine.calculate_all_years(net_capex_sek=315000.0)
     report_2025_dict = multi_year_results["years"].get(2025, {})
 
-    # 2. 30-Day High Resolution Ingestion and Analysis
-    sonnen_30d_csv = os.path.join(data_dir, "sonnen_energy_data_Sun_Aug_16_2026.csv")
-    prices_30d_candidates = [
+    # 2. High Resolution Ingestion and Analysis (All Available Hourly Logs)
+    hourly_files = SonnenHourlyIngestor.find_hourly_files(data_dir)
+    logging.info("Ingesting %d high-resolution hourly Sonnen files from %s...", len(hourly_files), data_dir)
+    energy_records = SonnenHourlyIngestor.parse_directory(data_dir)
+
+    prices_candidates = [
+        os.path.join(data_dir, "prices", "se3_prices_2026.json"),
         os.path.join(data_dir, "prices", "auto_SE3_20260716_20260816.json"),
         os.path.join(data_dir, "prices", "entsoe_SE3_20260716_20260816.json"),
         os.path.join(data_dir, "prices", "se3_prices_2025.json"),
     ]
-    price_file_30d = None
-    for pfc in prices_30d_candidates:
+    price_file_highres = None
+    for pfc in prices_candidates:
         if os.path.exists(pfc):
-            price_file_30d = pfc
+            price_file_highres = pfc
             break
 
-    logging.info("Ingesting 30-day hourly Sonnen logs from %s...", sonnen_30d_csv)
-    energy_records = SonnenHourlyIngestor.parse_csv(sonnen_30d_csv)
-    price_points = ResolutionMatcher.load_prices_from_json(price_file_30d) if price_file_30d else []
+    price_points = ResolutionMatcher.load_prices_from_json(price_file_highres) if price_file_highres else []
+    logging.info("Loaded %d price points from %s", len(price_points), price_file_highres)
 
-    logging.info("Matching multi-resolution hourly/quarterly intervals...")
+    logging.info("Matching multi-resolution hourly/quarterly intervals (%d energy records)...", len(energy_records))
     matched_intervals = ResolutionMatcher.match_hourly_energy_with_prices(energy_records, price_points)
 
     analyzer_30d = HighResAnalyzer(tariff=tariff)

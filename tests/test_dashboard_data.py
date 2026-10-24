@@ -25,13 +25,13 @@ def test_generate_dashboard_dataset_structure():
     assert y2025["financial_totals"]["total_savings_sek"] > 0
     assert y2025["financial_totals"]["baseline_no_solar_cost_sek"] > y2025["financial_totals"]["actual_cost_sek"]
 
-    # High-Res 30d checks
+    # High-Res checks (all available high-resolution files merged)
     assert "high_res_30d" in dataset
     hr = dataset["high_res_30d"]
     assert "period" in hr
-    assert hr["period"]["total_hours"] == 744
-    assert len(hr["days_list"]) == 31
-    assert len(hr["hourly_data"]) == 744
+    assert hr["period"]["total_hours"] >= 744
+    assert len(hr["days_list"]) >= 31
+    assert len(hr["hourly_data"]) >= 744
     assert "variance_benchmarks" in hr
 
     # Hourly interval check
