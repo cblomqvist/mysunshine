@@ -57,6 +57,7 @@ const ledger2025Body = document.getElementById('ledger-2025-body');
 const ledgerMultiyearBody = document.getElementById('ledger-multiyear-body');
 const ledger25yBody = document.getElementById('ledger-25y-body');
 const ledgerVarianceBody = document.getElementById('ledger-variance-body');
+const ledgerUtilityAuditBody = document.getElementById('ledger-utility-audit-body');
 
 // Formatting Helpers
 function formatSEK(num) {
@@ -86,6 +87,7 @@ async function initApp() {
         setupEventListeners();
         populateDispatchDays();
         populateVarianceTable();
+        populateUtilityAuditTable();
         updateSimulation();
     } catch (err) {
         console.error('Failed to load dashboard data:', err);
@@ -1242,6 +1244,43 @@ function populateVarianceTable() {
         `;
     });
     ledgerVarianceBody.innerHTML = html;
+}
+
+// Populate Utility Tariff & Invoicing Audit Table
+function populateUtilityAuditTable() {
+    if (!ledgerUtilityAuditBody || !dashboardData?.utility_tariff_audit?.monthly_records) return;
+
+    const audit = dashboardData.utility_tariff_audit;
+    const records = audit.monthly_records.filter(r => r.is_billed);
+    let html = '';
+
+    records.forEach(r => {
+        const isPureGrid = r.billing_regime === 'pure_grid_tibber';
+        const regimeBadge = isPureGrid
+            ? '<span class="era-tag era-batt2">Pure EEM Grid + Tibber</span>'
+            : '<span class="era-tag era-solar">EEM Combined Retail+Grid</span>';
+        const retailStr = isPureGrid ? '&mdash;' : formatSEK(r.inferred_eem_retail_supply_kr);
+        const matchStr = isPureGrid
+            ? `<span class="text-savings">&#10003; Exact (${r.invoice_residual_kr >= 0 ? '+' : ''}${r.invoice_residual_kr.toFixed(2)} kr)</span>`
+            : `<span class="text-solar">Pre-Switch (${r.year}-09-28)</span>`;
+
+        html += `
+            <tr>
+                <td><strong>${r.month_name.substring(0, 3)} ${r.year}</strong></td>
+                <td>${regimeBadge}</td>
+                <td>${r.eem_billed_kwh.toFixed(1)}</td>
+                <td>${r.sonnen_imported_kwh.toFixed(1)} (${r.kwh_delta_pct.toFixed(1)}%)</td>
+                <td><strong>${formatSEK(r.eem_billed_kr)}</strong></td>
+                <td>${r.audited_grid_fixed_kr.toFixed(2)} SEK</td>
+                <td>${r.audited_grid_variable_kr.toFixed(2)} SEK</td>
+                <td>${r.audited_grid_total_kr.toFixed(2)} SEK</td>
+                <td>${retailStr}</td>
+                <td>${matchStr}</td>
+            </tr>
+        `;
+    });
+
+    ledgerUtilityAuditBody.innerHTML = html;
 }
 
 // Start application

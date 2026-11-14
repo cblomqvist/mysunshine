@@ -8,11 +8,11 @@
 
 * **Active Phase**: Milestone 5.5: Full Day-1 Historical Expansion (2021–2023 Solar Era) & Utility Audit
 * **Current Branch**: `feat/m5.5-day1-historical-expansion`
-* **Pre-Push Validation State**: **100% Green** (42/42 unit tests passing, flake8 syntax & style passing).
+* **Pre-Push Validation State**: **100% Green** (47/47 unit tests passing, flake8 syntax & style passing).
 
 ---
 
-## 2. Completed Work in Milestone 5.5 Step 1 (2021–2022 Solar Era & Nov 2026 Expansion)
+## 2. Completed Work in Milestone 5.5 (Steps 1 & 2)
 
 1. **Solar Era Ingestion & Empirical Calibration (Milestone 5.5.1–5.5.3)**:
    * Built [`src/financial_engine/solar_ingestor.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/solar_ingestor.py) (`SMAInverterIngestor`, `EEMMeterIngestor`, `SolarEraSynthesizer`):
@@ -29,20 +29,23 @@
    * Updated [`data/sonnen_energy_data_2026.csv`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/sonnen_energy_data_2026.csv) by replacing the incomplete `2026-08-30` row (`1214` measurements) and extending 2026 YTD to **317 complete days** (`2026-01-01` through `2026-11-13`, 8,346.3 kWh PV, 10,355.23 SEK savings).
    * Fetched and merged 2,639 15-minute SE3 spot prices (`2026-10-19` to `2026-11-15`) into [`data/prices/se3_prices_2026.json`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/prices/se3_prices_2026.json) (now 30,245 points), expanding continuous high-res dispatch coverage from 94 to **121 consecutive days** (2,905 hours, July 16 – Nov 13, 2026).
    * Updated `calculate25YearProjection` and `renderPaybackSCurveChart` in [`app.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/app.js) to anchor years 2021–2026 on actual historical realized savings (`annualSummaries`, rendered as a solid line) before projecting 2027–2045 forward (rendered as a dashed line).
-   * Extended [`index.html`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/index.html), [`app.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/app.js), and [`calc_multi_year_roi.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/calc_multi_year_roi.py) across 2021–2026 (2,143 days, cumulative savings **73,172.21 SEK**, **23.23%** of 315k SEK Net Capex recouped) and re-baked [`data/dashboard_data.json`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/dashboard_data.json) and [`data/dashboard_data.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/dashboard_data.js).
+   * Extended [`index.html`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/index.html), [`app.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/app.js), and [`calc_multi_year_roi.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/calc_multi_year_roi.py) across 2021–2026 (2,143 days, cumulative savings **73,172.21 SEK**, **23.23%** of 315k SEK Net Capex recouped).
+
+3. **Utility Tariff Benchmarking & Invoicing Audit (Milestone 5.5.4 — Step 2)**:
+   * Built [`src/financial_engine/tariff_audit.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/tariff_audit.py) (`EEMYearlyCostsIngestor`, `AuditedEEMTariffSchedule`, `UtilityTariffAuditor`) and added `SwedishTariff.for_audited_year(year)` in [`src/financial_engine/tariff.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/tariff.py):
+     * **Regime 1 — Pre-`Leverantörsbyte` (`2024-01` to `2024-09`, switch on `2024-09-28` at meter stand `22,217.291 kWh`)**: Decomposed EEM's combined retail+grid invoices (`8,741.00 SEK` across `3,257.00 kWh`) into `5,706.51 SEK` EEM Grid+Energiskatt and `3,034.49 SEK` EEM Retail Supply (`0.9317 SEK/kWh` incl. VAT).
+     * **Regime 2 — Post-`Leverantörsbyte` (`2024-10` to `2026-09`, 24 billed months)**: Audited EEM pure grid schedules (`2024`: `10.9726 SEK/day` fixed + `82.90 öre/kWh` var incl. VAT; `2025`: `11.8904 SEK/day` / `4,340 SEK/yr` fixed + `84.26 öre/kWh` var incl. VAT; `2026`: `13.3260 SEK/day` / `4,864 SEK/yr` fixed + `74.44 öre/kWh` var incl. VAT after the 2026 statutory `Energiskatt` cut to `36.0 öre/kWh` ex. VAT). Achieved **24/24 (100.0%) exact integer SEK invoice match** (`14,313.00 SEK` billed vs `14,312.99 SEK` modeled, MAE = `0.20 SEK`).
+     * **`SwedishTariff` Benchmark & CT Clamp Audit**: Identified that EEM's actual variable transfer fee (`Överföringsavgift`) is `23.51–23.55 öre/kWh` ex. VAT (vs `17.60 öre/kWh` baseline default), and verified Sonnen CT clamp import readings against EEM fiscal meter readings (`-5.92%` cumulative CT bias across 33 billed months; Oct 1–24, 2026 partial export `179.261 kWh` EEM vs `170.395 kWh` Sonnen = `-4.95%`).
+     * Added the **Utility Billing Audit** tab in [`index.html`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/index.html) and [`app.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/app.js), baked `utility_tariff_audit` into [`data/dashboard_data.json`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/dashboard_data.json) and [`data/dashboard_data.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/dashboard_data.js), and added unit tests in [`tests/test_tariff_audit.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/tests/test_tariff_audit.py).
 
 ---
 
 ## 3. Next Prioritized Steps
 
-1. **Step 2 (Next Up — Milestone 5.5.4)**:
-   * **Utility Tariff Benchmarking & Invoicing Audit**:
-     * Compare modeled EEM grid fees in `SwedishTariff` against actual billed amounts in [`data/eem-yearly-costs-2024-2026.csv`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/eem-yearly-costs-2024-2026.csv).
-     * Account for the `Leverantörsbyte` on `2024-09-28` (transition from EEM combined supply+grid to pure grid fee + Tibber).
-
-2. **Step 3 (Milestone 5.5.5 — Formerly Item 4)**:
-   * **Granular Hourly Actual Export Arbitrage**:
-     * Use high-resolution hourly export records from the 121-day continuous dataset (July 16 – Nov 13, 2026) to calculate exact spot price matching for battery revenue.
+1. **Step 3 (Next Up — Milestone 5.5.5, Formerly Item 4)**:
+   * **Granular Hourly Actual Export & Import Arbitrage**:
+     * Currently in [`HistoricalYearCalculator.calculate_annual_report`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/multi_year.py#L238-L243), battery-era daily rows evaluate `act_imp_cost` and `act_exp_rev` at the flat daily arithmetic mean spot price (`avg_spot`), whereas `Baseline 1` and `Baseline 2` use hourly diurnal weights.
+     * Use the high-resolution hourly records from the 121-day continuous dataset (`2,905` hours, `2026-07-16` through `2026-11-13` via [`SonnenHourlyIngestor.parse_directory`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/multi_res.py) and [`HighResAnalyzer`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/analyzer_30d.py)) to compute exact hourly spot-matched import costs and export revenues for actual battery dispatch, and calibrate diurnal/hourly battery dispatch profiles for days without hourly exports.
 
 ---
 

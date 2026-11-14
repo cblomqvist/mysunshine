@@ -330,6 +330,7 @@
                             <button type="button" class="tab-btn" data-tab="tab-multiyear-summary"><i class="fa-solid fa-layer-group"></i> Multi-Year Annual Summary</button>
                             <button type="button" class="tab-btn" data-tab="tab-25y-ledger"><i class="fa-solid fa-table-list"></i> 25-Year Projection Ledger</button>
                             <button type="button" class="tab-btn" data-tab="tab-variance-benchmark"><i class="fa-solid fa-microscope"></i> High-Res Estimation Variance</button>
+                            <button type="button" class="tab-btn" data-tab="tab-utility-audit"><i class="fa-solid fa-file-invoice-dollar"></i> Utility Billing Audit</button>
                         </div>
                     </div>
 
@@ -429,6 +430,35 @@
                                     </tr>
                                 </thead>
                                 <tbody id="ledger-variance-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Utility Tariff & Billing Audit -->
+                    <div class="tab-content" id="tab-utility-audit">
+                        <div class="variance-summary-box">
+                            <h4><i class="fa-solid fa-file-invoice-dollar"></i> EEM Utility Invoicing & Tariff Audit (2024–2026)</h4>
+                            <p id="utility-audit-summary-text">Audits Eskilstuna Energi & Miljö (EEM) invoices across the 2024-09-28 Leverantörsbyte transition (Combined Retail+Grid &rarr; Pure Grid + Tibber). Post-switch pure grid model matches 24/24 monthly invoices to the exact rounded SEK.</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month / Year</th>
+                                        <th>Billing Regime</th>
+                                        <th>EEM Fiscal (kWh)</th>
+                                        <th>Sonnen CT (kWh)</th>
+                                        <th>EEM Billed (SEK)</th>
+                                        <th>Audited Grid Fixed</th>
+                                        <th>Audited Grid Var</th>
+                                        <th>Audited Grid Total</th>
+                                        <th>EEM Retail Share</th>
+                                        <th>Invoice Match / Delta</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-utility-audit-body">
                                     <!-- Populated by JS -->
                                 </tbody>
                             </table>

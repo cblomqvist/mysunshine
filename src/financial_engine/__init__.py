@@ -41,6 +41,15 @@ from .solar_ingestor import (
     SolarEraSynthesizer,
     SolarEraMetrics,
 )
+from .tariff_audit import (
+    AuditedEEMTariffSchedule,
+    DEFAULT_AUDITED_EEM_SCHEDULES,
+    EEMBillingRecord,
+    EEMYearlyCostsIngestor,
+    MonthlyTariffAuditRecord,
+    UtilityTariffAuditReport,
+    UtilityTariffAuditor,
+)
 
 __all__ = [
     # Tariffs
@@ -68,6 +77,14 @@ __all__ = [
     "EEMMeterIngestor",
     "SolarEraSynthesizer",
     "SolarEraMetrics",
+    # Utility Tariff Audit
+    "AuditedEEMTariffSchedule",
+    "DEFAULT_AUDITED_EEM_SCHEDULES",
+    "EEMBillingRecord",
+    "EEMYearlyCostsIngestor",
+    "MonthlyTariffAuditRecord",
+    "UtilityTariffAuditReport",
+    "UtilityTariffAuditor",
     # Multi-Resolution & Ingestion
     "HourlyEnergyRecord",
     "MatchedHourlyInterval",
