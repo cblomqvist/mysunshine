@@ -331,6 +331,7 @@
                             <button type="button" class="tab-btn" data-tab="tab-25y-ledger"><i class="fa-solid fa-table-list"></i> 25-Year Projection Ledger</button>
                             <button type="button" class="tab-btn" data-tab="tab-variance-benchmark"><i class="fa-solid fa-microscope"></i> High-Res Estimation Variance</button>
                             <button type="button" class="tab-btn" data-tab="tab-utility-audit"><i class="fa-solid fa-file-invoice-dollar"></i> Utility Billing Audit</button>
+                            <button type="button" class="tab-btn" data-tab="tab-shadow-forecast" id="tab-btn-shadow"><i class="fa-solid fa-wand-magic-sparkles"></i> Next-Day Forecast &amp; Shadow Advisor</button>
                         </div>
                     </div>
 
@@ -463,6 +464,120 @@
                                     <!-- Populated by JS -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 5: Next-Day Forecast & Shadow Mode Recommendation Engine (Milestone 6) -->
+                    <div class="tab-content" id="tab-shadow-forecast">
+                        <div class="shadow-advisor-header-box">
+                            <div class="shadow-top-bar">
+                                <div class="shadow-title-group">
+                                    <h4>
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        <span id="shadow-banner-title">Next-Day Forecast &amp; Dynamic Grid Pre-Charging Advisor (Shadow Mode)</span>
+                                        <span class="badge badge-success" id="shadow-gate-badge">GATE PASSED: PRE-CHARGE ACTIVE</span>
+                                    </h4>
+                                    <p id="shadow-headline-text">Loading day-ahead SE3 spot curve and shadow dispatch schedule...</p>
+                                </div>
+                                <div class="shadow-scenario-controls">
+                                    <label for="shadow-scenario-select">Forecast / Backtest Day:</label>
+                                    <select id="shadow-scenario-select" class="custom-select">
+                                        <!-- Populated dynamically by JS -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 4-Card Summary Strip for Forecast & Backtest Metrics -->
+                            <div class="shadow-kpi-strip">
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">Selected Day Projected Bill</span>
+                                    <strong class="shadow-mini-val text-savings" id="shadow-val-day-bill">17.67 SEK</strong>
+                                    <span class="shadow-mini-sub" id="shadow-sub-day-bill">Saves +9.65 SEK vs Default SC (27.32 SEK)</span>
+                                </div>
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">Efficiency Gate (η = 76.8%)</span>
+                                    <strong class="shadow-mini-val text-solar" id="shadow-val-gate-spread">13.0 &rarr; 118.3 öre</strong>
+                                    <span class="shadow-mini-sub" id="shadow-sub-gate-breakeven">Break-Even Peak Spot: 41.6 öre/kWh</span>
+                                </div>
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">121-Day Shadow Backtest Upside</span>
+                                    <strong class="shadow-mini-val text-savings" id="shadow-val-121d-upside">+144.39 SEK</strong>
+                                    <span class="shadow-mini-sub" id="shadow-sub-121d-upside">+109.05 SEK Predictive | +247.12 SEK vs Raw CT</span>
+                                </div>
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">121-Day Day-Ahead Forecast MAE</span>
+                                    <strong class="shadow-mini-val" id="shadow-val-121d-mae">4.66 SEK/day</strong>
+                                    <span class="shadow-mini-sub" id="shadow-sub-121d-mae">PV MAE: 4.47 kWh | Load MAE: 3.89 kWh (20 Pre-Charge Days)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 24h Shadow Dispatch vs Default Self-Consumption Chart -->
+                        <div class="shadow-chart-box">
+                            <div class="chart-header">
+                                <div class="chart-title">
+                                    <h3><i class="fa-solid fa-bolt-lightning"></i> 24h Shadow Mode Trajectory vs. Default Self-Consumption</h3>
+                                    <p id="shadow-chart-subtitle">Comparing Shadow SoC (%) &amp; Night Pre-Charging against Standard Sonnen Self-Consumption and Efficiency Gate Break-Even Threshold</p>
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container" style="height: 290px;">
+                                <canvas id="chart-shadow-forecast"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Sub-tables: 24-Hour Action Schedule & 121-Day Backtest Log -->
+                        <div class="shadow-tables-grid">
+                            <div>
+                                <h4 class="shadow-subtable-title"><i class="fa-solid fa-clock"></i> 24-Hour Actionable Shadow Dispatch Schedule</h4>
+                                <div class="table-responsive" style="max-height: 360px;">
+                                    <table class="ledger-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Hour</th>
+                                                <th>Spot (öre)</th>
+                                                <th>Import (SEK)</th>
+                                                <th>PV / Load (kWh)</th>
+                                                <th>Default SoC</th>
+                                                <th>Shadow Action</th>
+                                                <th>Pre-Chg / Dis (kWh)</th>
+                                                <th>Shadow SoC</th>
+                                                <th>Delta (SEK)</th>
+                                                <th>Recommendation Rationale</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ledger-shadow-hourly-body">
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 class="shadow-subtable-title"><i class="fa-solid fa-trophy"></i> 121-Day Prediction vs. Actual Backtest (Jul 16 – Nov 13, 2026)</h4>
+                                <div class="table-responsive" style="max-height: 360px;">
+                                    <table class="ledger-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>PV (Pred / Act)</th>
+                                                <th>Load (Pred / Act)</th>
+                                                <th>Spot [Min–Max]</th>
+                                                <th>Break-Even</th>
+                                                <th>Grid Pre-Chg</th>
+                                                <th>Shadow Strategy</th>
+                                                <th>Actual Sonnen</th>
+                                                <th>Default SC</th>
+                                                <th>Pred Shadow</th>
+                                                <th>Oracle Shadow</th>
+                                                <th>Shadow Gain</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ledger-shadow-backtest-body">
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

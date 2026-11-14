@@ -298,15 +298,15 @@ flowchart TD
 * **Verification Gate**:
   * Complete 2021–2026 historical financial ledger starting from Day 1 installation date (`2,143` days, `72,247.07 SEK` cumulative savings, `22.94%` Capex recouped); 48/48 unit and integration tests passing.
 
-### Milestone 6: Next-Day Forecasting & Shadow Recommendation Engine
+### Milestone 6: Next-Day Forecasting & Shadow Recommendation Engine (Completed)
 * **Branch**: `feat/m6-next-day-forecast`
 * **Deliverables**:
-  * `6.1 Day-Ahead Price & Weather Ingestion`: Ingest tomorrow's published spot prices and local weather/solar irradiance forecast.
-  * `6.2 Next-Day Cost & Savings Projection`: Model expected consumption and calculate tomorrow's projected bill and savings.
-  * `6.3 Dynamic Charging Advisor (Shadow Mode)`: Generate pre-charging/dispatch advice without physical control.
-  * `6.4 Prediction vs. Actual Backtesting`: Track and report predicted vs. actual delta (*"Engine would have saved/lost X SEK"*).
+  * `6.1 Day-Ahead Price & Weather Ingestion`: Built `DayAheadPriceForecaster` and `WeatherIrradianceProvider` (`src/forecast_engine/forecaster.py`) to ingest tomorrow's 15-minute/hourly SE3 spot prices in Swedish local time (`CET/CEST`) and Eskilstuna solar irradiance/weather forecasts (Open-Meteo API with deterministic seasonal clear-sky/transmittance fallback).
+  * `6.2 Next-Day Cost & Savings Projection`: Built `SolarLoadForecaster` to predict next-day hourly PV generation and household consumption (incorporating heating degree days and trailing 7-day trimmed profiles) and project 4-way comparative bills (No Solar, Solar Only, Default Self-Consumption, Shadow Advisor).
+  * `6.3 Dynamic Charging Advisor (Shadow Mode)`: Built `ShadowModeAdvisor` (`src/forecast_engine/shadow_advisor.py`) enforcing the round-trip efficiency gate ($\eta_{\text{rt}} = 76.8\%$, $C_{\text{import}}(t_{\text{peak}}) > C_{\text{import}}(t_{\text{trough}}) / \eta_{\text{rt}} + 0.05\text{ SEK/kWh}$) and smart peak-preservation hold, outputting explicit hourly shadow actions (`GRID_PRECHARGE`, `SOLAR_CHARGE`, `HOLD_FOR_PEAK`, `PEAK_DISCHARGE`, `SELF_CONSUMPTION`, `IDLE`).
+  * `6.4 Prediction vs. Actual Backtesting & Dashboard UI`: Built `ShadowBacktester` (`src/forecast_engine/backtester.py`), verified across the 121-day (`2,905`-hour) continuous high-res dataset (`+109.05 SEK` out-of-sample predictive upside, `+144.39 SEK` oracle dispatch upside vs Default SC, `+247.12 SEK` vs raw realized Sonnen across `20` pre-charge days and `6` smart-hold days), and added the interactive **Next-Day Forecast & Shadow Advisor** tab to the web dashboard.
 * **Verification Gate**:
-  * Automated forecast pipeline and backtesting accuracy metrics report; CI tests pass.
+  * Automated forecast pipeline and 121-day backtesting accuracy metrics report (`PV MAE = 4.47 kWh/day`, `Load MAE = 3.89 kWh/day`, `Bill MAE = 4.66 SEK/day`); 53/53 CI tests passing.
 
 ### Phase 3 (Future): Home Assistant Custom Integration & Active Control
 * **Deliverables**: Home Assistant custom sensors, long-term statistics entity, and optional automated battery dispatch after predictive model verification.

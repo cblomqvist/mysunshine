@@ -16,6 +16,7 @@ from .multi_res import ResolutionMatcher, SonnenHourlyIngestor
 from .multi_year import MultiYearEngine
 from .tariff import SwedishTariff, TariffConfig
 from .tariff_audit import UtilityTariffAuditor
+from ..forecast_engine import ShadowBacktester
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -144,10 +145,19 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
     tariff_auditor = UtilityTariffAuditor(data_dir=data_dir, baseline_tariff=tariff)
     tariff_audit_report = tariff_auditor.run_audit().to_dict()
 
+    # 4. Next-Day Forecast & Shadow Mode Recommendation Engine + 121-Day Backtest (Milestone 6)
+    logging.info("Executing Milestone 6 Next-Day Forecast & 121-Day Shadow Advisor Backtest...")
+    shadow_backtester = ShadowBacktester(tariff=tariff)
+    next_day_forecast_pkg = shadow_backtester.build_next_day_dashboard_package(
+        price_points=price_points,
+        matched_intervals=matched_intervals,
+        target_date="2026-11-15",
+    )
+
     dataset: Dict[str, Any] = {
         "metadata": {
             "app": "MySunshine",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "generated_at": datetime.now().isoformat(),
             "bidding_zone": "SE3",
             "retailer": "Tibber",
@@ -167,6 +177,7 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
         "hardware_eras": multi_year_results["hardware_eras"],
         "year_2025": report_2025_dict,
         "utility_tariff_audit": tariff_audit_report,
+        "next_day_forecast": next_day_forecast_pkg,
         "high_res_30d": {
             **report_30d_dict,
             "days_list": days_summary,
