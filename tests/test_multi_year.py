@@ -49,8 +49,8 @@ def test_historical_years_2021_2022_solar_only():
     assert rep_2022.financial_totals["total_savings_sek"] > 18000.0
 
 
-def test_historical_year_2023_partial():
-    """Verify that 2023 partial year (110 days from Sep 13) calculates properly."""
+def test_historical_year_2023_full_hybrid():
+    """Verify that 2023 full hybrid year (365 days: Jan-Sep 12 Solar Only + Sep 13-Dec 31 Sonnen) calculates properly."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, "data")
     prices_dir = os.path.join(data_dir, "prices")
@@ -63,10 +63,10 @@ def test_historical_year_2023_partial():
     report = calc.calculate_annual_report(capex_sek=315000.0)
 
     assert report.year == 2023
-    assert report.total_days == 110
-    assert report.energy_totals["produced_kwh"] > 900
-    assert report.financial_totals["total_savings_sek"] > 0
-    assert len(report.monthly_ledgers) == 4  # Sep, Oct, Nov, Dec
+    assert report.total_days == 365
+    assert report.energy_totals["produced_kwh"] > 8500
+    assert report.financial_totals["total_savings_sek"] > 9000
+    assert len(report.monthly_ledgers) == 12
 
 
 def test_historical_year_2024_full_leap():

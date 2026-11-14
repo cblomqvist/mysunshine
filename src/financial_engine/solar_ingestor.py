@@ -303,3 +303,107 @@ class SolarEraSynthesizer:
         logger.info("Synthesized %d daily records for Year %d into %s", len(rows), year, target_path)
         assert len(rows) == expected_days, f"Expected {expected_days} days for {year}, got {len(rows)}"
         return target_path
+
+    def synthesize_hybrid_2023_csv(self, output_filepath: Optional[str] = None) -> str:
+        """Synthesize full-year 2023 CSV combining Jan 1 - Sep 12 Solar-Only with Sep 13 - Dec 31 Sonnen logs."""
+        target_path = output_filepath or os.path.join(self.data_dir, "sonnen_energy_data_2023.csv")
+        sonnen_2023_path = os.path.join(self.data_dir, "sonnen_energy_data_2023.csv")
+
+        existing_sonnen = []
+        if os.path.exists(sonnen_2023_path):
+            with open(sonnen_2023_path, "r", encoding="utf-8") as f:
+                existing_sonnen = [
+                    r for r in csv.DictReader(f)
+                    if r["timestamp"][:10] >= "2023-09-13"
+                ]
+
+        metrics = self.get_empirical_metrics(2023)
+        sep_sonnen_prod_wh = sum(
+            int(float(r["produced_energy"]))
+            for r in existing_sonnen
+            if r["timestamp"].startswith("2023-09")
+        )
+        sep_sonnen_exp_wh = sum(
+            int(float(r["grid_feedin_energy"]))
+            for r in existing_sonnen
+            if r["timestamp"].startswith("2023-09")
+        )
+
+        rows = []
+        # 1. Jan - Aug 2023 (Full Solar-Only Months)
+        for m in range(1, 9):
+            days_in_month = calendar.monthrange(2023, m)[1]
+            m_metrics = metrics[m]
+            prod_wh = int(round(m_metrics.produced_kwh * 1000.0))
+            exp_wh = int(round(m_metrics.exported_kwh * 1000.0))
+            cons_wh = int(round(self.CALIBRATED_MONTHLY_CONSUMPTION.get(m, 666.0) * 1000.0))
+
+            base_prod, rem_prod = prod_wh // days_in_month, prod_wh % days_in_month
+            base_exp, rem_exp = exp_wh // days_in_month, exp_wh % days_in_month
+            base_cons, rem_cons = cons_wh // days_in_month, cons_wh % days_in_month
+
+            for d in range(1, days_in_month + 1):
+                dp = base_prod + (1 if d <= rem_prod else 0)
+                de = base_exp + (1 if d <= rem_exp else 0)
+                dc = base_cons + (1 if d <= rem_cons else 0)
+                dsc = max(0, dp - de)
+                dimp = max(0, dc - dsc)
+                tz_str = "+02:00" if (m >= 4 or (m == 3 and d >= 26)) else "+01:00"
+                rows.append({
+                    "timestamp": f"2023-{m:02d}-{d:02d}T00:00:00{tz_str}",
+                    "measurements_count": 1440,
+                    "produced_energy": dp,
+                    "consumed_energy": dc,
+                    "battery_charged_energy": 0,
+                    "battery_discharged_energy": 0,
+                    "grid_feedin_energy": de,
+                    "grid_purchase_energy": dimp,
+                })
+
+        # 2. Sep 1 - Sep 12, 2023 (Pre-Sonnen Solar-Only portion of September)
+        sep_days_pre = 12
+        rem_sep_prod_wh = max(0, int(round(metrics[9].produced_kwh * 1000.0)) - sep_sonnen_prod_wh)
+        rem_sep_exp_wh = max(0, int(round(metrics[9].exported_kwh * 1000.0)) - sep_sonnen_exp_wh)
+        sep_cons_pre_wh = int(round(self.CALIBRATED_MONTHLY_CONSUMPTION[9] * 1000.0 * (12.0 / 30.0)))
+
+        bp, rp = rem_sep_prod_wh // sep_days_pre, rem_sep_prod_wh % sep_days_pre
+        be, re = rem_sep_exp_wh // sep_days_pre, rem_sep_exp_wh % sep_days_pre
+        bc, rc = sep_cons_pre_wh // sep_days_pre, sep_cons_pre_wh % sep_days_pre
+
+        for d in range(1, sep_days_pre + 1):
+            dp = bp + (1 if d <= rp else 0)
+            de = be + (1 if d <= re else 0)
+            dc = bc + (1 if d <= rc else 0)
+            dsc = max(0, dp - de)
+            dimp = max(0, dc - dsc)
+            rows.append({
+                "timestamp": f"2023-09-{d:02d}T00:00:00+02:00",
+                "measurements_count": 1440,
+                "produced_energy": dp,
+                "consumed_energy": dc,
+                "battery_charged_energy": 0,
+                "battery_discharged_energy": 0,
+                "grid_feedin_energy": de,
+                "grid_purchase_energy": dimp,
+            })
+
+        # 3. Sep 13 - Dec 31, 2023 (Sonnen 11 kWh Battery Logs)
+        rows.extend(existing_sonnen)
+
+        fieldnames = [
+            "timestamp",
+            "measurements_count",
+            "produced_energy",
+            "consumed_energy",
+            "battery_charged_energy",
+            "battery_discharged_energy",
+            "grid_feedin_energy",
+            "grid_purchase_energy",
+        ]
+        with open(target_path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        assert len(rows) == 365, f"Expected 365 days for hybrid 2023, got {len(rows)}"
+        return target_path

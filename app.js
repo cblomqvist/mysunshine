@@ -231,10 +231,11 @@ function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek,
         const noSolarCost = (m.consumed_kwh * importCostPerKwh) + fixedCost;
 
         // Baseline 2 (Solar Only)
+        const isSolarOnlyMonth = (!m.battery_charged_kwh && !m.battery_discharged_kwh);
         const scPct = (m.solar_only_self_consumption_pct || m.solar_only_sc_pct || 35.0) / 100.0;
-        const solarDirectSC = Math.min(m.consumed_kwh, m.produced_kwh * scPct);
-        const solarOnlyImport = Math.max(0, m.consumed_kwh - solarDirectSC);
-        const solarOnlyExport = Math.max(0, m.produced_kwh - solarDirectSC);
+        const solarDirectSC = isSolarOnlyMonth ? Math.max(0, m.produced_kwh - m.exported_kwh) : Math.min(m.consumed_kwh, m.produced_kwh * scPct);
+        const solarOnlyImport = isSolarOnlyMonth ? m.imported_kwh : Math.max(0, m.consumed_kwh - solarDirectSC);
+        const solarOnlyExport = isSolarOnlyMonth ? m.exported_kwh : Math.max(0, m.produced_kwh - solarDirectSC);
         const solarOnlyTaxRed = solarOnlyExport * taxRedSek;
         const solarOnlyCost = (solarOnlyImport * importCostPerKwh) - (solarOnlyExport * exportRevPerKwh) + fixedCost;
 
@@ -409,10 +410,10 @@ function updateSimulation() {
         diagAnnualGen.innerText = formatKWh(dashboardData.year_2025.energy_totals.produced_kwh);
     }
 
-    // 4. 25-Year Projection & Payback (Base on 2025 full year stabilized run-rate)
+    // 4. 25-Year Projection & Payback (Actual historicals for 2021–2026 + stabilized 22 kWh run-rate forward)
     const baseMonths2025 = recalculatedYears['2025'] || displayMonths;
     const baseSavings2025 = baseMonths2025.reduce((a, m) => a + m.total_savings_sek, 0);
-    const projection25y = calculate25YearProjection(netCapex, baseSavings2025, inflation, baseMonths2025);
+    const projection25y = calculate25YearProjection(netCapex, baseSavings2025, inflation, baseMonths2025, annualSummaries);
     
     if (projection25y.paybackYear !== null) {
         valPayback.innerText = projection25y.paybackYear.toFixed(1);
@@ -467,7 +468,7 @@ function updateSimulation() {
 }
 
 // 25-Year Projection Math (Starting Jan 2021 Solar Installation)
-function calculate25YearProjection(capex, baseYearSavings, inflationRate, monthsData) {
+function calculate25YearProjection(capex, baseYearSavings, inflationRate, monthsData, annualSummaries = []) {
     const START_YEAR = 2021;
     let cumulative = -capex;
     let paybackYearFraction = null;
@@ -480,14 +481,49 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
     const baseConsumed = monthsData.reduce((acc, m) => acc + m.consumed_kwh, 0);
     const baseImport = monthsData.reduce((acc, m) => acc + m.imported_kwh, 0);
     const baseExport = monthsData.reduce((acc, m) => acc + m.exported_kwh, 0);
+    const baseNoSolarBill = monthsData.reduce((a, m) => a + m.baseline_no_solar_sek, 0);
+    const baseActualBill = monthsData.reduce((a, m) => a + m.actual_cost_sek, 0);
+
+    const summaryByYear = {};
+    annualSummaries.forEach(s => {
+        summaryByYear[s.year] = s;
+    });
+
+    let historicalCount = 0;
 
     for (let y = 1; y <= 25; y++) {
         const calYear = START_YEAR + (y - 1);
         const solarFactor = Math.pow(0.995, y - 1);
         const inflationFactor = Math.pow(1 + inflationRate, y - 1);
+        const hist = summaryByYear[calYear];
 
-        const currentSolarGen = baseSolarGen * solarFactor;
-        const currentSavings = baseYearSavings * solarFactor * inflationFactor;
+        let currentSolarGen;
+        let selfConsumed;
+        let exported;
+        let imported;
+        let noSolarBill;
+        let actualBill;
+        let currentSavings;
+
+        if (hist) {
+            historicalCount = y;
+            currentSolarGen = hist.produced_kwh;
+            selfConsumed = Math.max(0, hist.produced_kwh - hist.exported_kwh);
+            exported = hist.exported_kwh;
+            imported = hist.imported_kwh;
+            noSolarBill = hist.baseline_no_solar_sek;
+            actualBill = hist.actual_cost_sek;
+            currentSavings = hist.total_savings_sek;
+        } else {
+            currentSolarGen = baseSolarGen * solarFactor;
+            selfConsumed = Math.max(0, baseConsumed - baseImport);
+            exported = baseExport * solarFactor;
+            imported = baseImport;
+            noSolarBill = baseNoSolarBill * inflationFactor;
+            actualBill = baseActualBill * inflationFactor;
+            currentSavings = baseYearSavings * solarFactor * inflationFactor;
+        }
+
         const previousNet = cumulative;
         cumulative += currentSavings;
 
@@ -499,14 +535,18 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
 
         let milestoneTag = '';
         if (calYear === 2021) {
-            milestoneTag = ' (Solar Installed)';
+            milestoneTag = ' (Solar Installed - Actual)';
+        } else if (calYear === 2022) {
+            milestoneTag = ' (Energy Crisis - Actual)';
         } else if (calYear === 2023) {
-            milestoneTag = ' (+11 kWh Batt)';
+            milestoneTag = ' (+11 kWh Batt - Actual)';
         } else if (calYear === 2024) {
-            milestoneTag = ' (+11 kWh Expansion)';
+            milestoneTag = ' (+22 kWh Exp - Actual)';
         } else if (calYear === 2025) {
             milestoneTag = ' (Full Year Actual)';
-        } else if (calYear > 2025) {
+        } else if (calYear === 2026 && hist) {
+            milestoneTag = ' (YTD Actual)';
+        } else {
             milestoneTag = ' (Proj)';
         }
 
@@ -516,11 +556,11 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
         tableRows.push({
             year: `${calYear}${milestoneTag}`,
             solarGen: Math.round(currentSolarGen),
-            selfConsumed: Math.round(baseConsumed - baseImport),
-            exported: Math.round(baseExport * solarFactor),
-            imported: Math.round(baseImport),
-            noSolarBill: Math.round(monthsData.reduce((a, m) => a + m.baseline_no_solar_sek, 0) * inflationFactor),
-            actualBill: Math.round(monthsData.reduce((a, m) => a + m.actual_cost_sek, 0) * inflationFactor),
+            selfConsumed: Math.round(selfConsumed),
+            exported: Math.round(exported),
+            imported: Math.round(imported),
+            noSolarBill: Math.round(noSolarBill),
+            actualBill: Math.round(actualBill),
             savings: Math.round(currentSavings),
             balance: Math.round(cumulative)
         });
@@ -529,6 +569,7 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
     return {
         labels,
         dataPoints,
+        historicalCount,
         paybackYear: paybackYearFraction,
         breakEvenCalendarYear,
         tableRows
@@ -546,6 +587,7 @@ function renderPaybackSCurveChart(projection) {
     }
 
     const breakEvenIdx = projection.paybackYear ? Math.ceil(projection.paybackYear) : null;
+    const histLimitIdx = projection.historicalCount || 0;
 
     chartPaybackInstance = new Chart(ctx, {
         type: 'line',
@@ -555,6 +597,9 @@ function renderPaybackSCurveChart(projection) {
                 label: 'Cumulative Net Balance (SEK)',
                 data: projection.dataPoints,
                 borderColor: '#10b981',
+                segment: {
+                    borderDash: (segCtx) => (segCtx.p0DataIndex >= histLimitIdx ? [6, 4] : undefined)
+                },
                 backgroundColor: (context) => {
                     const chart = context.chart;
                     const { ctx, chartArea } = chart;
