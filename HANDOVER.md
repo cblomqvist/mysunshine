@@ -6,6 +6,7 @@
 >    * Update `HANDOVER.md` with completed work, key findings, and updated metrics.
 >    * **Always include a copy-pasteable prompt for the next step/phase** in `HANDOVER.md`.
 >    * **Always suggest a ready-to-use Git commit message in your chat response** when finishing a step or milestone.
+>    * **Whenever a Pull Request (PR) is suitable** (e.g., upon completing a milestone or feature branch), suggest opening a PR and generate a ready-to-use **PR title and description** in your chat response.
 
 ---
 

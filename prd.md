@@ -371,6 +371,7 @@ To maintain complete continuity across new chat conversations and minimize token
   * Update `HANDOVER.md` with current branch, completed work, active blockers/findings, and next actionable steps.
   * **Always include a copy-pasteable prompt for the next step/phase** in `HANDOVER.md`.
   * **Always suggest a ready-to-use Git commit message in the chat response**.
+  * **Whenever a Pull Request (PR) is suitable** (e.g., upon completing a milestone or feature branch), suggest opening a PR and generate a ready-to-use **PR title and description** in the chat response.
 * **Session Start**: Any new chat session begins by reading `HANDOVER.md` and `prd.md` to immediately restore exact project state without redundant re-analysis.
 
 
