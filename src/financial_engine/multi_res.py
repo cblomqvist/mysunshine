@@ -99,8 +99,24 @@ class SonnenHourlyIngestor:
                     missing = required_cols - set(reader.fieldnames or [])
                     raise ValueError(f"CSV missing required columns in {file_path}: {missing}")
 
-                for row in reader:
+                file_rows = list(reader)
+                # Group by local date (YYYY-MM-DD) to skip an incomplete last day (< 23 hours)
+                day_counts: Dict[str, int] = {}
+                for row in file_rows:
+                    d_key = row["timestamp"][:10]
+                    day_counts[d_key] = day_counts.get(d_key, 0) + 1
+
+                sorted_days = sorted(day_counts.keys())
+                incomplete_last_day = (
+                    sorted_days[-1]
+                    if len(sorted_days) > 1 and day_counts[sorted_days[-1]] < 23
+                    else None
+                )
+
+                for row in file_rows:
                     ts_str = row["timestamp"]
+                    if incomplete_last_day and ts_str[:10] == incomplete_last_day:
+                        continue
                     ts = datetime.fromisoformat(ts_str)
                     norm_utc = cls._normalize_dt(ts)
                     m_count = int(row.get("measurements_count", 60))

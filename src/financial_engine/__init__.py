@@ -35,6 +35,12 @@ from .multi_year import (
     HardwareEra,
     DEFAULT_HARDWARE_ERAS,
 )
+from .solar_ingestor import (
+    SMAInverterIngestor,
+    EEMMeterIngestor,
+    SolarEraSynthesizer,
+    SolarEraMetrics,
+)
 
 __all__ = [
     # Tariffs
@@ -57,6 +63,11 @@ __all__ = [
     "MultiYearEngine",
     "HardwareEra",
     "DEFAULT_HARDWARE_ERAS",
+    # Solar Era Ingestion
+    "SMAInverterIngestor",
+    "EEMMeterIngestor",
+    "SolarEraSynthesizer",
+    "SolarEraMetrics",
     # Multi-Resolution & Ingestion
     "HourlyEnergyRecord",
     "MatchedHourlyInterval",

@@ -186,6 +186,8 @@ class HistoricalYearCalculator:
                 batt_dis_kwh = float(row.get("battery_discharged_energy", 0.0)) / 1000.0
                 feedin_kwh = float(row.get("grid_feedin_energy", 0.0)) / 1000.0
                 purchase_kwh = float(row.get("grid_purchase_energy", 0.0)) / 1000.0
+                is_solar_only = (batt_chg_kwh == 0.0 and batt_dis_kwh == 0.0)
+                act_sc = max(0.0, produced_kwh - feedin_kwh)
 
                 day_prices = prices_by_date.get(date_key)
                 if day_prices:
@@ -212,9 +214,14 @@ class HistoricalYearCalculator:
 
                         b1_imp_cost += self.tariff.calculate_import_cost(load_h, p_h)
 
-                        sc_h = min(pv_h, load_h)
-                        exp_h = max(0.0, pv_h - load_h)
-                        imp_h = max(0.0, load_h - pv_h)
+                        if is_solar_only:
+                            sc_h = act_sc * w_pv
+                            exp_h = feedin_kwh * w_pv
+                            imp_h = purchase_kwh * w_l
+                        else:
+                            sc_h = min(pv_h, load_h)
+                            exp_h = max(0.0, pv_h - load_h)
+                            imp_h = max(0.0, load_h - pv_h)
 
                         b2_sc_tot += sc_h
                         b2_exp_tot += exp_h
@@ -225,11 +232,14 @@ class HistoricalYearCalculator:
                             exp_h, p_h, date_str=date_key
                         )
 
-                    act_imp_cost = self.tariff.calculate_import_cost(purchase_kwh, avg_spot)
-                    act_exp_rev = self.tariff.calculate_export_revenue(
-                        feedin_kwh, avg_spot, date_str=date_key
-                    )
-                    act_sc = max(0.0, produced_kwh - feedin_kwh)
+                    if is_solar_only:
+                        act_imp_cost = b2_imp_cost
+                        act_exp_rev = b2_exp_rev
+                    else:
+                        act_imp_cost = self.tariff.calculate_import_cost(purchase_kwh, avg_spot)
+                        act_exp_rev = self.tariff.calculate_export_revenue(
+                            feedin_kwh, avg_spot, date_str=date_key
+                        )
 
                     b1 = BaselineScenarioResult(
                         name="Baseline 1: No Solar, No Battery",

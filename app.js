@@ -308,7 +308,9 @@ function updateSimulation() {
         const totActTaxRed = recalcedMonths.reduce((a, m) => a + (m.actual_tax_red_sek || 0), 0);
 
         let eraName = "Sonnen 22 kWh (Dual)";
-        if (yrStr === "2023") eraName = "Sonnen 11 kWh Installed (Sep)";
+        if (yrStr === "2021") eraName = "Solar PV Only (SMA 8 kW)";
+        else if (yrStr === "2022") eraName = "Solar PV Only (Energy Crisis)";
+        else if (yrStr === "2023") eraName = "Sonnen 11 kWh Installed (Sep)";
         else if (yrStr === "2024") eraName = "11 kWh → 22 kWh Expansion (Sep 9)";
         else if (yrStr === "2026") eraName = "Sonnen 22 kWh (No Skattereduktion)";
 

@@ -20,12 +20,12 @@ def format_currency(amount: float) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Calculate Multi-Year (2023-2025) Solar & Battery ROI and Baselines."
+        description="Calculate Multi-Year (2021-2026) Solar & Battery ROI and Baselines."
     )
     parser.add_argument(
         "--year",
         type=int,
-        choices=[2023, 2024, 2025, 2026],
+        choices=[2021, 2022, 2023, 2024, 2025, 2026],
         default=None,
         help="Specific year to calculate (default: all available years)",
     )
