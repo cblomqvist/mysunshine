@@ -56,4 +56,3 @@ def test_solar_era_empirical_calibration():
     assert abs(s2022.produced_kwh - 9038.13) < 0.2
     assert abs(s2022.exported_kwh - 6997.96) < 0.2
     assert abs(s2022.self_consumption_pct - 22.57) < 0.1
-

@@ -26,6 +26,12 @@ from .calculator_2025 import (
     DailyFinancialRecord,
     MonthlyFinancialLedger,
 )
+from .multi_res import (
+    HourlyEnergyRecord,
+    MatchedHourlyInterval,
+    ResolutionMatcher,
+    SonnenHourlyIngestor,
+)
 from .tariff import SwedishTariff
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -87,12 +93,14 @@ class HistoricalYearCalculator:
         data_file: str,
         price_file: Optional[str] = None,
         tariff: Optional[SwedishTariff] = None,
+        hourly_records: Optional[List[HourlyEnergyRecord]] = None,
     ):
         self.year = year
         self.data_file = data_file
         self.price_file = price_file
         self.tariff = tariff or SwedishTariff()
         self.engine = BaselineEngine(tariff=self.tariff)
+        self.hourly_records = hourly_records
 
     @staticmethod
     def _to_swedish_local(dt: datetime) -> datetime:
@@ -163,12 +171,43 @@ class HistoricalYearCalculator:
 
         return prices_by_date
 
+    def load_matched_hourly_by_date(self) -> Dict[str, List[MatchedHourlyInterval]]:
+        """Load and match high-resolution hourly energy records with spot prices for this year."""
+        records = self.hourly_records
+        if records is None and self.data_file:
+            data_dir = os.path.dirname(os.path.abspath(self.data_file))
+            if os.path.exists(data_dir):
+                records = SonnenHourlyIngestor.parse_directory(data_dir)
+
+        if not records:
+            return {}
+
+        year_records = [r for r in records if r.timestamp.year == self.year]
+        if not year_records:
+            return {}
+
+        price_points = []
+        if self.price_file and os.path.exists(self.price_file):
+            try:
+                price_points = ResolutionMatcher.load_prices_from_json(self.price_file)
+            except Exception as e:
+                logging.warning("Error loading price points from %s: %s", self.price_file, e)
+
+        matched = ResolutionMatcher.match_hourly_energy_with_prices(year_records, price_points)
+        grouped: Dict[str, List[MatchedHourlyInterval]] = {}
+        for m in matched:
+            d_key = m.energy.timestamp.strftime("%Y-%m-%d")
+            grouped.setdefault(d_key, []).append(m)
+
+        return {d_key: ms for d_key, ms in grouped.items() if len(ms) >= 23}
+
     def calculate_annual_report(self, capex_sek: Optional[float] = None) -> AnnualFinancialReport:
         """Calculate complete annual report for the configured year."""
         if not os.path.exists(self.data_file):
             raise FileNotFoundError(f"Data file not found: {self.data_file}")
 
         prices_by_date = self.load_spot_prices_by_date()
+        matched_hourly_by_date = self.load_matched_hourly_by_date()
         daily_records_dict: Dict[str, DailyFinancialRecord] = {}
         default_spot_price = 0.50  # 50 öre/kWh fallback
 
@@ -235,10 +274,39 @@ class HistoricalYearCalculator:
                     if is_solar_only:
                         act_imp_cost = b2_imp_cost
                         act_exp_rev = b2_exp_rev
+                    elif date_key in matched_hourly_by_date:
+                        day_matched = matched_hourly_by_date[date_key]
+                        act_imp_cost = sum(
+                            self.tariff.calculate_import_cost(
+                                m.energy.grid_purchase_kwh, m.spot_price_sek_kwh
+                            )
+                            for m in day_matched
+                        )
+                        act_exp_rev = sum(
+                            self.tariff.calculate_export_revenue(
+                                m.energy.grid_feedin_kwh, m.spot_price_sek_kwh, date_str=date_key
+                            )
+                            for m in day_matched
+                        )
                     else:
-                        act_imp_cost = self.tariff.calculate_import_cost(purchase_kwh, avg_spot)
-                        act_exp_rev = self.tariff.calculate_export_revenue(
-                            feedin_kwh, avg_spot, date_str=date_key
+                        hourly_act_imp, hourly_act_exp = self.engine.disaggregate_daily_actual_battery(
+                            daily_consumed_kwh=consumed_kwh,
+                            daily_produced_kwh=produced_kwh,
+                            actual_imported_kwh=purchase_kwh,
+                            actual_exported_kwh=feedin_kwh,
+                            battery_charged_kwh=batt_chg_kwh,
+                            battery_discharged_kwh=batt_dis_kwh,
+                            hours_count=n_h,
+                        )
+                        act_imp_cost = sum(
+                            self.tariff.calculate_import_cost(hourly_act_imp[h], day_prices[h])
+                            for h in range(n_h)
+                        )
+                        act_exp_rev = sum(
+                            self.tariff.calculate_export_revenue(
+                                hourly_act_exp[h], day_prices[h], date_str=date_key
+                            )
+                            for h in range(n_h)
                         )
 
                     b1 = BaselineScenarioResult(
@@ -508,6 +576,7 @@ class MultiYearEngine:
         """Execute multi-year calculations across all available years."""
         years = self.get_available_years()
         annual_reports: Dict[int, AnnualFinancialReport] = {}
+        all_hourly_records = SonnenHourlyIngestor.parse_directory(self.data_dir)
 
         for y in years:
             csv_path = os.path.join(self.data_dir, f"sonnen_energy_data_{y}.csv")
@@ -518,6 +587,7 @@ class MultiYearEngine:
                 data_file=csv_path,
                 price_file=price_path if os.path.exists(price_path) else None,
                 tariff=self.tariff,
+                hourly_records=all_hourly_records,
             )
             report = calc.calculate_annual_report(capex_sek=net_capex_sek)
             annual_reports[y] = report

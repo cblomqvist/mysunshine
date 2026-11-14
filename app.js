@@ -211,41 +211,46 @@ function populateDispatchDays() {
 
 // Helper: Recalculate financial costs for a list of monthly ledgers given current tariff settings
 function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek, taxRedEnabled, tibberFee, defaultYear = 2025) {
+    const BAKED_ENERGISKATT_SEK = 0.428;
+    const BAKED_EEM_TRANSFER_SEK = 0.176;
+    const BAKED_TIBBER_FEE_SEK = 49.0;
+
     return monthlyLedgers.map(m => {
-        const spotSek = (m.avg_spot_price_ore_kwh || m.avg_spot_price_ore || 50.0) / 100.0;
         const year = m.year || defaultYear;
-        
-        // Import cost per kWh
-        const importCostPerKwh = (spotSek + energiskattSek + eemTransferSek) * (1.0 + MOMS_RATE);
-        
-        // Export revenue per kWh (Skattereduktion 60 öre/kWh ended 2026-01-01)
+
+        // Export revenue subsidy (Skattereduktion 60 öre/kWh ended 2026-01-01)
         const isTaxRedValid = taxRedEnabled && (year < 2026);
         const taxRedSek = isTaxRedValid ? 0.60 : 0.0;
-        const eemNatnyttaSek = 0.08; // 8 öre/kWh standard grid benefit
-        const exportRevPerKwh = spotSek + eemNatnyttaSek + taxRedSek;
-        
-        // Monthly fixed cost
+        const bakedTaxRedSek = (year < 2026) ? 0.60 : 0.0;
+
+        // Monthly fixed cost delta relative to baked 49 SEK/month Tibber fee
         const daysInMonth = m.days_count || m.days || 30;
         const monthFraction = daysInMonth / 30.4375;
-        const fixedCost = (tibberFee + 100.0) * monthFraction;
+        const deltaFixedCost = (tibberFee - BAKED_TIBBER_FEE_SEK) * monthFraction;
 
-        // Baseline 1 (No Solar)
-        const noSolarCost = (m.consumed_kwh * importCostPerKwh) + fixedCost;
+        // Linear variable tariff deltas per kWh relative to baked defaults
+        const deltaImportCostPerKwh = ((energiskattSek - BAKED_ENERGISKATT_SEK) + (eemTransferSek - BAKED_EEM_TRANSFER_SEK)) * (1.0 + MOMS_RATE);
+        const deltaExportRevPerKwh = taxRedSek - bakedTaxRedSek;
 
-        // Baseline 2 (Solar Only)
+        // Baseline 2 (Solar Only) kWh volumes
         const isSolarOnlyMonth = (!m.battery_charged_kwh && !m.battery_discharged_kwh);
-        const scPct = (m.solar_only_self_consumption_pct || m.solar_only_sc_pct || 35.0) / 100.0;
+        const scPct = (m.solar_only_self_consumption_pct ?? m.solar_only_sc_pct ?? 35.0) / 100.0;
         const solarDirectSC = isSolarOnlyMonth ? Math.max(0, m.produced_kwh - m.exported_kwh) : Math.min(m.consumed_kwh, m.produced_kwh * scPct);
         const solarOnlyImport = isSolarOnlyMonth ? m.imported_kwh : Math.max(0, m.consumed_kwh - solarDirectSC);
         const solarOnlyExport = isSolarOnlyMonth ? m.exported_kwh : Math.max(0, m.produced_kwh - solarDirectSC);
         const solarOnlyTaxRed = solarOnlyExport * taxRedSek;
-        const solarOnlyCost = (solarOnlyImport * importCostPerKwh) - (solarOnlyExport * exportRevPerKwh) + fixedCost;
-
-        // Actual System (Solar + SonnenBatterie 10)
         const actualTaxRed = m.exported_kwh * taxRedSek;
-        const actualImportCost = m.imported_kwh * importCostPerKwh;
-        const actualExportRev = m.exported_kwh * exportRevPerKwh;
-        const actualCost = actualImportCost - actualExportRev + fixedCost;
+
+        // Anchor on baked hourly/diurnal-matched bills and apply exact linear slider deltas
+        const bakedNoSolar = m.baseline_no_solar_cost_sek ?? m.baseline_no_solar_sek ?? 0;
+        const bakedSolarOnly = m.baseline_solar_only_cost_sek ?? m.baseline_solar_only_sek ?? 0;
+        const bakedActual = m.actual_cost_sek ?? 0;
+
+        const noSolarCost = bakedNoSolar + (m.consumed_kwh * deltaImportCostPerKwh) + deltaFixedCost;
+        const solarOnlyCost = isSolarOnlyMonth
+            ? (bakedActual + (m.imported_kwh * deltaImportCostPerKwh) - (m.exported_kwh * deltaExportRevPerKwh) + deltaFixedCost)
+            : (bakedSolarOnly + (solarOnlyImport * deltaImportCostPerKwh) - (solarOnlyExport * deltaExportRevPerKwh) + deltaFixedCost);
+        const actualCost = bakedActual + (m.imported_kwh * deltaImportCostPerKwh) - (m.exported_kwh * deltaExportRevPerKwh) + deltaFixedCost;
 
         const totalSavings = noSolarCost - actualCost;
         const solarSavings = noSolarCost - solarOnlyCost;
@@ -1003,10 +1008,10 @@ function updateHourlyDispatchChart() {
     }
 
     const labels = dayRecords.map(h => `${String(h.hour).padStart(2, '0')}:00`);
-    const pvPower = dayRecords.map(h => h.pv_power_kw);
-    const loadPower = dayRecords.map(h => h.load_power_kw);
-    const battPower = dayRecords.map(h => h.battery_power_kw);
-    const socData = dayRecords.map(h => h.soc_pct);
+    const pvPower = dayRecords.map(h => h.pv_power_kw ?? h.produced_kw ?? 0);
+    const loadPower = dayRecords.map(h => h.load_power_kw ?? h.consumed_kw ?? 0);
+    const battPower = dayRecords.map(h => h.battery_power_kw ?? ((h.battery_discharged_kw || 0) - (h.battery_charged_kw || 0)));
+    const socData = dayRecords.map(h => h.soc_pct ?? h.battery_soc_pct ?? 0);
     const priceData = dayRecords.map(h => h.spot_price_ore);
 
     chartHourlyDispatchInstance = new Chart(ctx, {
@@ -1225,21 +1230,29 @@ function render25YearLedgerTable(rows) {
     ledger25yBody.innerHTML = html;
 }
 
-// Populate 30-Day Variance Benchmark Table
+// Populate High-Res Variance Benchmark Table
 function populateVarianceTable() {
     if (!ledgerVarianceBody || !dashboardData?.high_res_30d?.variance_benchmarks?.daily_averaged?.metrics) return;
     
-    const metrics = dashboardData.high_res_30d.variance_benchmarks.daily_averaged.metrics;
+    const dailyMetrics = dashboardData.high_res_30d.variance_benchmarks.daily_averaged.metrics;
+    const synthMetrics = dashboardData.high_res_30d.variance_benchmarks.synthetic_weighted?.metrics || [];
     let html = '';
-    metrics.forEach(m => {
+    dailyMetrics.forEach((m, idx) => {
+        const s = synthMetrics[idx];
         const deltaClass = m.delta_sek >= 0 ? 'text-solar' : 'text-battery';
+        const sDeltaClass = s && s.delta_sek >= 0 ? 'text-solar' : 'text-battery';
+        const synthEstStr = s ? formatSEK(s.estimated_sek) : '&mdash;';
+        const synthErrStr = s
+            ? `${s.delta_sek >= 0 ? '+' : ''}${s.delta_sek.toFixed(2)} SEK (${s.percentage_error >= 0 ? '+' : ''}${s.percentage_error.toFixed(2)}%)`
+            : '&mdash;';
         html += `
             <tr>
-                <td>${m.metric}</td>
+                <td><strong>${m.metric}</strong></td>
                 <td>${formatSEK(m.exact_sek)}</td>
                 <td>${formatSEK(m.estimated_sek)}</td>
-                <td class="${deltaClass}">${m.delta_sek >= 0 ? '+' : ''}${m.delta_sek.toFixed(2)} SEK</td>
-                <td>${m.percentage_error.toFixed(2)}%</td>
+                <td class="${deltaClass}">${m.delta_sek >= 0 ? '+' : ''}${m.delta_sek.toFixed(2)} SEK (${m.percentage_error >= 0 ? '+' : ''}${m.percentage_error.toFixed(2)}%)</td>
+                <td>${synthEstStr}</td>
+                <td class="${sDeltaClass}">${synthErrStr}</td>
             </tr>
         `;
     });

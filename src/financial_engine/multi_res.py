@@ -166,6 +166,57 @@ class SonnenHourlyIngestor:
             return []
         return cls.parse_csvs(files)
 
+    @classmethod
+    def calibrate_diurnal_profiles(
+        cls, records: List[HourlyEnergyRecord]
+    ) -> Dict[str, List[float]]:
+        """Calibrate normalized 24-hour empirical diurnal energy & battery dispatch profiles."""
+        load_by_h = [0.0] * 24
+        solar_by_h = [0.0] * 24
+        imp_by_h = [0.0] * 24
+        imp_active_by_h = [0.0] * 24
+        imp_low_by_h = [0.0] * 24
+        exp_by_h = [0.0] * 24
+        chg_by_h = [0.0] * 24
+        dis_by_h = [0.0] * 24
+
+        by_day: Dict[str, List[HourlyEnergyRecord]] = {}
+        for r in records:
+            d_str = r.timestamp.strftime("%Y-%m-%d")
+            by_day.setdefault(d_str, []).append(r)
+
+        for d_str, day_recs in by_day.items():
+            day_cons = sum(r.consumed_kwh for r in day_recs)
+            day_dis = sum(r.battery_discharged_kwh for r in day_recs)
+            is_active = day_cons > 0.0 and day_dis >= 0.25 * day_cons
+            for r in day_recs:
+                h = r.timestamp.hour
+                load_by_h[h] += r.consumed_kwh
+                solar_by_h[h] += r.produced_kwh
+                imp_by_h[h] += r.grid_purchase_kwh
+                exp_by_h[h] += r.grid_feedin_kwh
+                chg_by_h[h] += r.battery_charged_kwh
+                dis_by_h[h] += r.battery_discharged_kwh
+                if is_active:
+                    imp_active_by_h[h] += r.grid_purchase_kwh
+                else:
+                    imp_low_by_h[h] += r.grid_purchase_kwh
+
+        def _norm(arr: List[float]) -> List[float]:
+            tot = sum(arr)
+            return [x / tot for x in arr] if tot > 0.0 else [1.0 / 24.0] * 24
+
+        return {
+            "load_weights": _norm(load_by_h),
+            "solar_weights": _norm(solar_by_h),
+            "battery_import_weights": _norm(imp_by_h),
+            "battery_active_import_weights": _norm(imp_active_by_h),
+            "battery_low_solar_import_weights": _norm(imp_low_by_h),
+            "battery_export_weights": _norm(exp_by_h),
+            "battery_charge_weights": _norm(chg_by_h),
+            "battery_discharge_weights": _norm(dis_by_h),
+        }
+
 
 class ResolutionMatcher:
     """Matches energy time-series with spot price data across 15-min and 60-min resolutions."""

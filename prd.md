@@ -287,16 +287,16 @@ flowchart TD
 * **Verification Gate**:
   * 38/38 unit and multi-resolution integration tests passing; all pre-push checks green.
 
-### Milestone 5.5: Full Day-1 Historical Expansion (2021–2023 Solar Era) & Utility Audit (In Progress)
+### Milestone 5.5: Full Day-1 Historical Expansion (2021–2023 Solar Era) & Utility Audit (Completed)
 * **Branch**: `feat/m5.5-day1-historical-expansion`
 * **Deliverables**:
   * `5.5.1 SMA Inverter Solar Yield Ingestion`: Ingest monthly production logs from `data/sunnyportal-sma-inverter-data-2026-10-24.csv` (8,381.5 kWh in 2021, 9,038.1 kWh in 2022, 8,532.4 kWh in 2023).
   * `5.5.2 EEM Utility Meter Readings Ingestion`: Ingest official monthly export meter readings from `data/EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv` (5,695.3 kWh exported in 2021, 6,998.0 kWh exported in 2022).
   * `5.5.3 Empirical Solar-Only Baseline 2 Calibration`: Calibrate Baseline 2 using actual empirical self-consumption rates (32.0% in 2021, 22.6% in 2022) and compute exact financial returns during the 2021–2022 energy crisis.
-  * `5.5.4 Utility Billing Benchmark`: Audit `SwedishTariff` fixed and variable fees against actual utility billed amounts in `data/eem-yearly-costs-2024-2026.csv`.
-  * `5.5.5 Item 4 Granular Actual Export Arbitrage`: Enhance actual system revenue calculations using granular hourly dispatch records.
+  * `5.5.4 Utility Billing Benchmark`: Audit `SwedishTariff` fixed and variable fees against actual utility billed amounts in `data/eem-yearly-costs-2024-2026.csv` (24/24 exact integer SEK monthly invoice matches post-`Leverantörsbyte`).
+  * `5.5.5 Item 4 Granular Actual Export Arbitrage`: Enhance actual system revenue and import cost calculations using exact spot-matched hourly dispatch records (`2,905` hours, `2026-07-16` to `2026-11-13`) and calibrated empirical diurnal battery dispatch profiles (`-0.81%` net cost variance).
 * **Verification Gate**:
-  * Complete 2021–2026 historical financial ledger starting from Day 1 installation date; verified cumulative capex recoupment.
+  * Complete 2021–2026 historical financial ledger starting from Day 1 installation date (`2,143` days, `72,247.07 SEK` cumulative savings, `22.94%` Capex recouped); 48/48 unit and integration tests passing.
 
 ### Milestone 6: Next-Day Forecasting & Shadow Recommendation Engine
 * **Branch**: `feat/m6-next-day-forecast`
@@ -367,7 +367,10 @@ To guarantee zero CI failures and ensure git pushes are never blocked by local h
 
 To maintain complete continuity across new chat conversations and minimize token overhead:
 * **Single Source of Truth**: Maintain a dedicated [`HANDOVER.md`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/HANDOVER.md) file at the repository root.
-* **Session Close**: At the conclusion of each milestone or when starting a new session, update `HANDOVER.md` with current branch, commit hash, completed work, active blockers/findings, and next actionable steps.
+* **Session / Step Close**: At the conclusion of each step, phase, or milestone:
+  * Update `HANDOVER.md` with current branch, completed work, active blockers/findings, and next actionable steps.
+  * **Always include a copy-pasteable prompt for the next step/phase** in `HANDOVER.md`.
+  * **Always suggest a ready-to-use Git commit message in the chat response**.
 * **Session Start**: Any new chat session begins by reading `HANDOVER.md` and `prd.md` to immediately restore exact project state without redundant re-analysis.
 
 

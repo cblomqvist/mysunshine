@@ -50,7 +50,7 @@ def test_historical_years_2021_2022_solar_only():
 
 
 def test_historical_year_2023_full_hybrid():
-    """Verify that 2023 full hybrid year (365 days: Jan-Sep 12 Solar Only + Sep 13-Dec 31 Sonnen) calculates properly."""
+    """Verify that 2023 full hybrid year (365 days: Solar Only + Sonnen 11 kWh) calculates properly."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, "data")
     prices_dir = os.path.join(data_dir, "prices")
@@ -106,6 +106,12 @@ def test_historical_year_2026_ytd():
     assert report.total_days >= 240
     assert report.energy_totals["produced_kwh"] > 7000
     assert report.financial_totals["total_savings_sek"] > 0
+
+    matched_by_date = calc.load_matched_hourly_by_date()
+    assert len(matched_by_date) == 121
+    assert "2026-07-16" in matched_by_date
+    assert "2026-11-13" in matched_by_date
+    assert len(matched_by_date["2026-10-25"]) == 25  # 25-hour DST fallback day
 
 
 def test_multi_year_engine_aggregation():

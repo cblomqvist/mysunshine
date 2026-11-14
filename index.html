@@ -415,8 +415,8 @@
                     <!-- Tab 3: Estimation Variance Benchmark -->
                     <div class="tab-content" id="tab-variance-benchmark">
                         <div class="variance-summary-box">
-                            <h4><i class="fa-solid fa-circle-info"></i> High-Resolution vs. Daily-Averaged Estimation Benchmark</h4>
-                            <p>Demonstrates the financial impact of 15-minute / hourly spot price settlement compared to simplified daily net averages on a 30-day high-resolution dataset (744 hours).</p>
+                            <h4><i class="fa-solid fa-circle-info"></i> High-Resolution vs. Daily-Averaged &amp; Calibrated Diurnal Profile Benchmark</h4>
+                            <p>Demonstrates the financial impact of 15-minute / hourly spot price settlement compared to simplified daily net averages and calibrated diurnal battery dispatch profiles on the 121-day continuous high-resolution dataset (2,905 hours, Jul 16 – Nov 13, 2026).</p>
                         </div>
                         <div class="table-responsive">
                             <table class="ledger-table">
@@ -424,9 +424,10 @@
                                     <tr>
                                         <th>Financial Metric</th>
                                         <th>Exact High-Res Settlement</th>
-                                        <th>Simple Daily Average Estimation</th>
-                                        <th>Variance / Delta (SEK)</th>
-                                        <th>Percentage Error</th>
+                                        <th>Simple Daily Average</th>
+                                        <th>Daily Avg Error</th>
+                                        <th>Calibrated Diurnal Profile</th>
+                                        <th>Diurnal Profile Error</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ledger-variance-body">
