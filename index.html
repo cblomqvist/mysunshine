@@ -133,11 +133,13 @@
                     <div class="input-group">
                         <label for="history-year-select" class="visually-hidden">Select Historical Year</label>
                         <select id="history-year-select" class="custom-select">
-                            <option value="all" selected>All Historical Data (2023–2026 Cumulative)</option>
+                            <option value="all" selected>All Historical Data (2021–2026 Cumulative)</option>
                             <option value="2026">2026 YTD (Dual 22 kWh Sonnen 10)</option>
                             <option value="2025">2025 (Dual 22 kWh Sonnen 10)</option>
                             <option value="2024">2024 (11 kWh &rarr; 22 kWh Expansion)</option>
                             <option value="2023">2023 (11 kWh Sonnen 10 Install)</option>
+                            <option value="2022">2022 (Solar PV Only, Energy Crisis)</option>
+                            <option value="2021">2021 (Solar PV Only, Day-1 Install)</option>
                         </select>
                     </div>
 
@@ -328,6 +330,7 @@
                             <button type="button" class="tab-btn" data-tab="tab-multiyear-summary"><i class="fa-solid fa-layer-group"></i> Multi-Year Annual Summary</button>
                             <button type="button" class="tab-btn" data-tab="tab-25y-ledger"><i class="fa-solid fa-table-list"></i> 25-Year Projection Ledger</button>
                             <button type="button" class="tab-btn" data-tab="tab-variance-benchmark"><i class="fa-solid fa-microscope"></i> High-Res Estimation Variance</button>
+                            <button type="button" class="tab-btn" data-tab="tab-utility-audit"><i class="fa-solid fa-file-invoice-dollar"></i> Utility Billing Audit</button>
                         </div>
                     </div>
 
@@ -412,8 +415,8 @@
                     <!-- Tab 3: Estimation Variance Benchmark -->
                     <div class="tab-content" id="tab-variance-benchmark">
                         <div class="variance-summary-box">
-                            <h4><i class="fa-solid fa-circle-info"></i> High-Resolution vs. Daily-Averaged Estimation Benchmark</h4>
-                            <p>Demonstrates the financial impact of 15-minute / hourly spot price settlement compared to simplified daily net averages on a 30-day high-resolution dataset (744 hours).</p>
+                            <h4><i class="fa-solid fa-circle-info"></i> High-Resolution vs. Daily-Averaged &amp; Calibrated Diurnal Profile Benchmark</h4>
+                            <p>Demonstrates the financial impact of 15-minute / hourly spot price settlement compared to simplified daily net averages and calibrated diurnal battery dispatch profiles on the 121-day continuous high-resolution dataset (2,905 hours, Jul 16 – Nov 13, 2026).</p>
                         </div>
                         <div class="table-responsive">
                             <table class="ledger-table">
@@ -421,12 +424,42 @@
                                     <tr>
                                         <th>Financial Metric</th>
                                         <th>Exact High-Res Settlement</th>
-                                        <th>Simple Daily Average Estimation</th>
-                                        <th>Variance / Delta (SEK)</th>
-                                        <th>Percentage Error</th>
+                                        <th>Simple Daily Average</th>
+                                        <th>Daily Avg Error</th>
+                                        <th>Calibrated Diurnal Profile</th>
+                                        <th>Diurnal Profile Error</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ledger-variance-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Utility Tariff & Billing Audit -->
+                    <div class="tab-content" id="tab-utility-audit">
+                        <div class="variance-summary-box">
+                            <h4><i class="fa-solid fa-file-invoice-dollar"></i> EEM Utility Invoicing & Tariff Audit (2024–2026)</h4>
+                            <p id="utility-audit-summary-text">Audits Eskilstuna Energi & Miljö (EEM) invoices across the 2024-09-28 Leverantörsbyte transition (Combined Retail+Grid &rarr; Pure Grid + Tibber). Post-switch pure grid model matches 24/24 monthly invoices to the exact rounded SEK.</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month / Year</th>
+                                        <th>Billing Regime</th>
+                                        <th>EEM Fiscal (kWh)</th>
+                                        <th>Sonnen CT (kWh)</th>
+                                        <th>EEM Billed (SEK)</th>
+                                        <th>Audited Grid Fixed</th>
+                                        <th>Audited Grid Var</th>
+                                        <th>Audited Grid Total</th>
+                                        <th>EEM Retail Share</th>
+                                        <th>Invoice Match / Delta</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-utility-audit-body">
                                     <!-- Populated by JS -->
                                 </tbody>
                             </table>

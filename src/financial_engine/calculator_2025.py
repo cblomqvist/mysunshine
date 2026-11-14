@@ -121,6 +121,7 @@ class AnnualFinancialReport:
                     "baseline_no_solar_sek": round(m.baseline_no_solar_cost_sek, 2),
                     "baseline_solar_only_sek": round(m.baseline_solar_only_cost_sek, 2),
                     "actual_cost_sek": round(m.actual_cost_sek, 2),
+                    "fixed_subscription_fee_sek": round(m.fixed_subscription_fee_sek, 2),
                     "total_savings_sek": round(m.total_savings_sek, 2),
                     "solar_savings_sek": round(m.solar_contribution_sek, 2),
                     "battery_savings_sek": round(m.battery_marginal_value_sek, 2),
@@ -297,10 +298,25 @@ class Year2025Calculator:
                             exp_h, p_h, date_str=date_key
                         )
 
-                    # Actual system
-                    act_imp_cost = self.tariff.calculate_import_cost(purchase_kwh, avg_spot)
-                    act_exp_rev = self.tariff.calculate_export_revenue(
-                        feedin_kwh, avg_spot, date_str=date_key
+                    # Actual system with calibrated diurnal battery dispatch profiles
+                    hourly_act_imp, hourly_act_exp = self.engine.disaggregate_daily_actual_battery(
+                        daily_consumed_kwh=consumed_kwh,
+                        daily_produced_kwh=produced_kwh,
+                        actual_imported_kwh=purchase_kwh,
+                        actual_exported_kwh=feedin_kwh,
+                        battery_charged_kwh=batt_chg_kwh,
+                        battery_discharged_kwh=batt_dis_kwh,
+                        hours_count=n_h,
+                    )
+                    act_imp_cost = sum(
+                        self.tariff.calculate_import_cost(hourly_act_imp[h], day_prices[h])
+                        for h in range(n_h)
+                    )
+                    act_exp_rev = sum(
+                        self.tariff.calculate_export_revenue(
+                            hourly_act_exp[h], day_prices[h], date_str=date_key
+                        )
+                        for h in range(n_h)
                     )
                     act_sc = max(0.0, produced_kwh - feedin_kwh)
 

@@ -39,6 +39,20 @@ class SwedishTariff:
     def __init__(self, config: Optional[TariffConfig] = None):
         self.config = config or TariffConfig()
 
+    @classmethod
+    def for_audited_year(cls, year: int) -> "SwedishTariff":
+        """Create a SwedishTariff instance calibrated to audited EEM invoices for a given year."""
+        from .tariff_audit import DEFAULT_AUDITED_EEM_SCHEDULES
+
+        sched = DEFAULT_AUDITED_EEM_SCHEDULES.get(year, DEFAULT_AUDITED_EEM_SCHEDULES[2025])
+        config = TariffConfig(
+            energiskatt_sek_per_kwh=sched.energiskatt_sek_per_kwh_ex_vat,
+            eem_transfer_fee_sek_per_kwh=sched.eem_transfer_fee_sek_per_kwh_ex_vat,
+            moms_rate=sched.moms_rate,
+            eem_monthly_fee_sek=round(sched.fixed_annual_fee_sek_inc_vat / 12.0, 2),
+        )
+        return cls(config=config)
+
     def get_import_price(self, spot_price_sek_per_kwh: float) -> float:
         """Calculate the total consumer import price in SEK/kWh (incl. all taxes, grid fees, and VAT).
 

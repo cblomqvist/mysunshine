@@ -34,6 +34,13 @@ def test_generate_dashboard_dataset_structure():
     assert len(hr["hourly_data"]) >= 744
     assert "variance_benchmarks" in hr
 
+    # Utility Tariff Audit checks (Milestone 5.5.4)
+    assert "utility_tariff_audit" in dataset
+    audit = dataset["utility_tariff_audit"]
+    assert audit["leverantorsbyte_date"] == "2024-09-28"
+    assert audit["post_switch_summary"]["exact_integer_invoice_matches"] == 24
+    assert len(audit["monthly_records"]) == 36
+
     # Hourly interval check
     first_hour = hr["hourly_data"][0]
     assert "timestamp" in first_hour

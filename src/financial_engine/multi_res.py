@@ -99,8 +99,24 @@ class SonnenHourlyIngestor:
                     missing = required_cols - set(reader.fieldnames or [])
                     raise ValueError(f"CSV missing required columns in {file_path}: {missing}")
 
-                for row in reader:
+                file_rows = list(reader)
+                # Group by local date (YYYY-MM-DD) to skip an incomplete last day (< 23 hours)
+                day_counts: Dict[str, int] = {}
+                for row in file_rows:
+                    d_key = row["timestamp"][:10]
+                    day_counts[d_key] = day_counts.get(d_key, 0) + 1
+
+                sorted_days = sorted(day_counts.keys())
+                incomplete_last_day = (
+                    sorted_days[-1]
+                    if len(sorted_days) > 1 and day_counts[sorted_days[-1]] < 23
+                    else None
+                )
+
+                for row in file_rows:
                     ts_str = row["timestamp"]
+                    if incomplete_last_day and ts_str[:10] == incomplete_last_day:
+                        continue
                     ts = datetime.fromisoformat(ts_str)
                     norm_utc = cls._normalize_dt(ts)
                     m_count = int(row.get("measurements_count", 60))
@@ -149,6 +165,57 @@ class SonnenHourlyIngestor:
         if not files:
             return []
         return cls.parse_csvs(files)
+
+    @classmethod
+    def calibrate_diurnal_profiles(
+        cls, records: List[HourlyEnergyRecord]
+    ) -> Dict[str, List[float]]:
+        """Calibrate normalized 24-hour empirical diurnal energy & battery dispatch profiles."""
+        load_by_h = [0.0] * 24
+        solar_by_h = [0.0] * 24
+        imp_by_h = [0.0] * 24
+        imp_active_by_h = [0.0] * 24
+        imp_low_by_h = [0.0] * 24
+        exp_by_h = [0.0] * 24
+        chg_by_h = [0.0] * 24
+        dis_by_h = [0.0] * 24
+
+        by_day: Dict[str, List[HourlyEnergyRecord]] = {}
+        for r in records:
+            d_str = r.timestamp.strftime("%Y-%m-%d")
+            by_day.setdefault(d_str, []).append(r)
+
+        for d_str, day_recs in by_day.items():
+            day_cons = sum(r.consumed_kwh for r in day_recs)
+            day_dis = sum(r.battery_discharged_kwh for r in day_recs)
+            is_active = day_cons > 0.0 and day_dis >= 0.25 * day_cons
+            for r in day_recs:
+                h = r.timestamp.hour
+                load_by_h[h] += r.consumed_kwh
+                solar_by_h[h] += r.produced_kwh
+                imp_by_h[h] += r.grid_purchase_kwh
+                exp_by_h[h] += r.grid_feedin_kwh
+                chg_by_h[h] += r.battery_charged_kwh
+                dis_by_h[h] += r.battery_discharged_kwh
+                if is_active:
+                    imp_active_by_h[h] += r.grid_purchase_kwh
+                else:
+                    imp_low_by_h[h] += r.grid_purchase_kwh
+
+        def _norm(arr: List[float]) -> List[float]:
+            tot = sum(arr)
+            return [x / tot for x in arr] if tot > 0.0 else [1.0 / 24.0] * 24
+
+        return {
+            "load_weights": _norm(load_by_h),
+            "solar_weights": _norm(solar_by_h),
+            "battery_import_weights": _norm(imp_by_h),
+            "battery_active_import_weights": _norm(imp_active_by_h),
+            "battery_low_solar_import_weights": _norm(imp_low_by_h),
+            "battery_export_weights": _norm(exp_by_h),
+            "battery_charge_weights": _norm(chg_by_h),
+            "battery_discharge_weights": _norm(dis_by_h),
+        }
 
 
 class ResolutionMatcher:

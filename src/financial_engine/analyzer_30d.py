@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
 
 from .baseline import (
+    BaselineEngine,
     DEFAULT_DIURNAL_LOAD_WEIGHTS,
     DEFAULT_DIURNAL_SOLAR_WEIGHTS,
 )
@@ -422,21 +423,29 @@ class HighResAnalyzer:
         est_act_imp_cost = 0.0
         est_act_exp_rev = 0.0
 
+        baseline_engine = BaselineEngine(tariff=self.tariff)
+
         for day_str, day_intervals in days.items():
             day_p_sek = [i.spot_price_sek_kwh for i in day_intervals]
             day_consumed = sum(i.energy.consumed_kwh for i in day_intervals)
             day_produced = sum(i.energy.produced_kwh for i in day_intervals)
             day_act_imp = sum(i.energy.grid_purchase_kwh for i in day_intervals)
             day_act_exp = sum(i.energy.grid_feedin_kwh for i in day_intervals)
+            day_batt_chg = sum(i.energy.battery_charged_kwh for i in day_intervals)
+            day_batt_dis = sum(i.energy.battery_discharged_kwh for i in day_intervals)
 
-            day_avg_p = sum(day_p_sek) / len(day_p_sek)
-
-            # Actual with daily average price
-            est_act_imp_cost += self.tariff.calculate_import_cost(day_act_imp, day_avg_p)
-            est_act_exp_rev += self.tariff.calculate_export_revenue(day_act_exp, day_avg_p, date_str=day_str)
-
-            # Distribute with standard diurnal weights across 24h
             n_h = len(day_intervals)
+            hourly_act_imp, hourly_act_exp = baseline_engine.disaggregate_daily_actual_battery(
+                daily_consumed_kwh=day_consumed,
+                daily_produced_kwh=day_produced,
+                actual_imported_kwh=day_act_imp,
+                actual_exported_kwh=day_act_exp,
+                battery_charged_kwh=day_batt_chg,
+                battery_discharged_kwh=day_batt_dis,
+                hours_count=n_h,
+            )
+
+            # Distribute with standard diurnal & calibrated battery weights across 24h
             for h in range(n_h):
                 p_h = day_p_sek[h]
                 w_l = DEFAULT_DIURNAL_LOAD_WEIGHTS[h % 24]
@@ -453,6 +462,12 @@ class HighResAnalyzer:
 
                 est_b2_imp_cost += self.tariff.calculate_import_cost(imp_h, p_h)
                 est_b2_exp_rev += self.tariff.calculate_export_revenue(exp_h, p_h, date_str=day_str)
+
+                # Actual with calibrated diurnal battery dispatch profiles
+                est_act_imp_cost += self.tariff.calculate_import_cost(hourly_act_imp[h], p_h)
+                est_act_exp_rev += self.tariff.calculate_export_revenue(
+                    hourly_act_exp[h], p_h, date_str=day_str
+                )
 
         est_b1_net = est_b1_imp_cost + fixed_costs
         est_b2_net = est_b2_imp_cost - est_b2_exp_rev + fixed_costs

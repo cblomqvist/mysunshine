@@ -57,6 +57,7 @@ const ledger2025Body = document.getElementById('ledger-2025-body');
 const ledgerMultiyearBody = document.getElementById('ledger-multiyear-body');
 const ledger25yBody = document.getElementById('ledger-25y-body');
 const ledgerVarianceBody = document.getElementById('ledger-variance-body');
+const ledgerUtilityAuditBody = document.getElementById('ledger-utility-audit-body');
 
 // Formatting Helpers
 function formatSEK(num) {
@@ -86,6 +87,7 @@ async function initApp() {
         setupEventListeners();
         populateDispatchDays();
         populateVarianceTable();
+        populateUtilityAuditTable();
         updateSimulation();
     } catch (err) {
         console.error('Failed to load dashboard data:', err);
@@ -209,40 +211,46 @@ function populateDispatchDays() {
 
 // Helper: Recalculate financial costs for a list of monthly ledgers given current tariff settings
 function recalculateLedgerMonths(monthlyLedgers, energiskattSek, eemTransferSek, taxRedEnabled, tibberFee, defaultYear = 2025) {
+    const BAKED_ENERGISKATT_SEK = 0.428;
+    const BAKED_EEM_TRANSFER_SEK = 0.176;
+    const BAKED_TIBBER_FEE_SEK = 49.0;
+
     return monthlyLedgers.map(m => {
-        const spotSek = (m.avg_spot_price_ore_kwh || m.avg_spot_price_ore || 50.0) / 100.0;
         const year = m.year || defaultYear;
-        
-        // Import cost per kWh
-        const importCostPerKwh = (spotSek + energiskattSek + eemTransferSek) * (1.0 + MOMS_RATE);
-        
-        // Export revenue per kWh (Skattereduktion 60 öre/kWh ended 2026-01-01)
+
+        // Export revenue subsidy (Skattereduktion 60 öre/kWh ended 2026-01-01)
         const isTaxRedValid = taxRedEnabled && (year < 2026);
         const taxRedSek = isTaxRedValid ? 0.60 : 0.0;
-        const eemNatnyttaSek = 0.08; // 8 öre/kWh standard grid benefit
-        const exportRevPerKwh = spotSek + eemNatnyttaSek + taxRedSek;
-        
-        // Monthly fixed cost
+        const bakedTaxRedSek = (year < 2026) ? 0.60 : 0.0;
+
+        // Monthly fixed cost delta relative to baked 49 SEK/month Tibber fee
         const daysInMonth = m.days_count || m.days || 30;
         const monthFraction = daysInMonth / 30.4375;
-        const fixedCost = (tibberFee + 100.0) * monthFraction;
+        const deltaFixedCost = (tibberFee - BAKED_TIBBER_FEE_SEK) * monthFraction;
 
-        // Baseline 1 (No Solar)
-        const noSolarCost = (m.consumed_kwh * importCostPerKwh) + fixedCost;
+        // Linear variable tariff deltas per kWh relative to baked defaults
+        const deltaImportCostPerKwh = ((energiskattSek - BAKED_ENERGISKATT_SEK) + (eemTransferSek - BAKED_EEM_TRANSFER_SEK)) * (1.0 + MOMS_RATE);
+        const deltaExportRevPerKwh = taxRedSek - bakedTaxRedSek;
 
-        // Baseline 2 (Solar Only)
-        const scPct = (m.solar_only_self_consumption_pct || m.solar_only_sc_pct || 35.0) / 100.0;
-        const solarDirectSC = Math.min(m.consumed_kwh, m.produced_kwh * scPct);
-        const solarOnlyImport = Math.max(0, m.consumed_kwh - solarDirectSC);
-        const solarOnlyExport = Math.max(0, m.produced_kwh - solarDirectSC);
+        // Baseline 2 (Solar Only) kWh volumes
+        const isSolarOnlyMonth = (!m.battery_charged_kwh && !m.battery_discharged_kwh);
+        const scPct = (m.solar_only_self_consumption_pct ?? m.solar_only_sc_pct ?? 35.0) / 100.0;
+        const solarDirectSC = isSolarOnlyMonth ? Math.max(0, m.produced_kwh - m.exported_kwh) : Math.min(m.consumed_kwh, m.produced_kwh * scPct);
+        const solarOnlyImport = isSolarOnlyMonth ? m.imported_kwh : Math.max(0, m.consumed_kwh - solarDirectSC);
+        const solarOnlyExport = isSolarOnlyMonth ? m.exported_kwh : Math.max(0, m.produced_kwh - solarDirectSC);
         const solarOnlyTaxRed = solarOnlyExport * taxRedSek;
-        const solarOnlyCost = (solarOnlyImport * importCostPerKwh) - (solarOnlyExport * exportRevPerKwh) + fixedCost;
-
-        // Actual System (Solar + SonnenBatterie 10)
         const actualTaxRed = m.exported_kwh * taxRedSek;
-        const actualImportCost = m.imported_kwh * importCostPerKwh;
-        const actualExportRev = m.exported_kwh * exportRevPerKwh;
-        const actualCost = actualImportCost - actualExportRev + fixedCost;
+
+        // Anchor on baked hourly/diurnal-matched bills and apply exact linear slider deltas
+        const bakedNoSolar = m.baseline_no_solar_cost_sek ?? m.baseline_no_solar_sek ?? 0;
+        const bakedSolarOnly = m.baseline_solar_only_cost_sek ?? m.baseline_solar_only_sek ?? 0;
+        const bakedActual = m.actual_cost_sek ?? 0;
+
+        const noSolarCost = bakedNoSolar + (m.consumed_kwh * deltaImportCostPerKwh) + deltaFixedCost;
+        const solarOnlyCost = isSolarOnlyMonth
+            ? (bakedActual + (m.imported_kwh * deltaImportCostPerKwh) - (m.exported_kwh * deltaExportRevPerKwh) + deltaFixedCost)
+            : (bakedSolarOnly + (solarOnlyImport * deltaImportCostPerKwh) - (solarOnlyExport * deltaExportRevPerKwh) + deltaFixedCost);
+        const actualCost = bakedActual + (m.imported_kwh * deltaImportCostPerKwh) - (m.exported_kwh * deltaExportRevPerKwh) + deltaFixedCost;
 
         const totalSavings = noSolarCost - actualCost;
         const solarSavings = noSolarCost - solarOnlyCost;
@@ -308,7 +316,9 @@ function updateSimulation() {
         const totActTaxRed = recalcedMonths.reduce((a, m) => a + (m.actual_tax_red_sek || 0), 0);
 
         let eraName = "Sonnen 22 kWh (Dual)";
-        if (yrStr === "2023") eraName = "Sonnen 11 kWh Installed (Sep)";
+        if (yrStr === "2021") eraName = "Solar PV Only (SMA 8 kW)";
+        else if (yrStr === "2022") eraName = "Solar PV Only (Energy Crisis)";
+        else if (yrStr === "2023") eraName = "Sonnen 11 kWh Installed (Sep)";
         else if (yrStr === "2024") eraName = "11 kWh → 22 kWh Expansion (Sep 9)";
         else if (yrStr === "2026") eraName = "Sonnen 22 kWh (No Skattereduktion)";
 
@@ -407,10 +417,10 @@ function updateSimulation() {
         diagAnnualGen.innerText = formatKWh(dashboardData.year_2025.energy_totals.produced_kwh);
     }
 
-    // 4. 25-Year Projection & Payback (Base on 2025 full year stabilized run-rate)
+    // 4. 25-Year Projection & Payback (Actual historicals for 2021–2026 + stabilized 22 kWh run-rate forward)
     const baseMonths2025 = recalculatedYears['2025'] || displayMonths;
     const baseSavings2025 = baseMonths2025.reduce((a, m) => a + m.total_savings_sek, 0);
-    const projection25y = calculate25YearProjection(netCapex, baseSavings2025, inflation, baseMonths2025);
+    const projection25y = calculate25YearProjection(netCapex, baseSavings2025, inflation, baseMonths2025, annualSummaries);
     
     if (projection25y.paybackYear !== null) {
         valPayback.innerText = projection25y.paybackYear.toFixed(1);
@@ -465,7 +475,7 @@ function updateSimulation() {
 }
 
 // 25-Year Projection Math (Starting Jan 2021 Solar Installation)
-function calculate25YearProjection(capex, baseYearSavings, inflationRate, monthsData) {
+function calculate25YearProjection(capex, baseYearSavings, inflationRate, monthsData, annualSummaries = []) {
     const START_YEAR = 2021;
     let cumulative = -capex;
     let paybackYearFraction = null;
@@ -478,14 +488,49 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
     const baseConsumed = monthsData.reduce((acc, m) => acc + m.consumed_kwh, 0);
     const baseImport = monthsData.reduce((acc, m) => acc + m.imported_kwh, 0);
     const baseExport = monthsData.reduce((acc, m) => acc + m.exported_kwh, 0);
+    const baseNoSolarBill = monthsData.reduce((a, m) => a + m.baseline_no_solar_sek, 0);
+    const baseActualBill = monthsData.reduce((a, m) => a + m.actual_cost_sek, 0);
+
+    const summaryByYear = {};
+    annualSummaries.forEach(s => {
+        summaryByYear[s.year] = s;
+    });
+
+    let historicalCount = 0;
 
     for (let y = 1; y <= 25; y++) {
         const calYear = START_YEAR + (y - 1);
         const solarFactor = Math.pow(0.995, y - 1);
         const inflationFactor = Math.pow(1 + inflationRate, y - 1);
+        const hist = summaryByYear[calYear];
 
-        const currentSolarGen = baseSolarGen * solarFactor;
-        const currentSavings = baseYearSavings * solarFactor * inflationFactor;
+        let currentSolarGen;
+        let selfConsumed;
+        let exported;
+        let imported;
+        let noSolarBill;
+        let actualBill;
+        let currentSavings;
+
+        if (hist) {
+            historicalCount = y;
+            currentSolarGen = hist.produced_kwh;
+            selfConsumed = Math.max(0, hist.produced_kwh - hist.exported_kwh);
+            exported = hist.exported_kwh;
+            imported = hist.imported_kwh;
+            noSolarBill = hist.baseline_no_solar_sek;
+            actualBill = hist.actual_cost_sek;
+            currentSavings = hist.total_savings_sek;
+        } else {
+            currentSolarGen = baseSolarGen * solarFactor;
+            selfConsumed = Math.max(0, baseConsumed - baseImport);
+            exported = baseExport * solarFactor;
+            imported = baseImport;
+            noSolarBill = baseNoSolarBill * inflationFactor;
+            actualBill = baseActualBill * inflationFactor;
+            currentSavings = baseYearSavings * solarFactor * inflationFactor;
+        }
+
         const previousNet = cumulative;
         cumulative += currentSavings;
 
@@ -497,14 +542,18 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
 
         let milestoneTag = '';
         if (calYear === 2021) {
-            milestoneTag = ' (Solar Installed)';
+            milestoneTag = ' (Solar Installed - Actual)';
+        } else if (calYear === 2022) {
+            milestoneTag = ' (Energy Crisis - Actual)';
         } else if (calYear === 2023) {
-            milestoneTag = ' (+11 kWh Batt)';
+            milestoneTag = ' (+11 kWh Batt - Actual)';
         } else if (calYear === 2024) {
-            milestoneTag = ' (+11 kWh Expansion)';
+            milestoneTag = ' (+22 kWh Exp - Actual)';
         } else if (calYear === 2025) {
             milestoneTag = ' (Full Year Actual)';
-        } else if (calYear > 2025) {
+        } else if (calYear === 2026 && hist) {
+            milestoneTag = ' (YTD Actual)';
+        } else {
             milestoneTag = ' (Proj)';
         }
 
@@ -514,11 +563,11 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
         tableRows.push({
             year: `${calYear}${milestoneTag}`,
             solarGen: Math.round(currentSolarGen),
-            selfConsumed: Math.round(baseConsumed - baseImport),
-            exported: Math.round(baseExport * solarFactor),
-            imported: Math.round(baseImport),
-            noSolarBill: Math.round(monthsData.reduce((a, m) => a + m.baseline_no_solar_sek, 0) * inflationFactor),
-            actualBill: Math.round(monthsData.reduce((a, m) => a + m.actual_cost_sek, 0) * inflationFactor),
+            selfConsumed: Math.round(selfConsumed),
+            exported: Math.round(exported),
+            imported: Math.round(imported),
+            noSolarBill: Math.round(noSolarBill),
+            actualBill: Math.round(actualBill),
             savings: Math.round(currentSavings),
             balance: Math.round(cumulative)
         });
@@ -527,6 +576,7 @@ function calculate25YearProjection(capex, baseYearSavings, inflationRate, months
     return {
         labels,
         dataPoints,
+        historicalCount,
         paybackYear: paybackYearFraction,
         breakEvenCalendarYear,
         tableRows
@@ -544,6 +594,7 @@ function renderPaybackSCurveChart(projection) {
     }
 
     const breakEvenIdx = projection.paybackYear ? Math.ceil(projection.paybackYear) : null;
+    const histLimitIdx = projection.historicalCount || 0;
 
     chartPaybackInstance = new Chart(ctx, {
         type: 'line',
@@ -553,6 +604,9 @@ function renderPaybackSCurveChart(projection) {
                 label: 'Cumulative Net Balance (SEK)',
                 data: projection.dataPoints,
                 borderColor: '#10b981',
+                segment: {
+                    borderDash: (segCtx) => (segCtx.p0DataIndex >= histLimitIdx ? [6, 4] : undefined)
+                },
                 backgroundColor: (context) => {
                     const chart = context.chart;
                     const { ctx, chartArea } = chart;
@@ -954,10 +1008,10 @@ function updateHourlyDispatchChart() {
     }
 
     const labels = dayRecords.map(h => `${String(h.hour).padStart(2, '0')}:00`);
-    const pvPower = dayRecords.map(h => h.pv_power_kw);
-    const loadPower = dayRecords.map(h => h.load_power_kw);
-    const battPower = dayRecords.map(h => h.battery_power_kw);
-    const socData = dayRecords.map(h => h.soc_pct);
+    const pvPower = dayRecords.map(h => h.pv_power_kw ?? h.produced_kw ?? 0);
+    const loadPower = dayRecords.map(h => h.load_power_kw ?? h.consumed_kw ?? 0);
+    const battPower = dayRecords.map(h => h.battery_power_kw ?? ((h.battery_discharged_kw || 0) - (h.battery_charged_kw || 0)));
+    const socData = dayRecords.map(h => h.soc_pct ?? h.battery_soc_pct ?? 0);
     const priceData = dayRecords.map(h => h.spot_price_ore);
 
     chartHourlyDispatchInstance = new Chart(ctx, {
@@ -1176,25 +1230,70 @@ function render25YearLedgerTable(rows) {
     ledger25yBody.innerHTML = html;
 }
 
-// Populate 30-Day Variance Benchmark Table
+// Populate High-Res Variance Benchmark Table
 function populateVarianceTable() {
     if (!ledgerVarianceBody || !dashboardData?.high_res_30d?.variance_benchmarks?.daily_averaged?.metrics) return;
     
-    const metrics = dashboardData.high_res_30d.variance_benchmarks.daily_averaged.metrics;
+    const dailyMetrics = dashboardData.high_res_30d.variance_benchmarks.daily_averaged.metrics;
+    const synthMetrics = dashboardData.high_res_30d.variance_benchmarks.synthetic_weighted?.metrics || [];
     let html = '';
-    metrics.forEach(m => {
+    dailyMetrics.forEach((m, idx) => {
+        const s = synthMetrics[idx];
         const deltaClass = m.delta_sek >= 0 ? 'text-solar' : 'text-battery';
+        const sDeltaClass = s && s.delta_sek >= 0 ? 'text-solar' : 'text-battery';
+        const synthEstStr = s ? formatSEK(s.estimated_sek) : '&mdash;';
+        const synthErrStr = s
+            ? `${s.delta_sek >= 0 ? '+' : ''}${s.delta_sek.toFixed(2)} SEK (${s.percentage_error >= 0 ? '+' : ''}${s.percentage_error.toFixed(2)}%)`
+            : '&mdash;';
         html += `
             <tr>
-                <td>${m.metric}</td>
+                <td><strong>${m.metric}</strong></td>
                 <td>${formatSEK(m.exact_sek)}</td>
                 <td>${formatSEK(m.estimated_sek)}</td>
-                <td class="${deltaClass}">${m.delta_sek >= 0 ? '+' : ''}${m.delta_sek.toFixed(2)} SEK</td>
-                <td>${m.percentage_error.toFixed(2)}%</td>
+                <td class="${deltaClass}">${m.delta_sek >= 0 ? '+' : ''}${m.delta_sek.toFixed(2)} SEK (${m.percentage_error >= 0 ? '+' : ''}${m.percentage_error.toFixed(2)}%)</td>
+                <td>${synthEstStr}</td>
+                <td class="${sDeltaClass}">${synthErrStr}</td>
             </tr>
         `;
     });
     ledgerVarianceBody.innerHTML = html;
+}
+
+// Populate Utility Tariff & Invoicing Audit Table
+function populateUtilityAuditTable() {
+    if (!ledgerUtilityAuditBody || !dashboardData?.utility_tariff_audit?.monthly_records) return;
+
+    const audit = dashboardData.utility_tariff_audit;
+    const records = audit.monthly_records.filter(r => r.is_billed);
+    let html = '';
+
+    records.forEach(r => {
+        const isPureGrid = r.billing_regime === 'pure_grid_tibber';
+        const regimeBadge = isPureGrid
+            ? '<span class="era-tag era-batt2">Pure EEM Grid + Tibber</span>'
+            : '<span class="era-tag era-solar">EEM Combined Retail+Grid</span>';
+        const retailStr = isPureGrid ? '&mdash;' : formatSEK(r.inferred_eem_retail_supply_kr);
+        const matchStr = isPureGrid
+            ? `<span class="text-savings">&#10003; Exact (${r.invoice_residual_kr >= 0 ? '+' : ''}${r.invoice_residual_kr.toFixed(2)} kr)</span>`
+            : `<span class="text-solar">Pre-Switch (${r.year}-09-28)</span>`;
+
+        html += `
+            <tr>
+                <td><strong>${r.month_name.substring(0, 3)} ${r.year}</strong></td>
+                <td>${regimeBadge}</td>
+                <td>${r.eem_billed_kwh.toFixed(1)}</td>
+                <td>${r.sonnen_imported_kwh.toFixed(1)} (${r.kwh_delta_pct.toFixed(1)}%)</td>
+                <td><strong>${formatSEK(r.eem_billed_kr)}</strong></td>
+                <td>${r.audited_grid_fixed_kr.toFixed(2)} SEK</td>
+                <td>${r.audited_grid_variable_kr.toFixed(2)} SEK</td>
+                <td>${r.audited_grid_total_kr.toFixed(2)} SEK</td>
+                <td>${retailStr}</td>
+                <td>${matchStr}</td>
+            </tr>
+        `;
+    });
+
+    ledgerUtilityAuditBody.innerHTML = html;
 }
 
 // Start application

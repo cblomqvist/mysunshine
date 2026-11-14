@@ -15,6 +15,7 @@ from .analyzer_30d import HighResAnalyzer
 from .multi_res import ResolutionMatcher, SonnenHourlyIngestor
 from .multi_year import MultiYearEngine
 from .tariff import SwedishTariff, TariffConfig
+from .tariff_audit import UtilityTariffAuditor
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -138,6 +139,11 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
     # 3. Cloudy / High Grid Dependency Day
     cloudy_day = min(days_summary, key=lambda x: x["total_produced_kwh"])["date"]
 
+    # 3. Utility Tariff & Invoicing Audit (Milestone 5.5.4)
+    logging.info("Executing Utility Tariff & Invoicing Audit (2024-2026)...")
+    tariff_auditor = UtilityTariffAuditor(data_dir=data_dir, baseline_tariff=tariff)
+    tariff_audit_report = tariff_auditor.run_audit().to_dict()
+
     dataset: Dict[str, Any] = {
         "metadata": {
             "app": "MySunshine",
@@ -160,6 +166,7 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
         "years": multi_year_results["years"],
         "hardware_eras": multi_year_results["hardware_eras"],
         "year_2025": report_2025_dict,
+        "utility_tariff_audit": tariff_audit_report,
         "high_res_30d": {
             **report_30d_dict,
             "days_list": days_summary,

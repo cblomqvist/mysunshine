@@ -282,10 +282,77 @@ class TestHighResAnalyzer:
         assert report.battery_marginal_value_sek == report.total_savings_sek - report.solar_contribution_sek
 
     def test_diurnal_weights_sum_to_one(self):
-        """Verify that diurnal residential load and solar profile weights sum strictly to 1.0."""
-        from src.financial_engine.baseline import DEFAULT_DIURNAL_LOAD_WEIGHTS, DEFAULT_DIURNAL_SOLAR_WEIGHTS
-        assert pytest.approx(sum(DEFAULT_DIURNAL_LOAD_WEIGHTS), 1e-6) == 1.0
-        assert pytest.approx(sum(DEFAULT_DIURNAL_SOLAR_WEIGHTS), 1e-6) == 1.0
+        """Verify that diurnal residential load, solar, and battery profile weights sum strictly to 1.0."""
+        from src.financial_engine.baseline import (
+            BaselineEngine,
+            DEFAULT_DIURNAL_LOAD_WEIGHTS,
+            DEFAULT_DIURNAL_SOLAR_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_IMPORT_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_ACTIVE_IMPORT_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_LOW_SOLAR_IMPORT_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_EXPORT_WEIGHTS,
+            DEFAULT_DIURNAL_NIGHT_GRID_CHARGE_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_CHARGE_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_DISCHARGE_WEIGHTS,
+        )
+        for weights in (
+            DEFAULT_DIURNAL_LOAD_WEIGHTS,
+            DEFAULT_DIURNAL_SOLAR_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_IMPORT_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_ACTIVE_IMPORT_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_LOW_SOLAR_IMPORT_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_EXPORT_WEIGHTS,
+            DEFAULT_DIURNAL_NIGHT_GRID_CHARGE_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_CHARGE_WEIGHTS,
+            DEFAULT_DIURNAL_BATTERY_DISCHARGE_WEIGHTS,
+        ):
+            assert len(weights) == 24
+            assert pytest.approx(sum(weights), 1e-6) == 1.0
+
+        engine = BaselineEngine()
+        for n_h in (23, 24, 25):
+            imp_h, exp_h = engine.disaggregate_daily_actual_battery(
+                daily_consumed_kwh=20.0,
+                daily_produced_kwh=10.0,
+                actual_imported_kwh=15.0,
+                actual_exported_kwh=4.0,
+                battery_charged_kwh=12.0,
+                battery_discharged_kwh=8.0,
+                hours_count=n_h,
+            )
+            assert len(imp_h) == n_h
+            assert len(exp_h) == n_h
+            assert pytest.approx(sum(imp_h), 1e-6) == 15.0
+            assert pytest.approx(sum(exp_h), 1e-6) == 4.0
+
+    def test_calibrate_diurnal_profiles_and_121d_variance(self, sample_tariff):
+        """Verify empirical diurnal calibration on 2,905-hour dataset and <1% Actual Net Cost variance."""
+        records = SonnenHourlyIngestor.parse_directory("data")
+        assert len(records) == 2905
+        profiles = SonnenHourlyIngestor.calibrate_diurnal_profiles(records)
+        for key in (
+            "load_weights",
+            "solar_weights",
+            "battery_import_weights",
+            "battery_active_import_weights",
+            "battery_low_solar_import_weights",
+            "battery_export_weights",
+            "battery_charge_weights",
+            "battery_discharge_weights",
+        ):
+            assert len(profiles[key]) == 24
+            assert pytest.approx(sum(profiles[key]), 1e-6) == 1.0
+
+        prices = ResolutionMatcher.load_prices_from_json("data/prices/se3_prices_2026.json")
+        matched = ResolutionMatcher.match_hourly_energy_with_prices(records, prices)
+        analyzer = HighResAnalyzer(tariff=sample_tariff)
+        report = analyzer.analyze_matched_intervals(matched)
+
+        act_metric = next(
+            m for m in report.synthetic_weighted_variance.metrics if m.metric_name == "Actual System Net Cost"
+        )
+        assert abs(act_metric.percentage_error) < 1.0
+        assert abs(act_metric.delta_sek) < 5.0
 
     def test_full_30d_analysis(self, sample_tariff):
         csv_path = "data/sonnen_energy_data_Sun_Aug_16_2026.csv"
