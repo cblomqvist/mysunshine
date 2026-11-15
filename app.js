@@ -6,6 +6,7 @@ let dashboardData = null;
 let chartPaybackInstance = null;
 let chartMonthlyBaselinesInstance = null;
 let chartHourlyDispatchInstance = null;
+let chartShadowForecastInstance = null;
 
 // Default Swedish Tariff & Capex Constants
 const DEFAULT_NET_CAPEX = 315000;   // 165k SEK Net Solar (Jan 2021) + 150k SEK Net Battery (Sep 2023/2024)
@@ -58,6 +59,9 @@ const ledgerMultiyearBody = document.getElementById('ledger-multiyear-body');
 const ledger25yBody = document.getElementById('ledger-25y-body');
 const ledgerVarianceBody = document.getElementById('ledger-variance-body');
 const ledgerUtilityAuditBody = document.getElementById('ledger-utility-audit-body');
+const shadowScenarioSelect = document.getElementById('shadow-scenario-select');
+const ledgerShadowHourlyBody = document.getElementById('ledger-shadow-hourly-body');
+const ledgerShadowBacktestBody = document.getElementById('ledger-shadow-backtest-body');
 
 // Formatting Helpers
 function formatSEK(num) {
@@ -88,6 +92,7 @@ async function initApp() {
         populateDispatchDays();
         populateVarianceTable();
         populateUtilityAuditTable();
+        populateShadowAdvisorTab();
         updateSimulation();
     } catch (err) {
         console.error('Failed to load dashboard data:', err);
@@ -179,8 +184,15 @@ function setupEventListeners() {
             const target = btn.getAttribute('data-tab');
             const targetEl = document.getElementById(target);
             if (targetEl) targetEl.classList.add('active');
+            if (target === 'tab-shadow-forecast') {
+                updateShadowAdvisorView();
+            }
         });
     });
+
+    if (shadowScenarioSelect) {
+        shadowScenarioSelect.addEventListener('change', updateShadowAdvisorView);
+    }
 }
 
 function updatePresetButtonsState() {
@@ -1294,6 +1306,363 @@ function populateUtilityAuditTable() {
     });
 
     ledgerUtilityAuditBody.innerHTML = html;
+}
+
+// Milestone 6: Populate Next-Day Forecast & Shadow Mode Recommendation Engine Tab
+function populateShadowAdvisorTab() {
+    if (!dashboardData?.next_day_forecast) return;
+    const ndf = dashboardData.next_day_forecast;
+
+    if (shadowScenarioSelect) {
+        shadowScenarioSelect.innerHTML = '';
+
+        // 1. Tomorrow Forecast Scenarios (2026-11-15)
+        const optGroupTomorrow = document.createElement('optgroup');
+        optGroupTomorrow.label = `Tomorrow Forecast Scenarios (${ndf.target_display_date || ndf.target_date})`;
+        Object.values(ndf.scenarios || {}).forEach(scen => {
+            const opt = document.createElement('option');
+            opt.value = `scen:${scen.id}`;
+            opt.innerText = scen.label;
+            optGroupTomorrow.appendChild(opt);
+        });
+        shadowScenarioSelect.appendChild(optGroupTomorrow);
+
+        // 2. Top Backtest Arbitrage Days (from 121-day high-res backtest)
+        const bt = ndf.backtest_121d;
+        if (bt?.featured_backtest_hourly) {
+            const optGroupBt = document.createElement('optgroup');
+            optGroupBt.label = 'Historical Backtest Days (2026 High-Res Arbitrage Audit)';
+            const featuredDates = Object.keys(bt.featured_backtest_hourly).sort().reverse();
+            featuredDates.forEach(dStr => {
+                const dayRec = (bt.daily_records || []).find(r => r.date === dStr);
+                const upside = dayRec ? dayRec.oracle_upside_vs_default_sek : 0;
+                const maxOre = dayRec ? dayRec.max_spot_ore_kwh : 0;
+                const opt = document.createElement('option');
+                opt.value = `bt:${dStr}`;
+                opt.innerText = `${dStr} — Saved +${upside.toFixed(2)} SEK (Peak ${maxOre.toFixed(1)} öre/kWh, ${dayRec?.primary_strategy || 'Audit'})`;
+                optGroupBt.appendChild(opt);
+            });
+            shadowScenarioSelect.appendChild(optGroupBt);
+        }
+
+        shadowScenarioSelect.value = `scen:${ndf.default_scenario_id || 'baseline_forecast'}`;
+    }
+
+    renderShadowBacktestTable(ndf.backtest_121d);
+    updateShadowAdvisorView();
+}
+
+function updateShadowAdvisorView() {
+    if (!dashboardData?.next_day_forecast) return;
+    const ndf = dashboardData.next_day_forecast;
+    const bt = ndf.backtest_121d || {};
+    const selVal = shadowScenarioSelect ? shadowScenarioSelect.value : 'scen:baseline_forecast';
+
+    let advisorResult = null;
+    let viewLabel = '';
+
+    if (selVal.startsWith('scen:')) {
+        const scenId = selVal.replace('scen:', '');
+        const scenObj = ndf.scenarios?.[scenId] || Object.values(ndf.scenarios || {})[0];
+        if (scenObj) {
+            advisorResult = scenObj.advisor_result;
+            viewLabel = scenObj.label;
+        }
+    } else if (selVal.startsWith('bt:')) {
+        const dStr = selVal.replace('bt:', '');
+        advisorResult = bt.featured_backtest_hourly?.[dStr];
+        viewLabel = `Backtest Day ${dStr} (Realized High-Res PV & Load vs Shadow Dispatch)`;
+    }
+
+    if (!advisorResult) return;
+
+    const diag = advisorResult.arbitrage_diagnostics || {};
+    const scens = advisorResult.scenarios || {};
+    const shdScen = scens.shadow_optimized || {};
+    const defScen = scens.default_self_consumption || {};
+
+    // Update Banner & Gate Badge
+    const gateBadge = document.getElementById('shadow-gate-badge');
+    const headlineEl = document.getElementById('shadow-headline-text');
+    if (gateBadge) {
+        if (diag.efficiency_gate_passed) {
+            gateBadge.className = 'badge badge-success';
+            gateBadge.innerHTML = `<i class="fa-solid fa-bolt"></i> GATE PASSED: PRE-CHARGE ${diag.recommended_grid_precharge_kwh.toFixed(1)} kWh`;
+        } else if (diag.hold_hours_count > 0 && diag.shadow_savings_vs_default_sek > 0.15) {
+            gateBadge.className = 'badge badge-accent';
+            gateBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> SMART PEAK HOLD (${diag.hold_hours_count}h)`;
+        } else {
+            gateBadge.className = 'badge badge-muted';
+            gateBadge.innerHTML = `<i class="fa-solid fa-solar-panel"></i> STANDARD SELF-CONSUMPTION`;
+        }
+    }
+    if (headlineEl) {
+        headlineEl.innerText = diag.headline_recommendation || '';
+    }
+
+    // Update 4 Mini KPI Cards
+    const valDayBill = document.getElementById('shadow-val-day-bill');
+    const subDayBill = document.getElementById('shadow-sub-day-bill');
+    const valGateSpread = document.getElementById('shadow-val-gate-spread');
+    const subGateBe = document.getElementById('shadow-sub-gate-breakeven');
+    const val121Upside = document.getElementById('shadow-val-121d-upside');
+    const sub121Upside = document.getElementById('shadow-sub-121d-upside');
+    const val121Mae = document.getElementById('shadow-val-121d-mae');
+    const sub121Mae = document.getElementById('shadow-sub-121d-mae');
+
+    if (valDayBill) valDayBill.innerText = `${(shdScen.net_cost_sek ?? 0).toFixed(2)} SEK`;
+    if (subDayBill) {
+        const delta = diag.shadow_savings_vs_default_sek ?? 0;
+        subDayBill.innerText = `Saves +${delta.toFixed(2)} SEK vs Default SC (${(defScen.net_cost_sek ?? 0).toFixed(2)} SEK)`;
+    }
+    if (valGateSpread) {
+        valGateSpread.innerHTML = `${(diag.avg_trough_spot_ore_kwh ?? 0).toFixed(1)} &rarr; ${(diag.max_peak_spot_ore_kwh ?? 0).toFixed(1)} öre`;
+    }
+    if (subGateBe) {
+        subGateBe.innerText = `Break-Even Peak Spot: ${(diag.breakeven_peak_spot_ore_kwh ?? 0).toFixed(1)} öre/kWh (η=${(diag.roundtrip_efficiency_pct ?? 76.8).toFixed(1)}%)`;
+    }
+    if (bt.financial_totals_sek) {
+        const ft = bt.financial_totals_sek;
+        if (val121Upside) val121Upside.innerText = `+${(ft.oracle_upside_vs_default_sek ?? 0).toFixed(2)} SEK`;
+        if (sub121Upside) {
+            sub121Upside.innerText = `+${(ft.predictive_upside_vs_default_sek ?? 0).toFixed(2)} SEK Out-of-Sample | +${(ft.oracle_upside_vs_actual_sonnen_sek ?? 0).toFixed(2)} SEK vs Raw CT`;
+        }
+    }
+    if (bt.forecast_accuracy && bt.strategy_trigger_summary) {
+        const fa = bt.forecast_accuracy;
+        const st = bt.strategy_trigger_summary;
+        if (val121Mae) val121Mae.innerText = `${(fa.bill_mae_sek ?? 0).toFixed(2)} SEK/day`;
+        if (sub121Mae) {
+            sub121Mae.innerText = `PV MAE: ${fa.pv_mae_kwh} kWh | Load MAE: ${fa.load_mae_kwh} kWh (${st.grid_precharge_days_count} Pre-Charge Days)`;
+        }
+    }
+
+    renderShadowForecastChart(advisorResult, viewLabel);
+    renderShadowHourlyTable(advisorResult.hourly_steps || []);
+}
+
+function renderShadowForecastChart(advisorResult, viewLabel) {
+    const canvas = document.getElementById('chart-shadow-forecast');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const subtitleEl = document.getElementById('shadow-chart-subtitle');
+    if (subtitleEl) {
+        subtitleEl.innerText = `${viewLabel} — Comparing Shadow SoC (%), Default SoC (%), Spot Price (öre), and η=76.8% Break-Even Threshold`;
+    }
+
+    if (chartShadowForecastInstance) {
+        chartShadowForecastInstance.destroy();
+    }
+
+    const steps = advisorResult.hourly_steps || [];
+    const diag = advisorResult.arbitrage_diagnostics || {};
+    const labels = steps.map(s => `${String(s.hour).padStart(2, '0')}:00`);
+    const shadowSoc = steps.map(s => s.shadow_soc_pct);
+    const defaultSoc = steps.map(s => s.default_soc_pct);
+    const spotOre = steps.map(s => s.spot_price_ore_kwh);
+    const breakevenLine = steps.map(() => diag.breakeven_peak_spot_ore_kwh || 0);
+    const shadowNetBattKw = steps.map(s => Number((s.shadow_discharged_kwh - s.shadow_total_charged_kwh).toFixed(2)));
+
+    chartShadowForecastInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Shadow Advisor SoC (%)',
+                    data: shadowSoc,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.14)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.25,
+                    yAxisID: 'ySoc'
+                },
+                {
+                    label: 'Default Self-Consumption SoC (%)',
+                    data: defaultSoc,
+                    borderColor: '#94a3b8',
+                    borderWidth: 2,
+                    borderDash: [5, 4],
+                    fill: false,
+                    tension: 0.25,
+                    yAxisID: 'ySoc'
+                },
+                {
+                    label: 'Day-Ahead Spot Price (öre/kWh)',
+                    data: spotOre,
+                    borderColor: '#06b6d4',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.2,
+                    yAxisID: 'yPrice'
+                },
+                {
+                    label: 'Efficiency Gate Break-Even (öre/kWh)',
+                    data: breakevenLine,
+                    borderColor: '#f59e0b',
+                    borderWidth: 1.5,
+                    borderDash: [3, 3],
+                    pointRadius: 0,
+                    fill: false,
+                    yAxisID: 'yPrice'
+                },
+                {
+                    type: 'bar',
+                    label: 'Shadow Battery Power (+Dis / -Chg kW)',
+                    data: shadowNetBattKw,
+                    backgroundColor: shadowNetBattKw.map(v => v < 0 ? 'rgba(6, 182, 212, 0.35)' : 'rgba(168, 85, 247, 0.4)'),
+                    borderColor: shadowNetBattKw.map(v => v < 0 ? '#06b6d4' : '#a855f7'),
+                    borderWidth: 1,
+                    borderRadius: 3,
+                    yAxisID: 'yPower'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 10 }, boxWidth: 10 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                    padding: 10
+                }
+            },
+            scales: {
+                ySoc: {
+                    type: 'linear',
+                    position: 'left',
+                    min: 0,
+                    max: 100,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#10b981', callback: v => `${v}%` },
+                    title: { display: true, text: 'Battery SoC (%)', color: '#10b981', font: { size: 10 } }
+                },
+                yPrice: {
+                    type: 'linear',
+                    position: 'right',
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#06b6d4', callback: v => `${v} ö` },
+                    title: { display: true, text: 'Spot Price (öre/kWh)', color: '#06b6d4', font: { size: 10 } }
+                },
+                yPower: {
+                    type: 'linear',
+                    position: 'right',
+                    display: false,
+                    min: -7,
+                    max: 7
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+}
+
+function renderShadowHourlyTable(steps) {
+    if (!ledgerShadowHourlyBody) return;
+    let html = '';
+
+    steps.forEach(s => {
+        let actionBadge = '<span class="era-tag" style="background:rgba(148,163,184,0.12);color:#94a3b8;">IDLE</span>';
+        if (s.shadow_action === 'GRID_PRECHARGE') {
+            actionBadge = '<span class="era-tag era-batt1">GRID PRE-CHARGE</span>';
+        } else if (s.shadow_action === 'SOLAR_CHARGE') {
+            actionBadge = '<span class="era-tag era-solar">SOLAR CHARGE</span>';
+        } else if (s.shadow_action === 'HOLD_FOR_PEAK') {
+            actionBadge = '<span class="era-tag" style="background:rgba(245,158,11,0.18);color:#fbbf24;">HOLD FOR PEAK</span>';
+        } else if (s.shadow_action === 'PEAK_DISCHARGE') {
+            actionBadge = '<span class="era-tag era-batt2">PEAK DISCHARGE</span>';
+        } else if (s.shadow_action === 'SELF_CONSUMPTION') {
+            actionBadge = '<span class="era-tag era-batt2">SELF-CONSUME</span>';
+        }
+
+        const chgDisStr = s.shadow_total_charged_kwh > 0.02
+            ? `+${s.shadow_total_charged_kwh.toFixed(2)} chg`
+            : (s.shadow_discharged_kwh > 0.02 ? `-${s.shadow_discharged_kwh.toFixed(2)} dis` : '0.00');
+        const deltaClass = s.hourly_savings_delta_sek > 0.01 ? 'text-savings' : (s.hourly_savings_delta_sek < -0.01 ? 'text-solar' : '');
+        const deltaStr = `${s.hourly_savings_delta_sek >= 0 ? '+' : ''}${s.hourly_savings_delta_sek.toFixed(2)} kr`;
+
+        html += `
+            <tr>
+                <td><strong>${String(s.hour).padStart(2, '0')}:00</strong></td>
+                <td>${s.spot_price_ore_kwh.toFixed(1)} öre</td>
+                <td>${s.import_price_sek_kwh.toFixed(2)} kr</td>
+                <td><span class="text-solar">${s.pv_kwh.toFixed(2)}</span> / ${s.load_kwh.toFixed(2)}</td>
+                <td>${s.default_soc_pct.toFixed(0)}%</td>
+                <td>${actionBadge}</td>
+                <td>${chgDisStr}</td>
+                <td class="text-battery">${s.shadow_soc_pct.toFixed(0)}% (${s.shadow_soc_kwh.toFixed(1)} kWh)</td>
+                <td class="${deltaClass}">${deltaStr}</td>
+                <td style="font-family:var(--font-body);font-size:0.75rem;color:var(--text-secondary);">${s.shadow_reason}</td>
+            </tr>
+        `;
+    });
+
+    ledgerShadowHourlyBody.innerHTML = html;
+}
+
+function renderShadowBacktestTable(backtest) {
+    if (!ledgerShadowBacktestBody || !backtest?.daily_records) return;
+
+    // Sort by date descending so November volatility days appear at the top, or show all 121 days
+    const records = [...backtest.daily_records].sort((a, b) => {
+        if (b.oracle_upside_vs_default_sek !== a.oracle_upside_vs_default_sek) {
+            return b.oracle_upside_vs_default_sek - a.oracle_upside_vs_default_sek;
+        }
+        return b.date.localeCompare(a.date);
+    });
+
+    let html = '';
+    records.forEach(r => {
+        let stratBadge = '<span class="era-tag" style="background:rgba(148,163,184,0.12);color:#94a3b8;">Standard SC</span>';
+        if (r.primary_strategy.includes('Pre-Charge')) {
+            stratBadge = '<span class="era-tag era-batt1">Grid Pre-Charge</span>';
+        } else if (r.primary_strategy.includes('Hold')) {
+            stratBadge = '<span class="era-tag era-solar">Peak Hold</span>';
+        }
+
+        const hasFeatured = backtest.featured_backtest_hourly && backtest.featured_backtest_hourly[r.date];
+        const rowCursor = hasFeatured ? 'cursor:pointer;' : '';
+        const rowTitle = hasFeatured ? 'Click to inspect this day in the 24h Shadow Trajectory Chart above' : r.headline_advice;
+
+        html += `
+            <tr style="${rowCursor}" title="${rowTitle}" data-bt-date="${hasFeatured ? r.date : ''}">
+                <td><strong>${r.display_name}</strong></td>
+                <td><span class="text-solar">${r.predicted_pv_kwh.toFixed(1)}</span> / ${r.actual_pv_kwh.toFixed(1)} kWh</td>
+                <td>${r.predicted_load_kwh.toFixed(1)} / ${r.actual_load_kwh.toFixed(1)} kWh</td>
+                <td>${r.min_spot_ore_kwh.toFixed(0)}–<strong>${r.max_spot_ore_kwh.toFixed(0)}</strong> öre</td>
+                <td>${r.breakeven_peak_spot_ore_kwh.toFixed(0)} öre</td>
+                <td>${r.recommended_grid_precharge_kwh > 0 ? `${r.recommended_grid_precharge_kwh.toFixed(1)} kWh` : '&mdash;'}</td>
+                <td>${stratBadge}</td>
+                <td>${r.actual_sonnen_cost_sek.toFixed(2)} kr</td>
+                <td>${r.default_sc_cost_sek.toFixed(2)} kr</td>
+                <td>${r.predictive_shadow_cost_sek.toFixed(2)} kr</td>
+                <td>${r.oracle_shadow_cost_sek.toFixed(2)} kr</td>
+                <td class="text-savings">+${r.oracle_upside_vs_default_sek.toFixed(2)} SEK</td>
+            </tr>
+        `;
+    });
+
+    ledgerShadowBacktestBody.innerHTML = html;
+
+    ledgerShadowBacktestBody.querySelectorAll('tr[data-bt-date]').forEach(tr => {
+        const dt = tr.getAttribute('data-bt-date');
+        if (dt && shadowScenarioSelect) {
+            tr.addEventListener('click', () => {
+                shadowScenarioSelect.value = `bt:${dt}`;
+                updateShadowAdvisorView();
+            });
+        }
+    });
 }
 
 // Start application

@@ -16,7 +16,7 @@ def test_detect_leverantorsbyte_event():
     ingestor = EEMYearlyCostsIngestor(
         costs_csv_path=os.path.join(data_dir, "eem-yearly-costs-2024-2026.csv"),
         meter_csv_path=os.path.join(
-            data_dir, "EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv"
+            data_dir, "eem-meter-readings-402520-2026-10-24-20-10-44-5195.csv"
         ),
     )
     switch_date, switch_stand = ingestor.detect_leverantorsbyte_event()

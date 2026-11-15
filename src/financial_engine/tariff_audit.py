@@ -213,8 +213,21 @@ class EEMYearlyCostsIngestor:
     DEFAULT_LEVERANTORSBYTE_DATE = "2024-09-28"
 
     def __init__(self, costs_csv_path: str, meter_csv_path: Optional[str] = None):
-        self.costs_csv_path = costs_csv_path
-        self.meter_csv_path = meter_csv_path
+        self.costs_csv_path = self._resolve_path(costs_csv_path)
+        self.meter_csv_path = self._resolve_path(meter_csv_path) if meter_csv_path else None
+
+    @staticmethod
+    def _resolve_path(filepath: str) -> str:
+        """Resolve exact on-disk filename casing for cross-platform (Windows/Linux) compatibility."""
+        if os.path.exists(filepath):
+            return filepath
+        parent = os.path.dirname(filepath)
+        target_lower = os.path.basename(filepath).lower()
+        if parent and os.path.isdir(parent):
+            for entry in os.listdir(parent):
+                if entry.lower() == target_lower:
+                    return os.path.join(parent, entry)
+        return filepath
 
     def detect_leverantorsbyte_event(self) -> Tuple[str, Optional[float]]:
         """Detect the official `Leverantörsbyte` date and meter stand from EEM meter readings CSV."""
@@ -299,7 +312,7 @@ class UtilityTariffAuditor:
         self.data_dir = data_dir
         self.costs_csv_path = os.path.join(data_dir, "eem-yearly-costs-2024-2026.csv")
         self.meter_csv_path = os.path.join(
-            data_dir, "EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv"
+            data_dir, "eem-meter-readings-402520-2026-10-24-20-10-44-5195.csv"
         )
         self.schedules = schedules or DEFAULT_AUDITED_EEM_SCHEDULES
         self.baseline_tariff = baseline_tariff or SwedishTariff(config=TariffConfig())
