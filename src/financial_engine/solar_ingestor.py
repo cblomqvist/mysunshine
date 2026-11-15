@@ -33,7 +33,20 @@ class SMAInverterIngestor:
     """Ingests historical solar generation yield from Sunny Portal SMA Inverter CSV export."""
 
     def __init__(self, filepath: str):
-        self.filepath = filepath
+        self.filepath = self._resolve_case_insensitive_path(filepath)
+
+    @staticmethod
+    def _resolve_case_insensitive_path(filepath: str) -> str:
+        """Resolve exact on-disk filename casing for cross-platform (Windows/Linux) compatibility."""
+        if os.path.exists(filepath):
+            return filepath
+        parent = os.path.dirname(filepath)
+        target_lower = os.path.basename(filepath).lower()
+        if parent and os.path.isdir(parent):
+            for entry in os.listdir(parent):
+                if entry.lower() == target_lower:
+                    return os.path.join(parent, entry)
+        return filepath
 
     def parse_monthly_yields(self) -> Dict[int, Dict[int, float]]:
         """Parse the Sunny Portal CSV and return monthly solar PV yield by year and month.
@@ -84,7 +97,20 @@ class EEMMeterIngestor:
     TARGET_METER = "7359992924582514P"
 
     def __init__(self, filepath: str):
-        self.filepath = filepath
+        self.filepath = self._resolve_case_insensitive_path(filepath)
+
+    @staticmethod
+    def _resolve_case_insensitive_path(filepath: str) -> str:
+        """Resolve exact on-disk filename casing for cross-platform (Windows/Linux) compatibility."""
+        if os.path.exists(filepath):
+            return filepath
+        parent = os.path.dirname(filepath)
+        target_lower = os.path.basename(filepath).lower()
+        if parent and os.path.isdir(parent):
+            for entry in os.listdir(parent):
+                if entry.lower() == target_lower:
+                    return os.path.join(parent, entry)
+        return filepath
 
     def parse_monthly_exports(self) -> Dict[int, Dict[int, float]]:
         """Parse UTF-16LE EEM meter readings CSV and return exported kWh per month.
@@ -177,7 +203,7 @@ class SolarEraSynthesizer:
     def __init__(self, data_dir: str):
         self.data_dir = data_dir
         self.sma_path = os.path.join(data_dir, "sunnyportal-sma-inverter-data-2026-10-24.csv")
-        self.eem_path = os.path.join(data_dir, "EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv")
+        self.eem_path = os.path.join(data_dir, "eem-meter-readings-402520-2026-10-24-20-10-44-5195.csv")
         self.sma_ingestor = SMAInverterIngestor(self.sma_path)
         self.eem_ingestor = EEMMeterIngestor(self.eem_path)
 

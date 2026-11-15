@@ -28,7 +28,7 @@ def test_eem_meter_ingestor():
     """Verify official EEM utility export meter readings for 2021 and 2022."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     eem_path = os.path.join(
-        base_dir, "data", "EEM-meter-readings-402520-2026-10-24-20-10-44-5195.csv"
+        base_dir, "data", "eem-meter-readings-402520-2026-10-24-20-10-44-5195.csv"
     )
 
     ingestor = EEMMeterIngestor(eem_path)
