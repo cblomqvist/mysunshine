@@ -958,6 +958,27 @@ class HomeAssistantTelemetryBridge:
                 "fail_safe_restore": fs,
             }
 
+        if (
+            command.shadow_action == "PEAK_DISCHARGE"
+            and not self.safety_gate.enable_direct_discharge_setpoint
+            and (
+                command.target_power_watts > 0
+                or command.target_operating_mode != SonnenSafetyActuationGate.MODE_SELF_CONSUMPTION
+                or "setpoint/discharge" in command.endpoint
+            )
+        ):
+            fs = self.restore_sonnen_safe_mode(
+                reason="Direct PEAK_DISCHARGE bypass attempt while enable_direct_discharge_setpoint=False",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "direct_peak_discharge_not_approved",
+                "fail_safe_restore": fs,
+            }
+
         if not self.safety_gate.is_unlocked or not command.would_actuate:
             return {
                 "executed": False,
@@ -1164,6 +1185,45 @@ class HomeAssistantTelemetryBridge:
             }
         return None
 
+    def _check_status_operating_mode(
+        self,
+        status_dict: Dict[str, Any],
+        dry_run: bool,
+        timeout_sec: float,
+    ) -> Optional[Dict[str, Any]]:
+        """Reject missing, unknown, or unsupported EM_OperatingMode in live /api/v2/status."""
+        if "EM_OperatingMode" not in status_dict:
+            if dry_run:
+                return None
+            raw_mode = None
+        else:
+            raw_mode = status_dict.get("EM_OperatingMode")
+
+        valid_modes = {
+            SonnenSafetyActuationGate.MODE_MANUAL_API,
+            SonnenSafetyActuationGate.MODE_SELF_CONSUMPTION,
+            SonnenSafetyActuationGate.MODE_TOU_SCHEDULE,
+        }
+        try:
+            if raw_mode is None or isinstance(raw_mode, bool):
+                raise ValueError("missing mode")
+            mode_int = int(str(raw_mode).strip())
+            if mode_int not in valid_modes:
+                raise ValueError(f"unsupported mode {mode_int}")
+        except (TypeError, ValueError):
+            fs = self.restore_sonnen_safe_mode(
+                reason=f"Live Sonnen /api/v2/status unknown or invalid EM_OperatingMode ({raw_mode!r})",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "unknown_or_invalid_operating_mode",
+                "fail_safe_restore": fs,
+            }
+        return None
+
     def _validate_usoc_payload(
         self,
         command: SonnenWriteCommandPreview,
@@ -1172,6 +1232,14 @@ class HomeAssistantTelemetryBridge:
         dry_run: bool,
         timeout_sec: float,
     ) -> Optional[Dict[str, Any]]:
+        mode_err = self._check_status_operating_mode(
+            status_dict=status_dict,
+            dry_run=dry_run,
+            timeout_sec=timeout_sec,
+        )
+        if mode_err is not None:
+            return mode_err
+
         raw_usoc = status_dict.get("USOC")
         if (
             "USOC" not in status_dict

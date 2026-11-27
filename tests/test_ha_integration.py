@@ -334,6 +334,29 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertTrue(res_forged["blocked"])
         self.assertEqual(res_forged["reason"], "unauthorized_actuation_bypass_rejected")
 
+        # Bypass attempt 3: Direct-discharge bypass attempt while enable_direct_discharge_setpoint=False
+        # (even if caller tampering sets target_power_watts/endpoint and recomputes token)
+        tampered_dis = bridge.safety_gate.evaluate_hourly_command(
+            hour=17,
+            timestamp_local="2026-11-15T17:00:00",
+            shadow_action="PEAK_DISCHARGE",
+            discharged_kwh=2.5,
+        )
+        tampered_dis.target_operating_mode = 1
+        tampered_dis.target_power_watts = 2500
+        tampered_dis.endpoint = "http://192.168.3.125/api/v2/setpoint/discharge/2500"
+        tampered_dis.would_actuate = True
+        tampered_dis.python_executor_token = bridge.safety_gate.compute_executor_token(tampered_dis.idempotency_key)
+        res_dis_bypass = bridge.execute_sonnen_command(
+            tampered_dis,
+            dry_run=True,
+            reference_now=datetime.fromisoformat("2026-11-15T17:05:00"),
+            caller_authority="python_executor",
+        )
+        self.assertFalse(res_dis_bypass["executed"])
+        self.assertTrue(res_dis_bypass["blocked"])
+        self.assertEqual(res_dis_bypass["reason"], "direct_peak_discharge_not_approved")
+
     def test_peak_discharge_semantics_and_separate_charge_discharge_power_limits(self):
         """Verify PEAK_DISCHARGE passive vs direct modes and separate charge (6500 W) / discharge (6000 W) limits."""
         gate_passive = SonnenSafetyActuationGate(
@@ -492,6 +515,29 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             self.assertTrue(res_stale_usoc["blocked"])
             self.assertEqual(res_stale_usoc["reason"], "stale_usoc_status_rejected")
             self.assertTrue(res_stale_usoc["fail_safe_restore"]["restored_to_mode_2"])
+
+        # 2c. Unknown or invalid EM_OperatingMode in live /api/v2/status (e.g. Mode 99 or 'unknown') rejected
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = [
+                _FakeHTTPResponse(200, {"USOC": 40.0, "EM_OperatingMode": 99}),  # Unknown operating mode!
+                # Bounded retry success on attempt 2 of Mode 2 restore (attempt 1 poll sees Mode 99, attempt 2 sees 2)
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Attempt 1 PUT Mode 2
+                _FakeHTTPResponse(200, {"USOC": 40.0, "EM_OperatingMode": 99}),  # Attempt 1 Poll 1
+                _FakeHTTPResponse(200, {"USOC": 40.0, "EM_OperatingMode": 99}),  # Attempt 1 Poll 2
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Attempt 2 PUT Mode 2
+                _FakeHTTPResponse(200, {"USOC": 40.0, "EM_OperatingMode": 2}),  # Attempt 2 Poll 1 -> Confirmed Mode 2!
+            ]
+            res_unknown_mode = bridge.execute_sonnen_command(
+                cmd_chg,
+                dry_run=False,
+                reference_now=valid_now,
+            )
+            self.assertFalse(res_unknown_mode["executed"])
+            self.assertTrue(res_unknown_mode["blocked"])
+            self.assertEqual(res_unknown_mode["reason"], "unknown_or_invalid_operating_mode")
+            self.assertTrue(res_unknown_mode["fail_safe_restore"]["restored_to_mode_2"])
+            self.assertTrue(res_unknown_mode["fail_safe_restore"]["verified_mode_2"])
+            self.assertEqual(res_unknown_mode["fail_safe_restore"]["attempts"], 2)
 
         # 3. Post-write setpoint effect mismatch (discharging during GRID_PRECHARGE) triggers Mode 2 restore
         with patch("urllib.request.urlopen") as mock_urlopen:
