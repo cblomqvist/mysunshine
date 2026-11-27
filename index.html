@@ -589,10 +589,10 @@
                                 <div class="shadow-title-group">
                                     <h4>
                                         <i class="fa-solid fa-house-signal"></i>
-                                        <span>Home Assistant Custom Sensor Integration &amp; Safety-Gated Sonnen Telemetry Bridge</span>
+                                        <span>Home Assistant Custom Sensor Integration &amp; Read-Only Shadow Telemetry Bridge</span>
                                         <span class="badge badge-accent" id="ha-safety-gate-badge"><i class="fa-solid fa-shield-halved"></i> SAFETY GATE: LOCKED (SHADOW MODE ONLY)</span>
                                     </h4>
-                                    <p id="ha-bridge-summary-text">Exposes MySunshine's Day-1 ROI statistics, next-day shadow dispatch advice, and η=76.8% break-even price threshold to Home Assistant Green (192.168.3.138:8123) while keeping physical SonnenBatterie 10 (192.168.3.125) write actuation locked behind a dual hardware safety gate.</p>
+                                    <p id="ha-bridge-summary-text">Exposes MySunshine's Day-1 ROI statistics, next-day shadow dispatch advice, and η=76.8% break-even price threshold to Home Assistant Green (192.168.3.138:8123) as read-only shadow telemetry. Milestone 7 performs no live SonnenBatterie 10 (192.168.3.125) writes and includes no live Sonnen hardware verification.</p>
                                 </div>
                                 <div class="shadow-scenario-controls">
                                     <label for="ha-safety-sim-toggle">Command Table Display Mode (UI Dry-Run Only):</label>
@@ -607,7 +607,7 @@
                             <div class="shadow-kpi-strip">
                                 <div class="shadow-mini-card">
                                     <span class="shadow-mini-label">Home Assistant Green Hub</span>
-                                    <strong class="shadow-mini-val text-savings" id="ha-val-entities-count">10 Entities</strong>
+                                    <strong class="shadow-mini-val text-savings" id="ha-val-entities-count">12 Entities</strong>
                                     <span class="shadow-mini-sub" id="ha-sub-endpoint">POST http://192.168.3.138:8123/api/states</span>
                                 </div>
                                 <div class="shadow-mini-card">

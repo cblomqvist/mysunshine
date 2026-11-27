@@ -23,7 +23,12 @@ A comprehensive system and interactive web application to track, simulate, and c
 - **2025 Full-Year Historical ROI Engine** (`src/financial_engine/calculator_2025.py`):
   - Full-year daily-to-monthly financial ledger, Capex payback timeline, and ROI metrics.
 - **High-Resolution 30-Day & Multi-Resolution Engine** (`src/financial_engine/multi_res.py`, `src/financial_engine/analyzer_30d.py`):
-  - Ingests 744 hours of granular Sonnen data, aligns with 15-minute / quarterly spot prices, and benchmarks precision against daily-averaged estimations.
+  - Ingests 744+ hours of granular Sonnen data, aligns with 15-minute / quarterly spot prices, and benchmarks precision against daily-averaged estimations.
+- **Next-Day Forecasting & Shadow Mode Arbitrage Advisor** (`src/forecast_engine/`):
+  - Predicts next-day hourly solar PV generation and household load, evaluates the $\eta_{\text{rt}} = 76.8\%$ round-trip efficiency gate against SE3 day-ahead spot prices, and benchmarks shadow recommendations across a 121-day (`2,905`-hour) continuous backtest.
+- **Home Assistant Read-Only Shadow Telemetry Bridge (Milestone 7)** (`src/ha_integration/`):
+  - Exposes 12 custom Home Assistant entities (`sensor.mysunshine_shadow_action`, `sensor.mysunshine_target_power_watts`, `sensor.mysunshine_breakeven_spot_ore`, Long-Term Statistics ROI sensors, and observer-only YAML blueprints).
+  - **Explicit Milestone 7 Scope**: Operates strictly as **read-only shadow telemetry with no live Sonnen writes (`M7_RELEASE_SHADOW_TELEMETRY_ONLY = True`) and no live Sonnen hardware verification** (64 offline/mocked tests passed, 1 live hardware test skipped across 65 collected tests until a real `SONNEN_API_TOKEN` is provisioned in Milestone 7.5).
 
 ## Web Dashboard & CLI Utilities
 
