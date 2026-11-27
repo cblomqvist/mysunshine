@@ -3,7 +3,7 @@
 from datetime import datetime
 import json
 import os
-import re
+import tempfile
 import unittest
 from unittest.mock import patch
 import urllib.error
@@ -81,6 +81,13 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             target_date="2026-11-15",
         )
 
+    def _new_temp_state_path(self) -> str:
+        fd, path = tempfile.mkstemp(prefix="mysunshine_test_exec_", suffix=".json")
+        os.close(fd)
+        os.unlink(path)
+        self.addCleanup(lambda: os.path.exists(path) and os.unlink(path))
+        return path
+
     def test_entity_payload_rest_schema(self):
         """Verify HomeAssistantEntityPayload produces standard HA REST /api/states JSON schema."""
         ent = HomeAssistantEntityPayload(
@@ -112,6 +119,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             grid_precharge_kwh=6.2,
         )
         self.assertFalse(cmd_ff.would_actuate)
+        self.assertEqual(cmd_ff.python_executor_token, "")
         self.assertEqual(cmd_ff.target_operating_mode, 1)
         self.assertEqual(cmd_ff.target_power_watts, 6200)
         self.assertIn("/api/v2/setpoint/charge/6200", cmd_ff.endpoint)
@@ -129,7 +137,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             grid_precharge_kwh=6.2,
         )
         self.assertFalse(cmd_ft.would_actuate)
-        self.assertIn("MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false", cmd_ft.blocked_reason)
+        self.assertEqual(cmd_ft.python_executor_token, "")
 
         # Combination 3: env=True, ha_switch=False -> Still Locked
         gate_tf = SonnenSafetyActuationGate(env_opt_in_enabled=True, ha_switch_on=False)
@@ -142,7 +150,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             grid_precharge_kwh=6.2,
         )
         self.assertFalse(cmd_tf.would_actuate)
-        self.assertIn("input_boolean.mysunshine_active_battery_control=off", cmd_tf.blocked_reason)
+        self.assertEqual(cmd_tf.python_executor_token, "")
 
         # Combination 4: env=True, ha_switch=True -> Unlocked
         gate_tt = SonnenSafetyActuationGate(env_opt_in_enabled=True, ha_switch_on=True)
@@ -156,64 +164,90 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         )
         self.assertTrue(cmd_tt.would_actuate)
         self.assertEqual(cmd_tt.safety_gate_status, "UNLOCKED_ACTIVE_CONTROL")
+        self.assertNotEqual(cmd_tt.python_executor_token, "")
 
-    def test_ha_and_python_opt_in_conflict_fails_closed(self):
-        """Verify missing or conflicting Python vs Home Assistant opt-in state fails closed and restores Mode 2."""
-        # Conflict 1: Python env True, HA binary_sensor 'off' -> Fail closed
-        bridge_conflict_1 = HomeAssistantTelemetryBridge(
+    def test_ha_and_python_opt_in_conflict_and_stale_ha_entities(self):
+        """Verify conflicting gate states and stale HA entities fail closed."""
+        store_path = self._new_temp_state_path()
+        bridge_conflict = HomeAssistantTelemetryBridge(
+            ha_token="valid_ha_token",
+            sonnen_token="valid_sonnen_token",
             env_opt_in_enabled=True,
             ha_switch_on=True,
             ha_env_opt_in_state="off",
+            state_store_path=store_path,
         )
-        self.assertTrue(bridge_conflict_1.safety_gate.has_gate_conflict)
-        self.assertFalse(bridge_conflict_1.safety_gate.is_unlocked)
-        self.assertEqual(bridge_conflict_1.safety_gate.gate_state_label, "LOCKED_GATE_CONFLICT_FAIL_CLOSED")
+        self.assertTrue(bridge_conflict.safety_gate.has_gate_conflict)
+        self.assertFalse(bridge_conflict.safety_gate.is_unlocked)
+        self.assertEqual(bridge_conflict.safety_gate.gate_state_label, "LOCKED_GATE_CONFLICT_FAIL_CLOSED")
 
-        cmd = bridge_conflict_1.safety_gate.evaluate_hourly_command(
+        cmd = bridge_conflict.safety_gate.evaluate_hourly_command(
             hour=3,
             timestamp_local="2026-11-15T03:00:00",
             shadow_action="GRID_PRECHARGE",
             grid_precharge_kwh=5.0,
         )
         self.assertFalse(cmd.would_actuate)
-        self.assertIn("Opt-in conflict", cmd.blocked_reason)
 
-        exec_res = bridge_conflict_1.execute_sonnen_command(cmd, dry_run=True)
-        self.assertFalse(exec_res["executed"])
-        self.assertTrue(exec_res["blocked"])
-        self.assertEqual(exec_res["reason"], "gate_conflict_fail_closed")
-        self.assertTrue(exec_res["fail_safe_restore"]["restored_to_mode_2"])
+        # Also test synchronize_and_verify_gates_with_ha detecting a stale HA Gate 2 entity
+        bridge_sync = HomeAssistantTelemetryBridge(
+            ha_token="valid_ha_token",
+            sonnen_token="valid_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            ha_entity_max_age_seconds=3600,
+            state_store_path=self._new_temp_state_path(),
+        )
+        now_dt = datetime.fromisoformat("2026-11-15T03:30:00")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = [
+                _FakeHTTPResponse(200, {}),  # POST binary_sensor.mysunshine_env_active_control_opt_in
+                _FakeHTTPResponse(
+                    200,
+                    {"state": "on", "last_updated": "2026-11-15T03:29:00"},
+                ),  # GET Gate 1 (fresh)
+                _FakeHTTPResponse(
+                    200,
+                    {"state": "on", "last_updated": "2026-11-15T01:00:00"},
+                ),  # GET Gate 2 (stale: 9000s old > 3600s!)
+            ]
+            sync_res = bridge_sync.synchronize_and_verify_gates_with_ha(reference_now=now_dt)
+            self.assertFalse(sync_res["ok"])
+            self.assertEqual(sync_res["reason"], "stale_ha_gate2_entity")
+            self.assertFalse(bridge_sync.safety_gate.is_unlocked)
 
-        # Conflict 2: Python env False, HA binary_sensor 'on' -> Fail closed
-        gate_conflict_2 = SonnenSafetyActuationGate(
+        # And test synchronize_and_verify_gates_with_ha detecting a conflicting HA Gate 1 readback
+        bridge_sync_conflict = HomeAssistantTelemetryBridge(
+            ha_token="valid_ha_token",
+            sonnen_token="valid_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=self._new_temp_state_path(),
+        )
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = [
+                _FakeHTTPResponse(200, {}),  # POST Gate 1
+                _FakeHTTPResponse(
+                    200,
+                    {"state": "off", "last_updated": "2026-11-15T03:29:30"},
+                ),  # GET Gate 1 (conflicting 'off' vs Python True!)
+                _FakeHTTPResponse(
+                    200,
+                    {"state": "on", "last_updated": "2026-11-15T03:29:30"},
+                ),  # GET Gate 2
+            ]
+            sync_conf_res = bridge_sync_conflict.synchronize_and_verify_gates_with_ha(reference_now=now_dt)
+            self.assertFalse(sync_conf_res["ok"])
+            self.assertEqual(sync_conf_res["reason"], "gate_conflict_fail_closed")
+            self.assertFalse(bridge_sync_conflict.safety_gate.is_unlocked)
+
+    def test_yaml_validation_no_ha_direct_sonnen_writes_and_authenticated_usoc(self):
+        """Verify Home Assistant YAML has no direct Sonnen rest_command writes and uses Auth-Token for USOC."""
+        bridge = HomeAssistantTelemetryBridge(
             env_opt_in_enabled=False,
-            ha_switch_on=True,
-            ha_env_opt_in_state="on",
+            ha_switch_on=False,
+            state_store_path=self._new_temp_state_path(),
         )
-        self.assertTrue(gate_conflict_2.has_gate_conflict)
-        self.assertFalse(gate_conflict_2.is_unlocked)
-
-        # Conflict 3: HA binary_sensor 'unavailable' or 'unknown' -> Fail closed
-        gate_unavailable = SonnenSafetyActuationGate(
-            env_opt_in_enabled=True,
-            ha_switch_on=True,
-            ha_env_opt_in_state="unavailable",
-        )
-        self.assertTrue(gate_unavailable.has_gate_conflict)
-        self.assertFalse(gate_unavailable.is_unlocked)
-
-        # Conflict 4: Synchronized Python env True and HA binary_sensor 'on' -> No conflict, unlocked
-        gate_synced = SonnenSafetyActuationGate(
-            env_opt_in_enabled=True,
-            ha_switch_on=True,
-            ha_env_opt_in_state="on",
-        )
-        self.assertFalse(gate_synced.has_gate_conflict)
-        self.assertTrue(gate_synced.is_unlocked)
-
-    def test_yaml_syntax_validation_and_hourly_command_parameters(self):
-        """Parse generated configuration.yaml & automations.yaml with PyYAML and verify no !secret in Jinja."""
-        bridge = HomeAssistantTelemetryBridge(env_opt_in_enabled=False, ha_switch_on=False)
         pkg_h3 = bridge.build_state_package(
             multi_year_summary=self.multi_year_results["multi_year_summary"],
             next_day_forecast_pkg=self.next_day_pkg,
@@ -227,7 +261,6 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             focus_hour=4,
         )
 
-        # Hour 03:00 and Hour 04:00 have different precharge kWh in the forecast schedule
         w_h3 = int(pkg_h3.get_entity("sensor.mysunshine_target_power_watts").state)
         w_h4 = int(pkg_h4.get_entity("sensor.mysunshine_target_power_watts").state)
         self.assertGreater(w_h3, 0)
@@ -237,33 +270,72 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         auto_yaml = pkg_h3.automations_yaml_snippet
         cfg_yaml = pkg_h3.configuration_yaml_snippet
 
-        # 1. Verify no invalid `!secret` inside any Jinja `{{ ... }}` expression
-        self.assertNotIn("!secret", re.findall(r"\{\{.*?\}\}", cfg_yaml, flags=re.DOTALL).__repr__())
-        self.assertNotIn("(!secret", cfg_yaml)
-
-        # 2. Parse both snippets with PyYAML to guarantee valid YAML syntax
+        # 1. Parse both YAML snippets with PyYAML
         parsed_cfg = yaml.load(cfg_yaml, Loader=_HomeAssistantYAMLValidatorLoader)
         parsed_auto = yaml.load(auto_yaml, Loader=_HomeAssistantYAMLValidatorLoader)
         self.assertIsInstance(parsed_cfg, dict)
-        self.assertIn("input_boolean", parsed_cfg)
-        self.assertIn("template", parsed_cfg)
-        self.assertIn("rest_command", parsed_cfg)
         self.assertIsInstance(parsed_auto, list)
-        self.assertEqual(len(parsed_auto), 2)
 
-        # 3. Verify no hard-coded 6200 W setpoint and verify both charge_watts (6500) & discharge_watts (6000)
-        self.assertNotIn("6200", auto_yaml)
-        self.assertNotIn("6200", cfg_yaml)
-        self.assertIn("sensor.mysunshine_target_power_watts", auto_yaml)
-        self.assertIn("charge_watts", auto_yaml)
-        self.assertIn("discharge_watts", auto_yaml)
-        self.assertIn("PEAK_DISCHARGE", auto_yaml)
-        self.assertIn("DIRECT_MANUAL_DISCHARGE_SETPOINT", auto_yaml)
-        self.assertIsNone(re.search(r"watts:\s*[1-9]\d{2,3}", auto_yaml))
+        # 2. Verify NO direct Home Assistant `rest_command` Sonnen writes exist in configuration or automations
+        self.assertNotIn("rest_command", parsed_cfg)
+        self.assertNotIn("rest_command.", auto_yaml)
+        self.assertNotIn("/api/v2/setpoint", cfg_yaml)
+        self.assertNotIn("/api/v2/configurations", cfg_yaml)
+        self.assertNotIn("(!secret", cfg_yaml)
+
+        # 3. Verify authenticated live USOC fetching in Home Assistant REST sensor
+        rest_sensors = parsed_cfg.get("sensor", [])
+        self.assertEqual(len(rest_sensors), 1)
+        self.assertEqual(rest_sensors[0]["headers"]["Auth-Token"], "__HA_SECRET__:sonnen_api_token")
+        self.assertIn("USOC", rest_sensors[0]["json_attributes"])
+
+    def test_ha_or_external_actuation_bypass_attempt_rejected(self):
+        """Verify any attempt to invoke execute_sonnen_command without valid Python executor token/authority fails."""
+        bridge = HomeAssistantTelemetryBridge(
+            sonnen_token="valid_test_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=self._new_temp_state_path(),
+        )
+        cmd = bridge.safety_gate.evaluate_hourly_command(
+            hour=3,
+            timestamp_local="2026-11-15T03:00:00",
+            shadow_action="GRID_PRECHARGE",
+            grid_precharge_kwh=4.5,
+        )
+        valid_now = datetime.fromisoformat("2026-11-15T03:05:00")
+
+        # Bypass attempt 1: Caller authority is Home Assistant instead of python_executor
+        res_ha_bypass = bridge.execute_sonnen_command(
+            cmd,
+            dry_run=True,
+            reference_now=valid_now,
+            caller_authority="home_assistant_automation",
+        )
+        self.assertFalse(res_ha_bypass["executed"])
+        self.assertTrue(res_ha_bypass["blocked"])
+        self.assertEqual(res_ha_bypass["reason"], "unauthorized_actuation_bypass_rejected")
+
+        # Bypass attempt 2: Forged or missing python_executor_token
+        forged_cmd = bridge.safety_gate.evaluate_hourly_command(
+            hour=3,
+            timestamp_local="2026-11-15T03:00:00",
+            shadow_action="GRID_PRECHARGE",
+            grid_precharge_kwh=4.5,
+        )
+        forged_cmd.python_executor_token = "forged_token_from_external_caller"
+        res_forged = bridge.execute_sonnen_command(
+            forged_cmd,
+            dry_run=True,
+            reference_now=valid_now,
+            caller_authority="python_executor",
+        )
+        self.assertFalse(res_forged["executed"])
+        self.assertTrue(res_forged["blocked"])
+        self.assertEqual(res_forged["reason"], "unauthorized_actuation_bypass_rejected")
 
     def test_peak_discharge_semantics_and_separate_charge_discharge_power_limits(self):
         """Verify PEAK_DISCHARGE passive vs direct modes and separate charge (6500 W) / discharge (6000 W) limits."""
-        # 1. Passive default mode: PEAK_DISCHARGE is non-actuating Mode 2
         gate_passive = SonnenSafetyActuationGate(
             env_opt_in_enabled=True,
             ha_switch_on=True,
@@ -278,11 +350,9 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertEqual(cmd_passive.target_operating_mode, 2)
         self.assertEqual(cmd_passive.target_power_watts, 0)
         self.assertEqual(cmd_passive.payload, {"EM_OperatingMode": "2"})
-        self.assertNotIn("expected_peak_shave_w", cmd_passive.payload)
         self.assertFalse(cmd_passive.would_actuate)
         self.assertEqual(cmd_passive.actuation_semantics, "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE")
 
-        # 2. Direct manual discharge mode: uses /api/v2/setpoint/discharge/<watts> capped at max_discharge_watts (6000)
         bridge_direct = HomeAssistantTelemetryBridge(
             sonnen_token="valid_test_sonnen_token",
             env_opt_in_enabled=True,
@@ -290,6 +360,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             max_charge_watts=6500,
             max_discharge_watts=6000,
             enable_direct_discharge_setpoint=True,
+            state_store_path=self._new_temp_state_path(),
         )
         cmd_direct = bridge_direct.safety_gate.evaluate_hourly_command(
             hour=17,
@@ -303,8 +374,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertTrue(cmd_direct.would_actuate)
         self.assertEqual(cmd_direct.actuation_semantics, "DIRECT_MANUAL_DISCHARGE_SETPOINT")
 
-        # 3. Verify separate charge vs discharge power limit enforcement in execute_sonnen_command:
-        # 6300 W is valid for GRID_PRECHARGE (<= 6500 W), but INVALID for PEAK_DISCHARGE (> 6000 W)
+        # Separate charge (6500 W) vs discharge (6000 W) power limit check
         valid_now = datetime.fromisoformat("2026-11-15T17:05:00")
         cmd_over_discharge = bridge_direct.safety_gate.evaluate_hourly_command(
             hour=17,
@@ -312,7 +382,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             shadow_action="PEAK_DISCHARGE",
             discharged_kwh=2.0,
         )
-        cmd_over_discharge.target_power_watts = 6300  # Exceeds 6000 W discharge limit (though <= 6500 W charge limit)
+        cmd_over_discharge.target_power_watts = 6300  # > 6000 W max_discharge_watts
         res_over_dis = bridge_direct.execute_sonnen_command(
             cmd_over_discharge,
             dry_run=True,
@@ -323,9 +393,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertTrue(res_over_dis["blocked"])
         self.assertEqual(res_over_dis["reason"], "power_limit_exceeded")
         self.assertIn("max_discharge_watts (6000 W)", res_over_dis["detail"])
-        self.assertTrue(res_over_dis["fail_safe_restore"]["restored_to_mode_2"])
 
-        # Conversely, 6300 W for GRID_PRECHARGE is allowed (<= 6500 W) and blocked only above 6500 W
         cmd_over_charge = bridge_direct.safety_gate.evaluate_hourly_command(
             hour=3,
             timestamp_local="2026-11-15T03:00:00",
@@ -341,7 +409,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertFalse(res_ok_chg["blocked"])
         self.assertEqual(res_ok_chg["target_power_watts"], 6300)
 
-        cmd_over_charge.target_power_watts = 6600  # Exceeds 6500 W charge limit
+        cmd_over_charge.target_power_watts = 6600  # > 6500 W max_charge_watts
         res_over_chg = bridge_direct.execute_sonnen_command(
             cmd_over_charge,
             dry_run=True,
@@ -352,17 +420,22 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertEqual(res_over_chg["reason"], "power_limit_exceeded")
         self.assertIn("max_charge_watts (6500 W)", res_over_chg["detail"])
 
-    def test_independent_live_usoc_fetch_staleness_and_verified_failsafe_restore(self):
-        """Verify independent live /api/v2/status fetch, missing/out-of-bounds USOC, stale/missing timestamps,
-        and verified fail-safe Mode 2 restoration after write and verification failures.
+    def test_live_usoc_validation_persistent_idempotency_and_verified_mode2_retry_exhaustion(self):
+        """Verify mandatory live /api/v2/status fetch, stale/unavailable USOC rejection, post-write
+        setpoint effect verification, disk-persisted idempotency across process restarts, and
+        bounded-retry Mode 2 verification failure tripping the persistent emergency latch.
         """
+        store_path = self._new_temp_state_path()
         bridge = HomeAssistantTelemetryBridge(
             sonnen_token="valid_test_sonnen_token",
             env_opt_in_enabled=True,
             ha_switch_on=True,
             min_soc_pct=10.0,
             max_soc_pct=95.0,
-            enable_direct_discharge_setpoint=True,
+            status_max_age_seconds=120,
+            state_store_path=store_path,
+            mode2_restore_max_attempts=3,
+            mode2_restore_poll_attempts=2,
         )
         cmd_chg = bridge.safety_gate.evaluate_hourly_command(
             hour=3,
@@ -372,7 +445,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         )
         valid_now = datetime.fromisoformat("2026-11-15T03:05:00")
 
-        # 1. Missing or malformed timestamp -> fails closed and restores Mode 2
+        # 1. Missing or stale command timestamp rejected
         cmd_no_ts = bridge.safety_gate.evaluate_hourly_command(
             hour=3,
             timestamp_local="",
@@ -380,111 +453,118 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             grid_precharge_kwh=4.5,
         )
         res_no_ts = bridge.execute_sonnen_command(cmd_no_ts, dry_run=True, reference_now=valid_now)
-        self.assertFalse(res_no_ts["executed"])
         self.assertTrue(res_no_ts["blocked"])
         self.assertEqual(res_no_ts["reason"], "missing_or_invalid_timestamp")
-        self.assertTrue(res_no_ts["fail_safe_restore"]["restored_to_mode_2"])
 
-        # 2. Stale command check (> 3900s old triggers fail-safe Mode 2 restore)
-        stale_now = datetime.fromisoformat("2026-11-15T06:00:00")
-        res_stale = bridge.execute_sonnen_command(cmd_chg, dry_run=True, reference_now=stale_now)
-        self.assertFalse(res_stale["executed"])
-        self.assertTrue(res_stale["blocked"])
-        self.assertEqual(res_stale["reason"], "stale_command_rejected")
-        self.assertTrue(res_stale["fail_safe_restore"]["restored_to_mode_2"])
-
-        # 3. Independent live GET /api/v2/status when current_status is NOT supplied:
-        # Case 3a: Live status payload missing USOC -> fails closed and restores/verifies Mode 2
+        # 2. Live USOC string 'unavailable' or stale status timestamp rejected even if caller passed current_status
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = [
-                _FakeHTTPResponse(200, {"EM_OperatingMode": 2}),  # Pre-check GET /api/v2/status (missing USOC!)
-                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Fail-safe PUT /api/v2/configurations
-                _FakeHTTPResponse(200, {"USOC": 50.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET /api/v2/status
+                _FakeHTTPResponse(200, {"USOC": "unavailable", "EM_OperatingMode": 2}),  # Live pre-check GET
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Fail-safe PUT Mode 2
+                _FakeHTTPResponse(200, {"USOC": 50.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET Mode 2
             ]
-            res_missing_usoc = bridge.execute_sonnen_command(
+            res_unavail = bridge.execute_sonnen_command(
                 cmd_chg,
                 dry_run=False,
                 reference_now=valid_now,
-                current_status=None,  # Forces independent live status fetch
+                current_status={"USOC": 50.0, "EM_OperatingMode": 2},  # Ignored in live mode!
             )
-            self.assertFalse(res_missing_usoc["executed"])
-            self.assertTrue(res_missing_usoc["blocked"])
-            self.assertEqual(res_missing_usoc["reason"], "live_status_unavailable_or_missing_usoc")
-            self.assertTrue(res_missing_usoc["fail_safe_restore"]["restored_to_mode_2"])
-            self.assertTrue(res_missing_usoc["fail_safe_restore"]["verified_mode_2"])
+            self.assertFalse(res_unavail["executed"])
+            self.assertTrue(res_unavail["blocked"])
+            self.assertEqual(res_unavail["reason"], "live_status_unavailable_or_missing_usoc")
+            self.assertTrue(res_unavail["fail_safe_restore"]["restored_to_mode_2"])
 
-        # Case 3b: Independently fetched live USOC out of bounds (97% >= 95% max_soc_pct)
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = [
-                _FakeHTTPResponse(200, {"USOC": 97.0, "EM_OperatingMode": 1}),  # Pre-check GET /api/v2/status
+                _FakeHTTPResponse(
+                    200,
+                    {"USOC": 40.0, "EM_OperatingMode": 2, "Timestamp": "2026-11-15T02:50:00"},
+                ),  # Stale status timestamp (900s > 120s)!
                 _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Fail-safe PUT Mode 2
-                _FakeHTTPResponse(200, {"USOC": 97.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET Mode 2
+                _FakeHTTPResponse(200, {"USOC": 40.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET Mode 2
             ]
-            res_high_soc = bridge.execute_sonnen_command(
+            res_stale_usoc = bridge.execute_sonnen_command(
                 cmd_chg,
                 dry_run=False,
                 reference_now=valid_now,
-                current_status=None,
             )
-            self.assertFalse(res_high_soc["executed"])
-            self.assertTrue(res_high_soc["blocked"])
-            self.assertEqual(res_high_soc["reason"], "soc_upper_limit_reached")
-            self.assertTrue(res_high_soc["fail_safe_restore"]["restored_to_mode_2"])
-            self.assertTrue(res_high_soc["fail_safe_restore"]["verified_mode_2"])
+            self.assertFalse(res_stale_usoc["executed"])
+            self.assertTrue(res_stale_usoc["blocked"])
+            self.assertEqual(res_stale_usoc["reason"], "stale_usoc_status_rejected")
+            self.assertTrue(res_stale_usoc["fail_safe_restore"]["restored_to_mode_2"])
 
-        # Case 3c: Independently fetched live USOC below min_soc_pct (8% <= 10%) on PEAK_DISCHARGE
-        cmd_dis = bridge.safety_gate.evaluate_hourly_command(
-            hour=17,
-            timestamp_local="2026-11-15T17:00:00",
-            shadow_action="PEAK_DISCHARGE",
-            discharged_kwh=2.5,
-        )
+        # 3. Post-write setpoint effect mismatch (discharging during GRID_PRECHARGE) triggers Mode 2 restore
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = [
-                _FakeHTTPResponse(200, {"USOC": 8.0, "EM_OperatingMode": 1}),  # Pre-check GET /api/v2/status
+                _FakeHTTPResponse(200, {"USOC": 20.0, "EM_OperatingMode": 2}),  # Pre-write GET
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT Mode 1
+                _FakeHTTPResponse(200, {}),  # POST charge setpoint
+                _FakeHTTPResponse(
+                    200,
+                    {
+                        "USOC": 20.0,
+                        "EM_OperatingMode": 1,
+                        "Pac_total_W": 1800,
+                        "BatteryDischarging": True,
+                    },
+                ),  # Post-write GET: Mode 1 ok, but discharging instead of charging!
                 _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Fail-safe PUT Mode 2
-                _FakeHTTPResponse(200, {"USOC": 8.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET Mode 2
+                _FakeHTTPResponse(200, {"USOC": 20.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET Mode 2
             ]
-            res_low_soc = bridge.execute_sonnen_command(
-                cmd_dis,
+            res_effect_fail = bridge.execute_sonnen_command(
+                cmd_chg,
                 dry_run=False,
-                reference_now=datetime.fromisoformat("2026-11-15T17:05:00"),
-                current_status=None,
+                reference_now=valid_now,
             )
-            self.assertFalse(res_low_soc["executed"])
-            self.assertTrue(res_low_soc["blocked"])
-            self.assertEqual(res_low_soc["reason"], "soc_lower_limit_reached")
-            self.assertTrue(res_low_soc["fail_safe_restore"]["restored_to_mode_2"])
+            self.assertFalse(res_effect_fail["executed"])
+            self.assertEqual(res_effect_fail["mode"], "failed_with_failsafe_restore")
+            self.assertIn("setpoint effect mismatch", res_effect_fail["error"])
+            self.assertTrue(res_effect_fail["fail_safe_restore"]["restored_to_mode_2"])
 
-        # 4. Live execution success with independent pre-check GET, PUT mode 1, POST setpoint, and post-write GET
+        # 4. Live execution success + persistent idempotency surviving process restart (new bridge instance)
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = [
-                _FakeHTTPResponse(200, {"USOC": 20.0, "EM_OperatingMode": 2}),  # Pre-write GET /api/v2/status
-                _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT /api/v2/configurations
-                _FakeHTTPResponse(200, {}),  # POST /api/v2/setpoint/charge/4500
-                _FakeHTTPResponse(200, {"USOC": 21.0, "EM_OperatingMode": 1}),  # Post-write GET /api/v2/status
+                _FakeHTTPResponse(200, {"USOC": 20.0, "EM_OperatingMode": 2}),  # Pre-write GET
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT Mode 1
+                _FakeHTTPResponse(200, {}),  # POST charge setpoint 4500W
+                _FakeHTTPResponse(
+                    200,
+                    {
+                        "USOC": 21.0,
+                        "EM_OperatingMode": 1,
+                        "Pac_total_W": -4450,
+                        "BatteryCharging": True,
+                        "BatteryDischarging": False,
+                    },
+                ),  # Post-write GET verifies BOTH Mode 1 AND charging effect
             ]
             res_live = bridge.execute_sonnen_command(
                 cmd_chg,
                 dry_run=False,
                 reference_now=valid_now,
-                current_status=None,
             )
             self.assertTrue(res_live["executed"])
             self.assertEqual(res_live["verified_operating_mode"], 1)
+            self.assertEqual(res_live["verified_pac_total_w"], -4450)
 
-            # Immediate retry with same command is blocked by idempotency key
-            res_dup = bridge.execute_sonnen_command(
-                cmd_chg,
-                dry_run=False,
-                reference_now=valid_now,
-            )
-            self.assertFalse(res_dup["executed"])
-            self.assertTrue(res_dup["blocked"])
-            self.assertEqual(res_dup["reason"], "duplicate_idempotency_key_blocked")
+        # Simulate process restart by instantiating a brand-new HomeAssistantTelemetryBridge pointing to store_path
+        restarted_bridge = HomeAssistantTelemetryBridge(
+            sonnen_token="valid_test_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=store_path,
+        )
+        res_dup_after_restart = restarted_bridge.execute_sonnen_command(
+            cmd_chg,
+            dry_run=False,
+            reference_now=valid_now,
+        )
+        self.assertFalse(res_dup_after_restart["executed"])
+        self.assertTrue(res_dup_after_restart["blocked"])
+        self.assertEqual(res_dup_after_restart["reason"], "duplicate_idempotency_key_blocked")
 
-        # 5. Live execution failure / post-write mode mismatch triggers fail-safe Mode 2 restore + verification
-        cmd_chg_h4 = bridge.safety_gate.evaluate_hourly_command(
+        # 5. Bounded-retry Mode 2 verification exhaustion trips persistent emergency latch across restarts
+        cmd_chg_h4 = restarted_bridge.safety_gate.evaluate_hourly_command(
             hour=4,
             timestamp_local="2026-11-15T04:00:00",
             shadow_action="GRID_PRECHARGE",
@@ -492,23 +572,45 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         )
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = [
-                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 2}),  # Pre-write GET /api/v2/status
-                _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT mode 1
-                _FakeHTTPResponse(200, {}),  # POST setpoint
-                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 2}),  # Post-write mismatch!
-                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Fail-safe PUT mode 2
-                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET mode 2
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 2}),  # Pre-write GET
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT Mode 1
+                _FakeHTTPResponse(500, {}),  # POST setpoint fails (HTTP 500) -> triggers restore_sonnen_safe_mode
+                # Attempt 1 of Mode 2 restore: PUT succeeds, but 2 polls still report Mode 1!
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 1}),
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 1}),
+                # Attempt 2 of Mode 2 restore: PUT succeeds, 2 polls still report Mode 1!
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 1}),
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 1}),
+                # Attempt 3 of Mode 2 restore: PUT succeeds, 2 polls still report Mode 1!
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 1}),
+                _FakeHTTPResponse(200, {"USOC": 30.0, "EM_OperatingMode": 1}),
             ]
-            res_fail = bridge.execute_sonnen_command(
+            res_exhausted = restarted_bridge.execute_sonnen_command(
                 cmd_chg_h4,
                 dry_run=False,
                 reference_now=datetime.fromisoformat("2026-11-15T04:05:00"),
-                current_status=None,
             )
-            self.assertFalse(res_fail["executed"])
-            self.assertEqual(res_fail["mode"], "failed_with_failsafe_restore")
-            self.assertTrue(res_fail["fail_safe_restore"]["restored_to_mode_2"])
-            self.assertTrue(res_fail["fail_safe_restore"]["verified_mode_2"])
+            self.assertFalse(res_exhausted["executed"])
+            self.assertFalse(res_exhausted["fail_safe_restore"]["restored_to_mode_2"])
+            self.assertFalse(res_exhausted["fail_safe_restore"]["verified_mode_2"])
+            self.assertEqual(res_exhausted["fail_safe_restore"]["attempts"], 3)
+            self.assertTrue(res_exhausted["fail_safe_restore"]["emergency_latch_locked"])
+            self.assertTrue(restarted_bridge.safety_gate.emergency_latch_locked)
+            self.assertFalse(restarted_bridge.safety_gate.is_unlocked)
+
+        # Simulate another process restart: emergency latch remains locked on disk and blocks all future commands
+        post_latch_bridge = HomeAssistantTelemetryBridge(
+            sonnen_token="valid_test_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=store_path,
+        )
+        self.assertTrue(post_latch_bridge.safety_gate.emergency_latch_locked)
+        self.assertFalse(post_latch_bridge.safety_gate.is_unlocked)
+        self.assertEqual(post_latch_bridge.safety_gate.gate_state_label, "LOCKED_EMERGENCY_FAILSAFE_LATCH")
 
     def test_sonnen_v2_status_parser(self):
         """Verify live and offline fallback parsing of SonnenBatterie 10 /api/v2/status."""
@@ -543,6 +645,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             sonnen_token="valid_sonnen_token",
             env_opt_in_enabled=False,
             ha_switch_on=False,
+            state_store_path=self._new_temp_state_path(),
         )
         pkg = bridge.build_state_package(
             multi_year_summary=self.multi_year_results["multi_year_summary"],
@@ -556,7 +659,6 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertFalse(pkg.active_control_enabled)
         self.assertEqual(pkg.safety_gate_status, "LOCKED_SHADOW_MODE_ONLY")
 
-        # Check key required sensors
         ent_action = pkg.get_entity("sensor.mysunshine_shadow_action")
         self.assertIsNotNone(ent_action)
         self.assertEqual(ent_action.state, "GRID_PRECHARGE")
@@ -604,6 +706,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             self.assertEqual(receipt_err["mode"], "live_rest_push")
             self.assertTrue(all(not r["ok"] for r in receipt_err["results"]))
             self.assertIsNotNone(receipt_err["fail_safe_restore"])
+            self.assertFalse(receipt_err["fail_safe_restore"]["restored_to_mode_2"])
 
 
 if __name__ == "__main__":

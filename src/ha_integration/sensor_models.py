@@ -7,10 +7,12 @@ Safety-Gated SonnenBatterie 10 Operating Mode (`EM_OperatingMode`) actuation gua
 Hardware safety architecture:
 - By default, MySunshine operates strictly in **Shadow Mode** (`active_control_enabled = False`,
   `input_boolean.mysunshine_active_battery_control = off`).
-- Any request to write to the SonnenBatterie 10 local API (`/api/v2/configurations` or
-  `/api/v2/setpoint`) is evaluated by `SonnenSafetyActuationGate`. When the gate is locked,
-  physical actuation is blocked (`would_actuate = False`) and a dry-run preview of the command
-  is returned for logging and dashboard inspection.
+- Home Assistant is strictly an **observer and operator UI** (`input_boolean.mysunshine_active_battery_control`).
+  Home Assistant NEVER issues direct REST writes to SonnenBatterie 10 (`192.168.3.125`).
+- The **sole hardware actuation path** is `HomeAssistantTelemetryBridge.execute_sonnen_command()`
+  in Python, which enforces the synchronized dual safety gate, persistent disk-backed idempotency,
+  live `/api/v2/status` pre-write & post-write verification, and bounded-retry verified Mode 2
+  fail-safe restoration with a persistent latch on verification failure.
 """
 
 from dataclasses import dataclass, field
@@ -82,6 +84,7 @@ class SonnenWriteCommandPreview:
     actuation_semantics: str = "MANUAL_SETPOINT_OR_MODE2"
     idempotency_key: str = ""
     fail_safe_fallback_mode: int = 2
+    python_executor_token: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -100,6 +103,7 @@ class SonnenWriteCommandPreview:
             "actuation_semantics": self.actuation_semantics,
             "idempotency_key": self.idempotency_key,
             "fail_safe_fallback_mode": self.fail_safe_fallback_mode,
+            "python_executor_token": self.python_executor_token,
         }
 
 
@@ -111,11 +115,12 @@ class SonnenSafetyActuationGate:
     - Mode `1`: Manual / API Setpoint Mode (`/api/v2/setpoint/charge/<watts>` or `discharge/<watts>`)
     - Mode `10`: Time-of-Use (ToU) Schedule Mode (`EM_ToU_Schedule`)
 
-    Physical actuation is strictly forbidden unless BOTH conditions hold without conflict:
-    1. `env_opt_in_enabled` (`MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true`) is explicitly enabled,
-       and if `ha_env_opt_in_state` (`binary_sensor.mysunshine_env_active_control_opt_in`) is
-       reported by Home Assistant, it must match (`"on"`) without conflict.
-    2. `ha_switch_on` (`input_boolean.mysunshine_active_battery_control == 'on'`) is active.
+    Physical actuation is strictly forbidden unless ALL conditions hold without conflict:
+    1. `env_opt_in_enabled` (`MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true` in Python) is explicitly enabled,
+       and if `ha_env_opt_in_state` (`binary_sensor.mysunshine_env_active_control_opt_in`) is reported
+       by Home Assistant, it must match (`"on"`) and not be stale or conflicting.
+    2. `ha_switch_on` (`input_boolean.mysunshine_active_battery_control == 'on'`) is active and fresh.
+    3. `emergency_latch_locked` is `False` (no unverified Mode 2 fail-safe restoration failure has occurred).
     """
 
     MODE_MANUAL_API = 1
@@ -133,6 +138,8 @@ class SonnenSafetyActuationGate:
         max_charge_watts: int = 6500,
         max_discharge_watts: int = 6000,
         enable_direct_discharge_setpoint: bool = False,
+        emergency_latch_locked: bool = False,
+        emergency_latch_reason: Optional[str] = None,
     ):
         self._raw_env_opt_in = env_opt_in_enabled
         self._raw_ha_switch = ha_switch_on
@@ -145,6 +152,13 @@ class SonnenSafetyActuationGate:
         self.max_charge_watts = int(max_charge_watts)
         self.max_discharge_watts = int(max_discharge_watts)
         self.enable_direct_discharge_setpoint = bool(enable_direct_discharge_setpoint)
+        self.emergency_latch_locked = bool(emergency_latch_locked)
+        self.emergency_latch_reason = emergency_latch_reason
+
+    def trip_emergency_latch(self, reason: str) -> None:
+        """Permanently lock out future actuation until explicitly reset."""
+        self.emergency_latch_locked = True
+        self.emergency_latch_reason = reason
 
     @staticmethod
     def _parse_ha_bool_state(val: Any) -> Optional[bool]:
@@ -194,13 +208,15 @@ class SonnenSafetyActuationGate:
 
     @property
     def is_unlocked(self) -> bool:
-        """Return True ONLY when both environment opt-in and HA boolean switch are active without conflict."""
-        if self.has_gate_conflict:
+        """Return True ONLY when emergency latch is clear, no conflict exists, and both gates are ON."""
+        if self.emergency_latch_locked or self.has_gate_conflict:
             return False
         return self.env_opt_in_enabled and self.ha_switch_on
 
     @property
     def gate_state_label(self) -> str:
+        if self.emergency_latch_locked:
+            return "LOCKED_EMERGENCY_FAILSAFE_LATCH"
         if self.has_gate_conflict:
             return "LOCKED_GATE_CONFLICT_FAIL_CLOSED"
         if self.is_unlocked:
@@ -216,6 +232,13 @@ class SonnenSafetyActuationGate:
     ) -> str:
         raw = f"{timestamp_local}|{shadow_action}|{target_operating_mode}|{target_power_watts}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+    def compute_executor_token(self, idempotency_key: str) -> str:
+        """Compute cryptographic token proving Python safety gate authorized this exact command."""
+        if not self.is_unlocked:
+            return ""
+        raw = f"PY_AUTH|{idempotency_key}|{self.env_opt_in_enabled}|{self.ha_switch_on}"
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
     def _resolve_target_command(
         self,
@@ -352,7 +375,13 @@ class SonnenSafetyActuationGate:
         )
 
         conflict_msg = self.gate_conflict_reason
-        if conflict_msg:
+        if self.emergency_latch_locked:
+            would_actuate = False
+            blocked_reason = (
+                f"Emergency Fail-Safe Latch Locked ({self.emergency_latch_reason}): "
+                "all future actuation disabled until manual operator reset."
+            )
+        elif conflict_msg:
             would_actuate = False
             blocked_reason = conflict_msg
         elif soc_violation_reason:
@@ -379,6 +408,8 @@ class SonnenSafetyActuationGate:
                 "physical Sonnen API write blocked; telemetry recorded for shadow verification."
             )
 
+        executor_token = self.compute_executor_token(idempotency_key) if would_actuate else ""
+
         return SonnenWriteCommandPreview(
             hour=hour,
             timestamp_local=timestamp_local,
@@ -395,6 +426,7 @@ class SonnenSafetyActuationGate:
             actuation_semantics=actuation_semantics,
             idempotency_key=idempotency_key,
             fail_safe_fallback_mode=self.MODE_SELF_CONSUMPTION,
+            python_executor_token=executor_token,
         )
 
 
@@ -435,6 +467,7 @@ class HomeAssistantStatePackage:
                 "active_control_enabled": self.active_control_enabled,
                 "opt_in_switch_entity": "input_boolean.mysunshine_active_battery_control",
                 "env_opt_in_sensor_entity": "binary_sensor.mysunshine_env_active_control_opt_in",
+                "actuation_authority": "python_executor_only (HA direct Sonnen writes disabled)",
                 "default_operating_mode": "Mode 2 (Eigenverbrauch / Automatic Self-Consumption)",
             },
             "entities_count": len(self.entities),

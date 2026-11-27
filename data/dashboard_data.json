@@ -2,7 +2,7 @@
   "metadata": {
     "app": "MySunshine",
     "version": "1.2.0",
-    "generated_at": "2026-11-27T21:09:55.026042",
+    "generated_at": "2026-11-27T21:37:52.290431",
     "bidding_zone": "SE3",
     "retailer": "Tibber",
     "grid_operator": "Eskilstuna Energi & Milj\u00f6 (EEM)",
@@ -26309,7 +26309,7 @@
     }
   },
   "ha_integration": {
-    "generated_at": "2026-11-27T21:09:55.025992",
+    "generated_at": "2026-11-27T21:37:52.290384",
     "target_date": "2026-11-15",
     "endpoints": {
       "ha_url": "http://192.168.3.138:8123",
@@ -26321,6 +26321,7 @@
       "active_control_enabled": false,
       "opt_in_switch_entity": "input_boolean.mysunshine_active_battery_control",
       "env_opt_in_sensor_entity": "binary_sensor.mysunshine_env_active_control_opt_in",
+      "actuation_authority": "python_executor_only (HA direct Sonnen writes disabled)",
       "default_operating_mode": "Mode 2 (Eigenverbrauch / Automatic Self-Consumption)"
     },
     "entities_count": 12,
@@ -26346,6 +26347,8 @@
           "enable_direct_discharge_setpoint": false,
           "would_actuate": false,
           "idempotency_key": "26ba07c42e232eba",
+          "python_executor_token": "",
+          "actuation_authority": "python_executor_only",
           "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
           "efficiency_gate_passed": true,
           "cheapest_trough_window": "03:00\u201305:00",
@@ -26356,6 +26359,7 @@
           "recommended_grid_precharge_kwh": 12.2,
           "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
           "has_gate_conflict": false,
+          "emergency_latch_locked": false,
           "env_opt_in_enabled": false,
           "ha_switch_on": false,
           "active_control_enabled": false,
@@ -26785,6 +26789,8 @@
             "enable_direct_discharge_setpoint": false,
             "would_actuate": false,
             "idempotency_key": "26ba07c42e232eba",
+            "python_executor_token": "",
+            "actuation_authority": "python_executor_only",
             "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
             "efficiency_gate_passed": true,
             "cheapest_trough_window": "03:00\u201305:00",
@@ -26795,6 +26801,7 @@
             "recommended_grid_precharge_kwh": 12.2,
             "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
             "has_gate_conflict": false,
+            "emergency_latch_locked": false,
             "env_opt_in_enabled": false,
             "ha_switch_on": false,
             "active_control_enabled": false,
@@ -27611,6 +27618,7 @@
           "env_opt_in_enabled": false,
           "has_gate_conflict": false,
           "gate_conflict_reason": null,
+          "emergency_latch_locked": false,
           "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY"
         },
         "ha_rest_payload": {
@@ -27625,6 +27633,7 @@
             "env_opt_in_enabled": false,
             "has_gate_conflict": false,
             "gate_conflict_reason": null,
+            "emergency_latch_locked": false,
             "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY"
           }
         }
@@ -27645,9 +27654,11 @@
           "env_opt_in_enabled": false,
           "ha_switch_on": false,
           "has_gate_conflict": false,
+          "emergency_latch_locked": false,
+          "actuation_authority": "python_executor_only",
           "sonnen_endpoint": "http://192.168.3.125",
           "default_safe_mode": "EM_OperatingMode=2 (Automatic Self-Consumption)",
-          "warning": "Keep OFF for Shadow Mode telemetry only. Enabling requires both MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true and this switch ON."
+          "warning": "Observer/UI Gate 2 switch. Home Assistant never writes directly to Sonnen; Python execute_sonnen_command() is the sole actuation authority."
         },
         "ha_rest_payload": {
           "state": "off",
@@ -27659,9 +27670,11 @@
             "env_opt_in_enabled": false,
             "ha_switch_on": false,
             "has_gate_conflict": false,
+            "emergency_latch_locked": false,
+            "actuation_authority": "python_executor_only",
             "sonnen_endpoint": "http://192.168.3.125",
             "default_safe_mode": "EM_OperatingMode=2 (Automatic Self-Consumption)",
-            "warning": "Keep OFF for Shadow Mode telemetry only. Enabling requires both MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true and this switch ON."
+            "warning": "Observer/UI Gate 2 switch. Home Assistant never writes directly to Sonnen; Python execute_sonnen_command() is the sole actuation authority."
           }
         }
       }
@@ -27685,7 +27698,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "9f425a47a089aa24",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 1,
@@ -27705,7 +27719,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "ab992e5b10de5b8d",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 2,
@@ -27725,7 +27740,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "46c1dd4ae75371e6",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 3,
@@ -27745,7 +27761,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "26ba07c42e232eba",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 4,
@@ -27765,7 +27782,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "335dbd4dc49a8310",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 5,
@@ -27785,7 +27803,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "301ba287c1b353dd",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 6,
@@ -27805,7 +27824,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "dbb490b5f43d8001",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 7,
@@ -27824,7 +27844,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "cd077371966e2c8d",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 8,
@@ -27843,7 +27864,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "7c3530ae56367053",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 9,
@@ -27862,7 +27884,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "3bbbae476bef19dc",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 10,
@@ -27881,7 +27904,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "ebaec405017a6176",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 11,
@@ -27900,7 +27924,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "5a929f8a20f75fc4",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 12,
@@ -27919,7 +27944,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "47aae06f058579cc",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 13,
@@ -27938,7 +27964,8 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "0d00b18851dd3c68",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 14,
@@ -27957,7 +27984,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "421d232d939f49f7",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 15,
@@ -27976,7 +28004,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "5a1abe7b8eb4d618",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 16,
@@ -27995,7 +28024,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "dfe5c3883b5e9b70",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 17,
@@ -28014,7 +28044,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "2c8562d91e94c6a2",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 18,
@@ -28033,7 +28064,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "8a5ccb3c583e1c40",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 19,
@@ -28052,7 +28084,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "9bef40a25255fec9",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 20,
@@ -28071,7 +28104,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "901d4b76299e4c2e",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 21,
@@ -28090,7 +28124,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "c79f26dc912aa80b",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 22,
@@ -28109,7 +28144,8 @@
         "blocked_reason": "PEAK_DISCHARGE is non-actuating in passive Mode 2 (Sonnen Eigenverbrauch automatically covers household load without an active watt setpoint write).",
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "093c4efd652d7edd",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       },
       {
         "hour": 23,
@@ -28128,14 +28164,17 @@
         "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification.",
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "879a7911d6236cf5",
-        "fail_safe_fallback_mode": 2
+        "fail_safe_fallback_mode": 2,
+        "python_executor_token": ""
       }
     ],
     "hardware_telemetry": {
       "home_assistant": {
         "url": "http://192.168.3.138:8123",
         "token_configured": false,
-        "rest_api_endpoint": "http://192.168.3.138:8123/api/states"
+        "rest_api_endpoint": "http://192.168.3.138:8123/api/states",
+        "direct_sonnen_writes_enabled": false,
+        "role": "Observer & Gate 2 UI Controller Only"
       },
       "sonnen_batterie_10": {
         "url": "http://192.168.3.125",
@@ -28163,8 +28202,8 @@
         "status": "Ok / Night Standby (0 W)"
       }
     },
-    "configuration_yaml_snippet": "# MySunshine Home Assistant Green Package (configuration.yaml)\n# Authoritative Gate 1 Source: Python MYSUNSHINE_ACTIVE_CONTROL_ENABLED (.env)\n# Authoritative Gate 2 Source: input_boolean.mysunshine_active_battery_control (HA UI)\n\ninput_boolean:\n  mysunshine_active_battery_control:\n    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate 2)\"\n    initial: false\n    icon: mdi:shield-lock-outline\n\ntemplate:\n  - binary_sensor:\n      - name: \"MySunshine Environment Active Control Opt-In (Safety Gate 1)\"\n        unique_id: mysunshine_env_active_control_opt_in\n        device_class: safety\n        icon: mdi:key-chain\n        availability: >\n          {{ states('sensor.mysunshine_shadow_action') not in ['unknown', 'unavailable', 'none'] }}\n        state: >\n          {{ state_attr('sensor.mysunshine_shadow_action', 'env_opt_in_enabled') == true\n             and state_attr('sensor.mysunshine_shadow_action', 'has_gate_conflict') == false\n             and state_attr('sensor.mysunshine_shadow_action',\n                            'safety_gate_status') == 'UNLOCKED_ACTIVE_CONTROL' }}\n\nsensor:\n  - platform: rest\n    name: \"SonnenBatterie 10 Live Status\"\n    resource: \"http://192.168.3.125/api/v2/status\"\n    method: GET\n    scan_interval: 15\n    timeout: 5\n    value_template: \"{{ value_json.EM_OperatingMode }}\"\n    json_attributes:\n      - USOC\n      - RSOC\n      - Pac_total_W\n      - EM_OperatingMode\n      - SystemStatus\n\nrest_command:\n  sonnen_set_operating_mode:\n    url: \"http://192.168.3.125/api/v2/configurations\"\n    method: PUT\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n      Content-Type: application/json\n    payload: '{\"EM_OperatingMode\": \"{{ mode }}\"}'\n  sonnen_charge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/charge/{{ watts | int(0) }}\"\n    method: POST\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n  sonnen_discharge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/discharge/{{ watts | int(0) }}\"\n    method: POST\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n",
-    "automations_yaml_snippet": "# MySunshine Dual-Safety-Gated Arbitrage & Fail-Safe Automation Blueprint (automations.yaml)\n- id: mysunshine_shadow_or_active_dispatch\n  alias: \"MySunshine \u2014 Hourly Dual-Gated Sonnen Dispatch\"\n  mode: single\n  max_exceeded: silent\n  trigger:\n    - platform: time_pattern\n      minutes: 0\n  condition:\n    # Gate 1: Authoritative Python environment opt-in synchronized to HA template binary_sensor\n    - condition: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      state: \"on\"\n    # Gate 2: Explicit Home Assistant operator switch\n    - condition: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      state: \"on\"\n    # Gate 3: Synchronized non-conflicting gate state & command freshness (< 3900s)\n    - condition: template\n      value_template: >\n        {{ state_attr('sensor.mysunshine_shadow_action', 'active_control_enabled') == true\n           and state_attr('sensor.mysunshine_shadow_action', 'env_opt_in_enabled') == true\n           and state_attr('sensor.mysunshine_shadow_action', 'has_gate_conflict') == false\n           and state_attr('sensor.mysunshine_shadow_action',\n                          'safety_gate_status') == 'UNLOCKED_ACTIVE_CONTROL'\n           and (as_timestamp(now()) -\n                as_timestamp(states.sensor.mysunshine_shadow_action.last_updated)) < 3900 }}\n    # Gate 4: Round-trip efficiency gate (eta_rt = 76.8%) passed\n    - condition: state\n      entity_id: binary_sensor.mysunshine_efficiency_gate_passed\n      state: \"on\"\n  action:\n    - variables:\n        raw_watts: \"{{ states('sensor.mysunshine_target_power_watts') | int(0) }}\"\n        charge_watts: \"{{ [0, [6500, raw_watts] | min] | max }}\"\n        discharge_watts: \"{{ [0, [6000, raw_watts] | min] | max }}\"\n        live_usoc: \"{{ state_attr('sensor.sonnenbatterie_10_live_status', 'USOC') | float(-1) }}\"\n        actuation_semantics: >\n          {{ state_attr('sensor.mysunshine_shadow_action', 'actuation_semantics') | default('') }}\n        direct_discharge_enabled: >\n          {{ state_attr('sensor.mysunshine_shadow_action',\n                        'enable_direct_discharge_setpoint') == true }}\n    - choose:\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"GRID_PRECHARGE\"\n            - condition: template\n              value_template: \"{{ charge_watts > 0 and live_usoc >= 0 and live_usoc < 100 }}\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_charge_setpoint_w\n              data:\n                watts: \"{{ charge_watts }}\"\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"HOLD_FOR_PEAK\"\n            - condition: template\n              value_template: \"{{ live_usoc >= 0 }}\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_discharge_setpoint_w\n              data:\n                watts: 0\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"PEAK_DISCHARGE\"\n            - condition: template\n              value_template: >\n                {{ direct_discharge_enabled\n                   and actuation_semantics == 'DIRECT_MANUAL_DISCHARGE_SETPOINT'\n                   and discharge_watts > 0\n                   and live_usoc > 5 }}\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_discharge_setpoint_w\n              data:\n                watts: \"{{ discharge_watts }}\"\n      default:\n        # Passive PEAK_DISCHARGE (SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE), SOLAR_CHARGE,\n        # SELF_CONSUMPTION, IDLE, or out-of-bounds USOC restore passive Mode 2\n        - service: rest_command.sonnen_set_operating_mode\n          data:\n            mode: \"2\"\n\n- id: mysunshine_failsafe_restore_mode_2\n  alias: \"MySunshine \u2014 Fail-Safe Restore & Verify EM_OperatingMode=2 on Gate Lock or Fault\"\n  mode: restart\n  trigger:\n    - platform: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      to: \"off\"\n    - platform: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      to:\n        - \"off\"\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.mysunshine_shadow_action\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.mysunshine_target_power_watts\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.sonnenbatterie_10_live_status\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: homeassistant\n      event: shutdown\n  action:\n    - service: rest_command.sonnen_set_operating_mode\n      data:\n        mode: \"2\"\n    - service: homeassistant.update_entity\n      target:\n        entity_id: sensor.sonnenbatterie_10_live_status\n    - condition: template\n      value_template: \"{{ states('sensor.sonnenbatterie_10_live_status') == '2' }}\"\n",
+    "configuration_yaml_snippet": "# MySunshine Home Assistant Green Observer & Gate-2 UI Package (configuration.yaml)\n# NOTE: Home Assistant is strictly an observer/UI controller. Direct HA -> Sonnen\n# setpoint writes are intentionally disabled so no automation can bypass Python's\n# HomeAssistantTelemetryBridge.execute_sonnen_command() safety executor.\n\ninput_boolean:\n  mysunshine_active_battery_control:\n    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate 2 \u2014 UI Opt-In)\"\n    initial: false\n    icon: mdi:shield-lock-outline\n\nsensor:\n  - platform: rest\n    name: \"SonnenBatterie 10 Live Status\"\n    resource: \"http://192.168.3.125/api/v2/status\"\n    method: GET\n    headers:\n      Auth-Token: !secret sonnen_api_token\n    scan_interval: 15\n    timeout: 5\n    value_template: \"{{ value_json.EM_OperatingMode }}\"\n    json_attributes:\n      - USOC\n      - RSOC\n      - Pac_total_W\n      - EM_OperatingMode\n      - BatteryCharging\n      - BatteryDischarging\n      - SystemStatus\n",
+    "automations_yaml_snippet": "# MySunshine Observer & Gate-2 Auto-Lockout Automation Blueprint (automations.yaml)\n# Direct HA -> Sonnen actuation is disabled by design; Python execute_sonnen_command()\n# is the sole hardware actuation authority.\n- id: mysunshine_revoke_gate2_on_fault_or_stale_telemetry\n  alias: \"MySunshine \u2014 Revoke Gate 2 Switch on Gate 1 Lock, Stale Telemetry, or Shutdown\"\n  mode: restart\n  trigger:\n    - platform: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      to:\n        - \"off\"\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.mysunshine_shadow_action\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.mysunshine_target_power_watts\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.sonnenbatterie_10_live_status\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: homeassistant\n      event: shutdown\n  action:\n    - service: input_boolean.turn_off\n      target:\n        entity_id: input_boolean.mysunshine_active_battery_control\n",
     "mqtt_discovery_topic_prefix": "homeassistant"
   },
   "high_res_30d": {
