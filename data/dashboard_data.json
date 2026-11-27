@@ -2,7 +2,7 @@
   "metadata": {
     "app": "MySunshine",
     "version": "1.2.0",
-    "generated_at": "2026-11-27T20:49:59.636372",
+    "generated_at": "2026-11-27T21:09:55.026042",
     "bidding_zone": "SE3",
     "retailer": "Tibber",
     "grid_operator": "Eskilstuna Energi & Milj\u00f6 (EEM)",
@@ -26309,7 +26309,7 @@
     }
   },
   "ha_integration": {
-    "generated_at": "2026-11-27T20:49:59.636325",
+    "generated_at": "2026-11-27T21:09:55.025992",
     "target_date": "2026-11-15",
     "endpoints": {
       "ha_url": "http://192.168.3.138:8123",
@@ -26343,6 +26343,7 @@
           "target_operating_mode_label": "Manual API Charge Setpoint (EM_OperatingMode=1)",
           "target_power_watts": 6500,
           "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
+          "enable_direct_discharge_setpoint": false,
           "would_actuate": false,
           "idempotency_key": "26ba07c42e232eba",
           "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
@@ -26354,6 +26355,7 @@
           "breakeven_peak_spot_ore_kwh": 41.57,
           "recommended_grid_precharge_kwh": 12.2,
           "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+          "has_gate_conflict": false,
           "env_opt_in_enabled": false,
           "ha_switch_on": false,
           "active_control_enabled": false,
@@ -26780,6 +26782,7 @@
             "target_operating_mode_label": "Manual API Charge Setpoint (EM_OperatingMode=1)",
             "target_power_watts": 6500,
             "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
+            "enable_direct_discharge_setpoint": false,
             "would_actuate": false,
             "idempotency_key": "26ba07c42e232eba",
             "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
@@ -26791,6 +26794,7 @@
             "breakeven_peak_spot_ore_kwh": 41.57,
             "recommended_grid_precharge_kwh": 12.2,
             "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+            "has_gate_conflict": false,
             "env_opt_in_enabled": false,
             "ha_switch_on": false,
             "active_control_enabled": false,
@@ -27227,6 +27231,7 @@
           "shadow_action": "GRID_PRECHARGE",
           "target_operating_mode": 1,
           "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
+          "enable_direct_discharge_setpoint": false,
           "max_charge_watts": 6500,
           "max_discharge_watts": 6000,
           "min_soc_pct": 5.0,
@@ -27248,6 +27253,7 @@
             "shadow_action": "GRID_PRECHARGE",
             "target_operating_mode": 1,
             "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
+            "enable_direct_discharge_setpoint": false,
             "max_charge_watts": 6500,
             "max_discharge_watts": 6000,
             "min_soc_pct": 5.0,
@@ -27600,9 +27606,11 @@
           "icon": "mdi:key-chain",
           "integration": "mysunshine",
           "device_class": "safety",
+          "authoritative_source": "python_env:MYSUNSHINE_ACTIVE_CONTROL_ENABLED",
           "env_variable": "MYSUNSHINE_ACTIVE_CONTROL_ENABLED",
           "env_opt_in_enabled": false,
-          "secrets_yaml_key": "mysunshine_active_control_enabled",
+          "has_gate_conflict": false,
+          "gate_conflict_reason": null,
           "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY"
         },
         "ha_rest_payload": {
@@ -27612,9 +27620,11 @@
             "icon": "mdi:key-chain",
             "integration": "mysunshine",
             "device_class": "safety",
+            "authoritative_source": "python_env:MYSUNSHINE_ACTIVE_CONTROL_ENABLED",
             "env_variable": "MYSUNSHINE_ACTIVE_CONTROL_ENABLED",
             "env_opt_in_enabled": false,
-            "secrets_yaml_key": "mysunshine_active_control_enabled",
+            "has_gate_conflict": false,
+            "gate_conflict_reason": null,
             "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY"
           }
         }
@@ -27634,6 +27644,7 @@
           "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
           "env_opt_in_enabled": false,
           "ha_switch_on": false,
+          "has_gate_conflict": false,
           "sonnen_endpoint": "http://192.168.3.125",
           "default_safe_mode": "EM_OperatingMode=2 (Automatic Self-Consumption)",
           "warning": "Keep OFF for Shadow Mode telemetry only. Enabling requires both MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true and this switch ON."
@@ -27647,6 +27658,7 @@
             "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
             "env_opt_in_enabled": false,
             "ha_switch_on": false,
+            "has_gate_conflict": false,
             "sonnen_endpoint": "http://192.168.3.125",
             "default_safe_mode": "EM_OperatingMode=2 (Automatic Self-Consumption)",
             "warning": "Keep OFF for Shadow Mode telemetry only. Enabling requires both MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true and this switch ON."
@@ -28151,8 +28163,8 @@
         "status": "Ok / Night Standby (0 W)"
       }
     },
-    "configuration_yaml_snippet": "# MySunshine Home Assistant Green Package (configuration.yaml)\n# In secrets.yaml, define:\n#   mysunshine_active_control_enabled: \"false\"  # Set to \"true\" ONLY after staging sign-off\n#   sonnen_api_token: \"your_sonnen_local_api_token\"\n\ninput_boolean:\n  mysunshine_active_battery_control:\n    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate 2)\"\n    initial: false\n    icon: mdi:shield-lock-outline\n\ntemplate:\n  - binary_sensor:\n      - name: \"MySunshine Environment Active Control Opt-In (Safety Gate 1)\"\n        unique_id: mysunshine_env_active_control_opt_in\n        state: >\n          {{ (!secret mysunshine_active_control_enabled) | lower in ['true', '1', 'yes', 'on'] }}\n        device_class: safety\n        icon: mdi:key-chain\n\nrest_command:\n  sonnen_set_operating_mode:\n    url: \"http://192.168.3.125/api/v2/configurations\"\n    method: PUT\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n      Content-Type: application/json\n    payload: '{\"EM_OperatingMode\": \"{{ mode }}\"}'\n  sonnen_charge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/charge/{{ watts | int(0) }}\"\n    method: POST\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n  sonnen_discharge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/discharge/{{ watts | int(0) }}\"\n    method: POST\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n",
-    "automations_yaml_snippet": "# MySunshine Dual-Safety-Gated Arbitrage & Fail-Safe Automation Blueprint (automations.yaml)\n- id: mysunshine_shadow_or_active_dispatch\n  alias: \"MySunshine \u2014 Hourly Dual-Gated Sonnen Dispatch\"\n  mode: single\n  max_exceeded: silent\n  trigger:\n    - platform: time_pattern\n      minutes: 0\n  condition:\n    # Gate 1: Environment / secrets.yaml opt-in (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true)\n    - condition: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      state: \"on\"\n    # Gate 2: Explicit Home Assistant operator switch\n    - condition: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      state: \"on\"\n    # Gate 3: MySunshine bridge confirms dual gate is unlocked & fresh\n    - condition: template\n      value_template: >\n        {{ state_attr('sensor.mysunshine_shadow_action', 'active_control_enabled') == true\n           and state_attr('sensor.mysunshine_shadow_action',\n                          'safety_gate_status') == 'UNLOCKED_ACTIVE_CONTROL' }}\n    # Gate 4: Round-trip efficiency gate (eta_rt = 76.8%) passed\n    - condition: state\n      entity_id: binary_sensor.mysunshine_efficiency_gate_passed\n      state: \"on\"\n  action:\n    - variables:\n        target_watts: >\n          {{ [0, [6500, states('sensor.mysunshine_target_power_watts') | int(0)] | min] | max }}\n    - choose:\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"GRID_PRECHARGE\"\n            - condition: template\n              value_template: \"{{ target_watts > 0 }}\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_charge_setpoint_w\n              data:\n                watts: \"{{ target_watts }}\"\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"HOLD_FOR_PEAK\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_discharge_setpoint_w\n              data:\n                watts: 0\n      default:\n        # PEAK_DISCHARGE, SOLAR_CHARGE, SELF_CONSUMPTION, and IDLE restore passive Mode 2\n        - service: rest_command.sonnen_set_operating_mode\n          data:\n            mode: \"2\"\n\n- id: mysunshine_failsafe_restore_mode_2\n  alias: \"MySunshine \u2014 Fail-Safe Restore to EM_OperatingMode=2 on Gate Lock or Interruption\"\n  mode: single\n  trigger:\n    - platform: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      to: \"off\"\n    - platform: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      to: \"off\"\n    - platform: state\n      entity_id: sensor.mysunshine_shadow_action\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: homeassistant\n      event: shutdown\n  action:\n    - service: rest_command.sonnen_set_operating_mode\n      data:\n        mode: \"2\"\n",
+    "configuration_yaml_snippet": "# MySunshine Home Assistant Green Package (configuration.yaml)\n# Authoritative Gate 1 Source: Python MYSUNSHINE_ACTIVE_CONTROL_ENABLED (.env)\n# Authoritative Gate 2 Source: input_boolean.mysunshine_active_battery_control (HA UI)\n\ninput_boolean:\n  mysunshine_active_battery_control:\n    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate 2)\"\n    initial: false\n    icon: mdi:shield-lock-outline\n\ntemplate:\n  - binary_sensor:\n      - name: \"MySunshine Environment Active Control Opt-In (Safety Gate 1)\"\n        unique_id: mysunshine_env_active_control_opt_in\n        device_class: safety\n        icon: mdi:key-chain\n        availability: >\n          {{ states('sensor.mysunshine_shadow_action') not in ['unknown', 'unavailable', 'none'] }}\n        state: >\n          {{ state_attr('sensor.mysunshine_shadow_action', 'env_opt_in_enabled') == true\n             and state_attr('sensor.mysunshine_shadow_action', 'has_gate_conflict') == false\n             and state_attr('sensor.mysunshine_shadow_action',\n                            'safety_gate_status') == 'UNLOCKED_ACTIVE_CONTROL' }}\n\nsensor:\n  - platform: rest\n    name: \"SonnenBatterie 10 Live Status\"\n    resource: \"http://192.168.3.125/api/v2/status\"\n    method: GET\n    scan_interval: 15\n    timeout: 5\n    value_template: \"{{ value_json.EM_OperatingMode }}\"\n    json_attributes:\n      - USOC\n      - RSOC\n      - Pac_total_W\n      - EM_OperatingMode\n      - SystemStatus\n\nrest_command:\n  sonnen_set_operating_mode:\n    url: \"http://192.168.3.125/api/v2/configurations\"\n    method: PUT\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n      Content-Type: application/json\n    payload: '{\"EM_OperatingMode\": \"{{ mode }}\"}'\n  sonnen_charge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/charge/{{ watts | int(0) }}\"\n    method: POST\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n  sonnen_discharge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/discharge/{{ watts | int(0) }}\"\n    method: POST\n    timeout: 5\n    headers:\n      Auth-Token: !secret sonnen_api_token\n",
+    "automations_yaml_snippet": "# MySunshine Dual-Safety-Gated Arbitrage & Fail-Safe Automation Blueprint (automations.yaml)\n- id: mysunshine_shadow_or_active_dispatch\n  alias: \"MySunshine \u2014 Hourly Dual-Gated Sonnen Dispatch\"\n  mode: single\n  max_exceeded: silent\n  trigger:\n    - platform: time_pattern\n      minutes: 0\n  condition:\n    # Gate 1: Authoritative Python environment opt-in synchronized to HA template binary_sensor\n    - condition: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      state: \"on\"\n    # Gate 2: Explicit Home Assistant operator switch\n    - condition: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      state: \"on\"\n    # Gate 3: Synchronized non-conflicting gate state & command freshness (< 3900s)\n    - condition: template\n      value_template: >\n        {{ state_attr('sensor.mysunshine_shadow_action', 'active_control_enabled') == true\n           and state_attr('sensor.mysunshine_shadow_action', 'env_opt_in_enabled') == true\n           and state_attr('sensor.mysunshine_shadow_action', 'has_gate_conflict') == false\n           and state_attr('sensor.mysunshine_shadow_action',\n                          'safety_gate_status') == 'UNLOCKED_ACTIVE_CONTROL'\n           and (as_timestamp(now()) -\n                as_timestamp(states.sensor.mysunshine_shadow_action.last_updated)) < 3900 }}\n    # Gate 4: Round-trip efficiency gate (eta_rt = 76.8%) passed\n    - condition: state\n      entity_id: binary_sensor.mysunshine_efficiency_gate_passed\n      state: \"on\"\n  action:\n    - variables:\n        raw_watts: \"{{ states('sensor.mysunshine_target_power_watts') | int(0) }}\"\n        charge_watts: \"{{ [0, [6500, raw_watts] | min] | max }}\"\n        discharge_watts: \"{{ [0, [6000, raw_watts] | min] | max }}\"\n        live_usoc: \"{{ state_attr('sensor.sonnenbatterie_10_live_status', 'USOC') | float(-1) }}\"\n        actuation_semantics: >\n          {{ state_attr('sensor.mysunshine_shadow_action', 'actuation_semantics') | default('') }}\n        direct_discharge_enabled: >\n          {{ state_attr('sensor.mysunshine_shadow_action',\n                        'enable_direct_discharge_setpoint') == true }}\n    - choose:\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"GRID_PRECHARGE\"\n            - condition: template\n              value_template: \"{{ charge_watts > 0 and live_usoc >= 0 and live_usoc < 100 }}\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_charge_setpoint_w\n              data:\n                watts: \"{{ charge_watts }}\"\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"HOLD_FOR_PEAK\"\n            - condition: template\n              value_template: \"{{ live_usoc >= 0 }}\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_discharge_setpoint_w\n              data:\n                watts: 0\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"PEAK_DISCHARGE\"\n            - condition: template\n              value_template: >\n                {{ direct_discharge_enabled\n                   and actuation_semantics == 'DIRECT_MANUAL_DISCHARGE_SETPOINT'\n                   and discharge_watts > 0\n                   and live_usoc > 5 }}\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_discharge_setpoint_w\n              data:\n                watts: \"{{ discharge_watts }}\"\n      default:\n        # Passive PEAK_DISCHARGE (SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE), SOLAR_CHARGE,\n        # SELF_CONSUMPTION, IDLE, or out-of-bounds USOC restore passive Mode 2\n        - service: rest_command.sonnen_set_operating_mode\n          data:\n            mode: \"2\"\n\n- id: mysunshine_failsafe_restore_mode_2\n  alias: \"MySunshine \u2014 Fail-Safe Restore & Verify EM_OperatingMode=2 on Gate Lock or Fault\"\n  mode: restart\n  trigger:\n    - platform: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      to: \"off\"\n    - platform: state\n      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n      to:\n        - \"off\"\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.mysunshine_shadow_action\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.mysunshine_target_power_watts\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: state\n      entity_id: sensor.sonnenbatterie_10_live_status\n      to:\n        - \"unavailable\"\n        - \"unknown\"\n    - platform: homeassistant\n      event: shutdown\n  action:\n    - service: rest_command.sonnen_set_operating_mode\n      data:\n        mode: \"2\"\n    - service: homeassistant.update_entity\n      target:\n        entity_id: sensor.sonnenbatterie_10_live_status\n    - condition: template\n      value_template: \"{{ states('sensor.sonnenbatterie_10_live_status') == '2' }}\"\n",
     "mqtt_discovery_topic_prefix": "homeassistant"
   },
   "high_res_30d": {

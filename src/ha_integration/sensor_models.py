@@ -111,8 +111,10 @@ class SonnenSafetyActuationGate:
     - Mode `1`: Manual / API Setpoint Mode (`/api/v2/setpoint/charge/<watts>` or `discharge/<watts>`)
     - Mode `10`: Time-of-Use (ToU) Schedule Mode (`EM_ToU_Schedule`)
 
-    Physical actuation is strictly forbidden unless BOTH conditions hold:
-    1. `env_opt_in_enabled` (`MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true`) is explicitly enabled.
+    Physical actuation is strictly forbidden unless BOTH conditions hold without conflict:
+    1. `env_opt_in_enabled` (`MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true`) is explicitly enabled,
+       and if `ha_env_opt_in_state` (`binary_sensor.mysunshine_env_active_control_opt_in`) is
+       reported by Home Assistant, it must match (`"on"`) without conflict.
     2. `ha_switch_on` (`input_boolean.mysunshine_active_battery_control == 'on'`) is active.
     """
 
@@ -122,8 +124,9 @@ class SonnenSafetyActuationGate:
 
     def __init__(
         self,
-        env_opt_in_enabled: bool = False,
-        ha_switch_on: bool = False,
+        env_opt_in_enabled: Optional[bool] = False,
+        ha_switch_on: Optional[bool] = False,
+        ha_env_opt_in_state: Optional[Any] = None,
         sonnen_base_url: str = "http://192.168.3.125",
         min_soc_pct: float = 5.0,
         max_soc_pct: float = 100.0,
@@ -131,8 +134,11 @@ class SonnenSafetyActuationGate:
         max_discharge_watts: int = 6000,
         enable_direct_discharge_setpoint: bool = False,
     ):
-        self.env_opt_in_enabled = bool(env_opt_in_enabled)
-        self.ha_switch_on = bool(ha_switch_on)
+        self._raw_env_opt_in = env_opt_in_enabled
+        self._raw_ha_switch = ha_switch_on
+        self.env_opt_in_enabled = bool(env_opt_in_enabled) if env_opt_in_enabled is not None else False
+        self.ha_switch_on = bool(ha_switch_on) if ha_switch_on is not None else False
+        self.ha_env_opt_in_state = ha_env_opt_in_state
         self.sonnen_base_url = sonnen_base_url.rstrip("/")
         self.min_soc_pct = float(min_soc_pct)
         self.max_soc_pct = float(max_soc_pct)
@@ -140,13 +146,63 @@ class SonnenSafetyActuationGate:
         self.max_discharge_watts = int(max_discharge_watts)
         self.enable_direct_discharge_setpoint = bool(enable_direct_discharge_setpoint)
 
+    @staticmethod
+    def _parse_ha_bool_state(val: Any) -> Optional[bool]:
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            return val
+        s = str(val).strip().lower()
+        if s in ("on", "true", "1", "yes"):
+            return True
+        if s in ("off", "false", "0", "no"):
+            return False
+        return None
+
+    @property
+    def has_gate_conflict(self) -> bool:
+        """Return True if Python and Home Assistant report conflicting or missing/unknown gate states."""
+        if self._raw_env_opt_in is None or self._raw_ha_switch is None:
+            return True
+        if self.ha_env_opt_in_state is not None:
+            parsed_ha_env = self._parse_ha_bool_state(self.ha_env_opt_in_state)
+            if parsed_ha_env is None:
+                return True
+            if parsed_ha_env != self.env_opt_in_enabled:
+                return True
+        return False
+
+    @property
+    def gate_conflict_reason(self) -> Optional[str]:
+        if self._raw_env_opt_in is None or self._raw_ha_switch is None:
+            return "Missing or undefined gate state (fail-closed)."
+        if self.ha_env_opt_in_state is not None:
+            parsed_ha_env = self._parse_ha_bool_state(self.ha_env_opt_in_state)
+            if parsed_ha_env is None:
+                return (
+                    f"Home Assistant env opt-in state is invalid/unavailable "
+                    f"({self.ha_env_opt_in_state!r}); failing closed."
+                )
+            if parsed_ha_env != self.env_opt_in_enabled:
+                return (
+                    f"Opt-in conflict between Python MYSUNSHINE_ACTIVE_CONTROL_ENABLED="
+                    f"{self.env_opt_in_enabled} and Home Assistant "
+                    f"binary_sensor.mysunshine_env_active_control_opt_in={self.ha_env_opt_in_state!r}; "
+                    "failing closed."
+                )
+        return None
+
     @property
     def is_unlocked(self) -> bool:
-        """Return True ONLY when both environment opt-in and HA boolean switch are active."""
+        """Return True ONLY when both environment opt-in and HA boolean switch are active without conflict."""
+        if self.has_gate_conflict:
+            return False
         return self.env_opt_in_enabled and self.ha_switch_on
 
     @property
     def gate_state_label(self) -> str:
+        if self.has_gate_conflict:
+            return "LOCKED_GATE_CONFLICT_FAIL_CLOSED"
         if self.is_unlocked:
             return "UNLOCKED_ACTIVE_CONTROL"
         return "LOCKED_SHADOW_MODE_ONLY"
@@ -295,7 +351,11 @@ class SonnenSafetyActuationGate:
             target_power_watts=watts,
         )
 
-        if soc_violation_reason:
+        conflict_msg = self.gate_conflict_reason
+        if conflict_msg:
+            would_actuate = False
+            blocked_reason = conflict_msg
+        elif soc_violation_reason:
             would_actuate = False
             blocked_reason = soc_violation_reason
         elif actuation_semantics == "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE":

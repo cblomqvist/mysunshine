@@ -315,7 +315,7 @@ flowchart TD
   * `7.2 Dual Hardware Safety Actuation Gate & Fail-Safe Executor`: Built `SonnenSafetyActuationGate` and `execute_sonnen_command` ensuring physical SonnenBatterie 10 API v2 writes (`/api/v2/configurations` and `/api/v2/setpoint/charge|discharge/<watts>`) remain strictly blocked (`LOCKED_SHADOW_MODE_ONLY`) across both Python and Home Assistant YAML unless both `MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true` and `input_boolean.mysunshine_active_battery_control=on` are explicitly enabled, with SoC/power bounds, idempotency, post-write verification, and automatic fail-safe restoration to `EM_OperatingMode=2`.
   * `7.3 Live Telemetry Bridge & Dashboard Integration`: Built `HomeAssistantTelemetryBridge` (`src/ha_integration/telemetry_bridge.py`) normalizing SonnenBatterie 10 `/api/v2/status` telemetry (`192.168.3.125`), Home Assistant Green REST push (`192.168.3.138:8123`), and ready-to-paste `configuration.yaml` / `automations.yaml` blueprints, integrated into the web dashboard (**Home Assistant Bridge** tab).
 * **Verification Gate**:
-  * All 12 custom Home Assistant entities, 24-hour safety-gated Sonnen command previews, fail-safe Mode 2 restoration, and dry-run/live REST publication verified; 60/60 CI unit and integration tests passing.
+  * All 12 custom Home Assistant entities, 24-hour safety-gated Sonnen command previews, PyYAML syntax validation, independent live USOC & Mode 2 fail-safe restoration verification, and dry-run/live REST publication verified; 61/61 CI unit and integration tests passing.
 
 ---
 
