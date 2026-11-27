@@ -3,7 +3,7 @@ window.MYSUNSHINE_DATA = {
   "metadata": {
     "app": "MySunshine",
     "version": "1.2.0",
-    "generated_at": "2026-11-27T22:02:23.525426",
+    "generated_at": "2026-11-27T23:13:54.955850",
     "bidding_zone": "SE3",
     "retailer": "Tibber",
     "grid_operator": "Eskilstuna Energi & Milj\u00f6 (EEM)",
@@ -26310,7 +26310,7 @@ window.MYSUNSHINE_DATA = {
     }
   },
   "ha_integration": {
-    "generated_at": "2026-11-27T22:02:23.525376",
+    "generated_at": "2026-11-27T23:13:54.955793",
     "target_date": "2026-11-15",
     "endpoints": {
       "ha_url": "http://192.168.3.138:8123",
@@ -26348,7 +26348,6 @@ window.MYSUNSHINE_DATA = {
           "enable_direct_discharge_setpoint": false,
           "would_actuate": false,
           "idempotency_key": "26ba07c42e232eba",
-          "python_executor_token": "",
           "actuation_authority": "python_executor_only",
           "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
           "efficiency_gate_passed": true,
@@ -26790,7 +26789,6 @@ window.MYSUNSHINE_DATA = {
             "enable_direct_discharge_setpoint": false,
             "would_actuate": false,
             "idempotency_key": "26ba07c42e232eba",
-            "python_executor_token": "",
             "actuation_authority": "python_executor_only",
             "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
             "efficiency_gate_passed": true,
@@ -27700,7 +27698,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "9f425a47a089aa24",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 1,
@@ -27721,7 +27720,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "ab992e5b10de5b8d",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 2,
@@ -27742,7 +27742,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "46c1dd4ae75371e6",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 3,
@@ -27763,7 +27764,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "26ba07c42e232eba",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 6.5,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 4,
@@ -27784,7 +27786,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "335dbd4dc49a8310",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 5.704,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 5,
@@ -27805,7 +27808,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "301ba287c1b353dd",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 6,
@@ -27826,7 +27830,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "dbb490b5f43d8001",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 7,
@@ -27846,7 +27851,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "cd077371966e2c8d",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.825
       },
       {
         "hour": 8,
@@ -27866,7 +27872,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "7c3530ae56367053",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.866
       },
       {
         "hour": 9,
@@ -27886,7 +27893,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "3bbbae476bef19dc",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.551
       },
       {
         "hour": 10,
@@ -27906,7 +27914,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "ebaec405017a6176",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.032
       },
       {
         "hour": 11,
@@ -27926,7 +27935,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "5a929f8a20f75fc4",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 12,
@@ -27946,7 +27956,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "47aae06f058579cc",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.0
       },
       {
         "hour": 13,
@@ -27966,7 +27977,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "0d00b18851dd3c68",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.149
       },
       {
         "hour": 14,
@@ -27986,7 +27998,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "421d232d939f49f7",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.565
       },
       {
         "hour": 15,
@@ -28006,7 +28019,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "5a1abe7b8eb4d618",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.819
       },
       {
         "hour": 16,
@@ -28026,7 +28040,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "dfe5c3883b5e9b70",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.925
       },
       {
         "hour": 17,
@@ -28046,7 +28061,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "2c8562d91e94c6a2",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 1.039
       },
       {
         "hour": 18,
@@ -28066,7 +28082,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "8a5ccb3c583e1c40",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 1.132
       },
       {
         "hour": 19,
@@ -28086,7 +28103,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "9bef40a25255fec9",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 1.183
       },
       {
         "hour": 20,
@@ -28106,7 +28124,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "901d4b76299e4c2e",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 1.082
       },
       {
         "hour": 21,
@@ -28126,7 +28145,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "c79f26dc912aa80b",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 1.125
       },
       {
         "hour": 22,
@@ -28146,7 +28166,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE",
         "idempotency_key": "093c4efd652d7edd",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.889
       },
       {
         "hour": 23,
@@ -28166,7 +28187,8 @@ window.MYSUNSHINE_DATA = {
         "actuation_semantics": "CONFIRMED_SONNEN_API_V2",
         "idempotency_key": "879a7911d6236cf5",
         "fail_safe_fallback_mode": 2,
-        "python_executor_token": ""
+        "grid_precharge_kwh": 0.0,
+        "discharged_kwh": 0.653
       }
     ],
     "hardware_telemetry": {

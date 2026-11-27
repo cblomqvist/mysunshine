@@ -6,9 +6,13 @@ from .sensor_models import (
     SonnenSafetyActuationGate,
     SonnenWriteCommandPreview,
 )
-from .telemetry_bridge import HomeAssistantTelemetryBridge
+from .telemetry_bridge import (
+    M7_RELEASE_SHADOW_TELEMETRY_ONLY,
+    HomeAssistantTelemetryBridge,
+)
 
 __all__ = [
+    "M7_RELEASE_SHADOW_TELEMETRY_ONLY",
     "HomeAssistantEntityPayload",
     "HomeAssistantStatePackage",
     "SonnenSafetyActuationGate",

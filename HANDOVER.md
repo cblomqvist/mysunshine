@@ -12,9 +12,9 @@
 
 ## 1. Current Status & Active Milestone
 
-* **Active Phase**: Milestone 7 (Phase 3): Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge (**Completed & Hardened for PR #9 Review — Ready for Commit & Push**)
+* **Active Phase**: Milestone 7 (Phase 3): Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge (**Completed & Hardened for PR #9 Review — Shadow/Telemetry-Ready Only; Physical Actuation Unverified Pending Real `SONNEN_API_TOKEN`**)
 * **Current Branch**: `feat/m7-ha-shadow-telemetry-bridge`
-* **Pre-Push Validation State**: **100% Green** (63/63 unit and integration tests passing, PyYAML syntax validation passing, 0 flake8 errors/warnings in `src/ha_integration/` and `tests/test_ha_integration.py`).
+* **Pre-Push Validation State**: **100% Green** (64 offline/mocked unit & integration tests passing + 1 live hardware test skipped without real `SONNEN_API_TOKEN`, PyYAML syntax validation passing, 0 flake8 errors/warnings in `src/ha_integration/` and `tests/test_ha_integration.py`).
 
 ---
 
@@ -52,13 +52,17 @@
 ## 3. Next Prioritized Steps & Copy-Paste Session Prompt
 
 ### Next Prioritized Steps
-1. **Commit, Push & Open PR for Milestone 7 (`feat/m7-ha-shadow-telemetry-bridge` $\rightarrow$ `main`)** to deploy the Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge tab to GitHub Pages.
-2. **Phase 4 (Optional Future Milestone 8): Live Scheduled Polling Daemon & Multi-Day Rolling Shadow Ledger**:
-   * Build a lightweight CLI/cron runner (`run_ha_shadow_sync.py`) for Home Assistant Green / Ubuntu 24/7 host that fetches live Tibber/ENTSO-E day-ahead prices at `13:15 CET`, queries `http://192.168.3.125/api/v2/status` for real-time Sonnen SoC, pushes the 10 custom entities to `http://192.168.3.138:8123/api/states`, and appends daily shadow vs. actual telemetry to a persistent JSONL audit log.
+1. **Commit, Push & Merge PR #9 for Milestone 7 (`feat/m7-ha-shadow-telemetry-bridge` $\rightarrow$ `main`)**:
+   * Deploys the 100% read-only **Home Assistant Bridge** tab (`M7_RELEASE_SHADOW_TELEMETRY_ONLY = True`), 12 custom sensor schemas, Long-Term Statistics ROI entities, and observer YAML blueprints to GitHub Pages.
+2. **Phase 3.2 (Milestone 7.5): Live Hardware Authentication & 7-Day Read-Only Telemetry Burn-In (`feat/m7.5-sonnen-live-read-probe`)**:
+   * Provision real `SONNEN_API_TOKEN` from `http://192.168.3.125` and `HA_TOKEN` from `http://192.168.3.138:8123`, run `TestLiveSonnenHardwareStaging` (`MYSUNSHINE_RUN_LIVE_HARDWARE_TESTS=true`), verify `/api/v2/status` schema and firmware watchdog behavior, and run a 7-day read-only Phase A telemetry burn-in.
+3. **Phase 3.3 (Milestone 8): Supervised Single-Window Night Pre-Charge & Fail-Safe Staging (`feat/m8-supervised-precharge-staging`)**:
+   * Build `run_ha_shadow_sync.py` with watchdog heartbeat refreshes and execute supervised Phase B (`GRID_PRECHARGE` & `< 15 s` Mode 2 restore) and Phase C (fault-injection latch drill) on the physical SonnenBatterie 10.
+4. **Phase 3.4 (Milestone 9): Unattended Scheduled Dispatch Daemon & Optional Direct Peak-Discharge Evaluation (`feat/m9-unattended-dispatch-daemon`)**.
 
 ### Prompt for Next Session
 ```text
-@HANDOVER.md @prd.md Review HANDOVER.md and prd.md. Proceed with Milestone 8: Live Scheduled Polling CLI Runner (run_ha_shadow_sync.py) & Persistent Daily Shadow Telemetry Audit Log.
+@HANDOVER.md @prd.md Review HANDOVER.md and prd.md. Proceed with Milestone 7.5: Live Hardware Authentication, Sonnen /api/v2/status Schema Probe & 7-Day Read-Only Telemetry Burn-In Runner.
 ```
 
 ---

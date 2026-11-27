@@ -12,16 +12,17 @@ representing:
    - Home Assistant is strictly an observer/controller UI (`input_boolean.mysunshine_active_battery_control`).
    - All direct Home Assistant `rest_command` Sonnen writes are removed so no automation can bypass
      Python's safety executor.
-   - Enforces disk-persisted idempotency and emergency fail-safe lockout latch across process restarts.
-   - Always fetches live `/api/v2/status` immediately before actuation, verifies post-write operating
-     mode AND setpoint effect, and executes bounded-retry verified Mode 2 restoration on any fault.
+   - Validates every command against an internal canonical representation (never trusting caller-supplied
+     endpoint, method, payload, action, mode, power, or timestamp fields, and publishing no executor tokens).
+   - Requires centralized live Home Assistant read-back synchronization of Gate 1 & Gate 2 before any live write.
+   - Enforces durable non-temp atomic disk-persisted idempotency and emergency fail-safe lockout latch,
+     blocking live writes if state cannot be persisted.
 """
 
 from datetime import datetime
 import json
 import logging
 import os
-import tempfile
 import time
 from typing import Any, Dict, List, Optional, Set
 import urllib.error
@@ -35,6 +36,13 @@ from .sensor_models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Milestone 7 Release-Level Hardware Write Lock:
+# In Milestone 7 (PR #9), MySunshine is strictly a read-only Home Assistant Shadow Telemetry Bridge.
+# Physical SonnenBatterie 10 actuation is hard-locked off at the release level until Milestone 7.5
+# (live SONNEN_API_TOKEN & /api/v2/status burn-in) and Milestone 8 (supervised hardware staging)
+# are completed on the physical inverter.
+M7_RELEASE_SHADOW_TELEMETRY_ONLY: bool = True
 
 
 class HomeAssistantTelemetryBridge:
@@ -62,6 +70,7 @@ class HomeAssistantTelemetryBridge:
         mode2_restore_max_attempts: int = 3,
         mode2_restore_poll_attempts: int = 2,
         mode2_restore_retry_delay_sec: float = 0.0,
+        allow_m8_staged_writes: bool = False,
     ):
         self.ha_url = (ha_url or os.getenv("HA_URL", "http://192.168.3.138:8123")).rstrip("/")
         self.ha_token = ha_token if ha_token is not None else os.getenv("HA_TOKEN", "")
@@ -74,13 +83,17 @@ class HomeAssistantTelemetryBridge:
         self.mode2_restore_max_attempts = max(1, int(mode2_restore_max_attempts))
         self.mode2_restore_poll_attempts = max(1, int(mode2_restore_poll_attempts))
         self.mode2_restore_retry_delay_sec = max(0.0, float(mode2_restore_retry_delay_sec))
+        self.allow_m8_staged_writes = bool(allow_m8_staged_writes)
 
         if state_store_path is None:
-            default_store = os.path.join(
-                tempfile.gettempdir(),
-                "mysunshine_ha_executor_state.json",
+            repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            default_durable_store = os.path.join(
+                repo_root,
+                "data",
+                "runtime",
+                "ha_executor_state.json",
             )
-            self.state_store_path = os.getenv("MYSUNSHINE_EXECUTOR_STATE_PATH", default_store)
+            self.state_store_path = os.getenv("MYSUNSHINE_EXECUTOR_STATE_PATH", default_durable_store)
         else:
             self.state_store_path = state_store_path
 
@@ -113,15 +126,20 @@ class HomeAssistantTelemetryBridge:
         )
 
     def _load_persistent_state(self) -> tuple[bool, Optional[str]]:
-        """Load executed idempotency keys and emergency fail-safe lockout latch from disk."""
-        if not self.state_store_path or not os.path.exists(self.state_store_path):
+        """Load executed idempotency keys and emergency fail-safe lockout latch from durable disk."""
+        if not self.state_store_path:
+            return True, "Missing state_store_path configuration (fail-closed)"
+        if not os.path.exists(self.state_store_path):
             return False, None
         try:
             with open(self.state_store_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("Executor state JSON root is not an object")
             keys = data.get("executed_idempotency_keys", [])
-            if isinstance(keys, list):
-                self._executed_idempotency_keys = {str(k) for k in keys if k}
+            if not isinstance(keys, list):
+                raise ValueError("executed_idempotency_keys must be a list")
+            self._executed_idempotency_keys = {str(k) for k in keys if k}
             latch_locked = bool(data.get("emergency_latch_locked", False))
             latch_reason = data.get("emergency_latch_reason")
             return latch_locked, (str(latch_reason) if latch_reason else None)
@@ -129,10 +147,16 @@ class HomeAssistantTelemetryBridge:
             logger.error("Failed to read persistent executor state (%s); failing closed", exc)
             return True, f"Corrupted executor state file: {exc}"
 
-    def _save_persistent_state(self) -> None:
-        """Atomically persist executed idempotency keys and emergency latch state to disk."""
-        if not self.state_store_path:
-            return
+    def _save_persistent_state(self) -> bool:
+        """Atomically persist executed idempotency keys and emergency latch state to durable disk.
+
+        Writes to a temporary sibling file, flushes + `os.fsync()`s the file descriptor, and atomically
+        replaces the target file via `os.replace()`. Returns `False` on any I/O failure.
+        """
+        if not self.state_store_path or not str(self.state_store_path).strip():
+            logger.error("Cannot persist executor state: empty state_store_path")
+            return False
+        tmp_path = f"{self.state_store_path}.tmp.{os.getpid()}"
         try:
             parent = os.path.dirname(os.path.abspath(self.state_store_path))
             if parent:
@@ -143,20 +167,36 @@ class HomeAssistantTelemetryBridge:
                 "emergency_latch_locked": self.safety_gate.emergency_latch_locked,
                 "emergency_latch_reason": self.safety_gate.emergency_latch_reason,
             }
-            with open(self.state_store_path, "w", encoding="utf-8") as f:
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, self.state_store_path)
+            return True
         except Exception as exc:
-            logger.error("Failed to save persistent executor state: %s", exc)
+            logger.error("Failed to atomically save persistent executor state: %s", exc)
+            try:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+            except OSError:
+                pass
+            return False
 
-    def _trip_emergency_latch(self, reason: str) -> None:
+    def _trip_emergency_latch(self, reason: str) -> bool:
         """Lock out all future physical actuation and persist the lockout across process restarts."""
         self.safety_gate.trip_emergency_latch(reason)
-        self._save_persistent_state()
+        return self._save_persistent_state()
 
-    def _record_executed_idempotency_key(self, key: str) -> None:
-        if key:
-            self._executed_idempotency_keys.add(key)
-            self._save_persistent_state()
+    def _record_executed_idempotency_key(self, key: str) -> bool:
+        """Record an idempotency key to durable disk atomically. Returns False if persistence fails."""
+        if not key:
+            return False
+        self._executed_idempotency_keys.add(key)
+        if not self._save_persistent_state():
+            self._executed_idempotency_keys.discard(key)
+            self.safety_gate.trip_emergency_latch("Failed to persist idempotency state to disk")
+            return False
+        return True
 
     @staticmethod
     def parse_sonnen_v2_status(
@@ -221,6 +261,10 @@ class HomeAssistantTelemetryBridge:
         """Return True only when an explicit, non-placeholder Sonnen API token is configured."""
         return bool(self.sonnen_token and self.sonnen_token.strip() and "your_" not in self.sonnen_token)
 
+    def has_valid_ha_token(self) -> bool:
+        """Return True only when an explicit, non-placeholder Home Assistant token is configured."""
+        return bool(self.ha_token and self.ha_token.strip() and "your_" not in self.ha_token)
+
     def fetch_live_sonnen_status(self, timeout_sec: float = 5.0) -> Optional[Dict[str, Any]]:
         """Query SonnenBatterie 10 `GET /api/v2/status` directly with mandatory `Auth-Token` header."""
         if not self.has_valid_sonnen_token():
@@ -245,12 +289,12 @@ class HomeAssistantTelemetryBridge:
 
     def fetch_ha_entity_state(self, entity_id: str, timeout_sec: float = 5.0) -> Optional[Dict[str, Any]]:
         """Fetch live entity state from Home Assistant Green `GET /api/states/<entity_id>`."""
-        if not self.ha_token or "your_" in self.ha_token:
+        if not self.has_valid_ha_token():
             return None
         req = urllib.request.Request(
             f"{self.ha_url}/api/states/{entity_id}",
             headers={
-                "Authorization": f"Bearer {self.ha_token}",
+                "Authorization": f"Bearer {self.ha_token.strip()}",
                 "Content-Type": "application/json",
             },
             method="GET",
@@ -266,6 +310,9 @@ class HomeAssistantTelemetryBridge:
             return None
 
     def _push_gate1_to_ha(self, now_dt: datetime, timeout_sec: float) -> Optional[Dict[str, Any]]:
+        if not self.has_valid_ha_token():
+            self.safety_gate.ha_env_opt_in_state = "unavailable"
+            return {"ok": False, "reason": "ha_token_missing_or_invalid"}
         expected_env_str = "on" if self.safety_gate.env_opt_in_enabled else "off"
         gate1_entity = HomeAssistantEntityPayload(
             entity_id="binary_sensor.mysunshine_env_active_control_opt_in",
@@ -280,7 +327,7 @@ class HomeAssistantTelemetryBridge:
             },
         )
         headers = {
-            "Authorization": f"Bearer {self.ha_token}",
+            "Authorization": f"Bearer {self.ha_token.strip()}",
             "Content-Type": "application/json",
         }
         try:
@@ -375,7 +422,13 @@ class HomeAssistantTelemetryBridge:
                 "reason": "gate_conflict_fail_closed",
                 "conflict_detail": self.safety_gate.gate_conflict_reason,
             }
-        return {"ok": True, "is_unlocked": self.safety_gate.is_unlocked}
+        if not self.safety_gate.is_unlocked:
+            return {
+                "ok": False,
+                "reason": "dual_safety_gate_locked_after_ha_readback",
+                "is_unlocked": False,
+            }
+        return {"ok": True, "is_unlocked": True}
 
     def build_state_package(
         self,
@@ -513,7 +566,6 @@ class HomeAssistantTelemetryBridge:
                     "enable_direct_discharge_setpoint": self.safety_gate.enable_direct_discharge_setpoint,
                     "would_actuate": focus_cmd.would_actuate,
                     "idempotency_key": focus_cmd.idempotency_key,
-                    "python_executor_token": focus_cmd.python_executor_token,
                     "actuation_authority": "python_executor_only",
                     "headline_recommendation": diag.get("headline_recommendation", ""),
                     "efficiency_gate_passed": gate_passed,
@@ -748,7 +800,7 @@ class HomeAssistantTelemetryBridge:
         hardware_telemetry = {
             "home_assistant": {
                 "url": self.ha_url,
-                "token_configured": bool(self.ha_token and "your_" not in self.ha_token),
+                "token_configured": self.has_valid_ha_token(),
                 "rest_api_endpoint": f"{self.ha_url}/api/states",
                 "direct_sonnen_writes_enabled": False,
                 "role": "Observer & Gate 2 UI Controller Only",
@@ -796,7 +848,7 @@ class HomeAssistantTelemetryBridge:
         """
         endpoint = f"{self.sonnen_url}/api/v2/configurations"
         payload = {"EM_OperatingMode": "2"}
-        has_valid_token = bool(self.sonnen_token and "your_" not in self.sonnen_token)
+        has_valid_token = self.has_valid_sonnen_token()
 
         if dry_run or not has_valid_token:
             logger.warning("Fail-safe restore to EM_OperatingMode=2 (dry_run/no_token): %s", reason)
@@ -812,7 +864,7 @@ class HomeAssistantTelemetryBridge:
             }
 
         headers = {
-            "Auth-Token": self.sonnen_token,
+            "Auth-Token": self.sonnen_token.strip(),
             "Content-Type": "application/json",
         }
         last_status_code: Optional[int] = None
@@ -885,14 +937,18 @@ class HomeAssistantTelemetryBridge:
         if persisted_latch_locked and not self.safety_gate.emergency_latch_locked:
             self.safety_gate.trip_emergency_latch(persisted_latch_reason or "Persisted emergency latch")
 
-        expected_token = self.safety_gate.compute_executor_token(command.idempotency_key)
-        if (
-            caller_authority != "python_executor"
-            or not command.python_executor_token
-            or command.python_executor_token != expected_token
-        ):
+        if self.safety_gate.emergency_latch_locked:
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "emergency_failsafe_latch_locked",
+                "safety_gate_status": self.safety_gate.gate_state_label,
+                "latch_reason": self.safety_gate.emergency_latch_reason,
+            }
+
+        if caller_authority != "python_executor":
             fs = self.restore_sonnen_safe_mode(
-                reason=f"Unauthorized or bypassed actuation attempt (caller={caller_authority!r})",
+                reason=f"Unauthorized caller_authority={caller_authority!r}",
                 dry_run=dry_run,
                 timeout_sec=timeout_sec,
             )
@@ -904,6 +960,18 @@ class HomeAssistantTelemetryBridge:
                 "fail_safe_restore": fs,
             }
 
+        if not dry_run and M7_RELEASE_SHADOW_TELEMETRY_ONLY and not self.allow_m8_staged_writes:
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "m7_release_shadow_telemetry_only_lock",
+                "safety_gate_status": self.safety_gate.gate_state_label,
+                "detail": (
+                    "Milestone 7 release is hard-locked to read-only shadow telemetry. "
+                    "Live Sonnen writes require Milestone 7.5 token burn-in and Milestone 8 staging."
+                ),
+            }
+
         if not dry_run and not self.has_valid_sonnen_token():
             return {
                 "executed": False,
@@ -911,14 +979,49 @@ class HomeAssistantTelemetryBridge:
                 "reason": "unauthenticated_sonnen_telemetry_rejected",
                 "safety_gate_status": self.safety_gate.gate_state_label,
             }
+        return None
 
-        if self.safety_gate.emergency_latch_locked:
+    def _check_direct_discharge_and_canonical_integrity(
+        self,
+        command: SonnenWriteCommandPreview,
+        dry_run: bool,
+        timeout_sec: float,
+    ) -> Optional[Dict[str, Any]]:
+        if (
+            command.shadow_action == "PEAK_DISCHARGE"
+            and not self.safety_gate.enable_direct_discharge_setpoint
+            and (
+                command.target_power_watts > 0
+                or command.target_operating_mode != SonnenSafetyActuationGate.MODE_SELF_CONSUMPTION
+                or "setpoint/discharge" in command.endpoint
+            )
+        ):
+            fs = self.restore_sonnen_safe_mode(
+                reason="Direct PEAK_DISCHARGE bypass attempt while enable_direct_discharge_setpoint=False",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
             return {
                 "executed": False,
                 "blocked": True,
-                "reason": "emergency_failsafe_latch_locked",
-                "safety_gate_status": self.safety_gate.gate_state_label,
-                "latch_reason": self.safety_gate.emergency_latch_reason,
+                "reason": "direct_peak_discharge_not_approved",
+                "fail_safe_restore": fs,
+            }
+
+        # Verify command fields against internal trusted canonical command registry
+        trusted_ok, mismatch_detail = self.safety_gate.verify_against_trusted_command(command)
+        if not trusted_ok:
+            fs = self.restore_sonnen_safe_mode(
+                reason=f"Untrusted or tampered command rejected: {mismatch_detail}",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "unauthorized_actuation_bypass_rejected",
+                "detail": mismatch_detail,
+                "fail_safe_restore": fs,
             }
         return None
 
@@ -931,8 +1034,9 @@ class HomeAssistantTelemetryBridge:
         caller_authority: str,
         timeout_sec: float,
     ) -> Optional[Dict[str, Any]]:
-        """Evaluate fail-closed executor authority, emergency latch, dual gate, conflict, idempotency,
-        staleness, action-specific power bounds, and live USOC bounds.
+        """Evaluate fail-closed executor authority, emergency latch, canonical command integrity,
+        centralized live HA dual-gate read-back synchronization, idempotency, staleness,
+        action-specific power bounds, and live USOC/operating-mode bounds.
         """
         auth_res = self._check_authority_and_latch(
             command=command,
@@ -958,26 +1062,33 @@ class HomeAssistantTelemetryBridge:
                 "fail_safe_restore": fs,
             }
 
-        if (
-            command.shadow_action == "PEAK_DISCHARGE"
-            and not self.safety_gate.enable_direct_discharge_setpoint
-            and (
-                command.target_power_watts > 0
-                or command.target_operating_mode != SonnenSafetyActuationGate.MODE_SELF_CONSUMPTION
-                or "setpoint/discharge" in command.endpoint
-            )
-        ):
-            fs = self.restore_sonnen_safe_mode(
-                reason="Direct PEAK_DISCHARGE bypass attempt while enable_direct_discharge_setpoint=False",
-                dry_run=dry_run,
+        # Before any live write, require fresh centralized read-back synchronization of both HA gate states
+        if not dry_run:
+            sync_res = self.synchronize_and_verify_gates_with_ha(
+                reference_now=reference_now,
                 timeout_sec=timeout_sec,
             )
-            return {
-                "executed": False,
-                "blocked": True,
-                "reason": "direct_peak_discharge_not_approved",
-                "fail_safe_restore": fs,
-            }
+            if not sync_res.get("ok"):
+                fs = self.restore_sonnen_safe_mode(
+                    reason=f"Live HA dual-gate readback failed: {sync_res.get('reason')}",
+                    dry_run=dry_run,
+                    timeout_sec=timeout_sec,
+                )
+                return {
+                    "executed": False,
+                    "blocked": True,
+                    "reason": str(sync_res.get("reason", "ha_gate_sync_failed")),
+                    "safety_gate_status": self.safety_gate.gate_state_label,
+                    "fail_safe_restore": fs,
+                }
+
+        for check_res in (
+            self._check_staleness(command, reference_now, dry_run, timeout_sec),
+            self._check_action_power_bounds(command, dry_run, timeout_sec),
+            self._check_direct_discharge_and_canonical_integrity(command, dry_run, timeout_sec),
+        ):
+            if check_res is not None:
+                return check_res
 
         if not self.safety_gate.is_unlocked or not command.would_actuate:
             return {
@@ -998,13 +1109,9 @@ class HomeAssistantTelemetryBridge:
                 "idempotency_key": command.idempotency_key,
             }
 
-        for check_res in (
-            self._check_staleness(command, reference_now, dry_run, timeout_sec),
-            self._check_action_power_bounds(command, dry_run, timeout_sec),
-            self._check_soc_bounds(command, current_status, reference_now, dry_run, timeout_sec),
-        ):
-            if check_res is not None:
-                return check_res
+        soc_res = self._check_soc_bounds(command, current_status, reference_now, dry_run, timeout_sec)
+        if soc_res is not None:
+            return soc_res
 
         return None
 
@@ -1113,7 +1220,6 @@ class HomeAssistantTelemetryBridge:
         status in live mode), reject missing/stale/invalid/unavailable/out-of-range USOC, and enforce bounds.
         """
         if not dry_run:
-            # In live mode, ALWAYS fetch live /api/v2/status directly from Sonnen immediately before actuation
             status_dict = self.fetch_live_sonnen_status(timeout_sec=timeout_sec)
             if status_dict is None:
                 fs = self.restore_sonnen_safe_mode(
@@ -1337,9 +1443,10 @@ class HomeAssistantTelemetryBridge:
         """Sole hardware actuation entrypoint for SonnenBatterie 10.
 
         Enforces:
-        - Cryptographic Python executor token & caller_authority verification (blocks HA/external bypasses)
-        - Persistent emergency fail-safe lockout latch & disk-backed idempotency across restarts
-        - Immediate pre-write live `GET /api/v2/status` USOC & freshness check
+        - Internal canonical command verification (rejects caller tampering or unregistered commands)
+        - Centralized live Home Assistant dual-gate read-back synchronization before any live write
+        - Durable non-temp atomic disk-persisted idempotency & emergency latch (blocks write if disk fails)
+        - Immediate pre-write live `GET /api/v2/status` USOC, operating mode & freshness check
         - Action-specific charge/discharge power limits
         - Post-write verification of BOTH `EM_OperatingMode` AND setpoint effect
         - Bounded-retry verified `EM_OperatingMode=2` restoration on any fault
@@ -1355,8 +1462,7 @@ class HomeAssistantTelemetryBridge:
         if guard_result is not None:
             return guard_result
 
-        has_valid_token = bool(self.sonnen_token and "your_" not in self.sonnen_token)
-        if dry_run or not has_valid_token:
+        if dry_run or not self.has_valid_sonnen_token():
             return {
                 "executed": False,
                 "blocked": False,
@@ -1385,7 +1491,6 @@ class HomeAssistantTelemetryBridge:
             )
 
         if command.shadow_action == "GRID_PRECHARGE" and command.target_power_watts > 0:
-            # Verify battery is not discharging and manual charge setpoint is active
             pac_w = int(status_json.get("Pac_total_W", 0))
             discharging = bool(status_json.get("BatteryDischarging", False))
             if discharging or pac_w > 100:
@@ -1415,15 +1520,30 @@ class HomeAssistantTelemetryBridge:
         command: SonnenWriteCommandPreview,
         timeout_sec: float,
     ) -> Dict[str, Any]:
-        # Record idempotency key to persistent disk BEFORE issuing network write so an interrupted/crashed
-        # process or recovery loop can never replay or duplicate a partially-sent write.
-        self._record_executed_idempotency_key(command.idempotency_key)
+        # Record idempotency key to durable disk atomically BEFORE issuing network write.
+        # If durable state persistence fails, block the live write and fail closed.
+        if not self._record_executed_idempotency_key(command.idempotency_key):
+            fs = self.restore_sonnen_safe_mode(
+                reason="Durable idempotency state persistence failed before live write",
+                dry_run=False,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "persistent_state_write_failed",
+                "fail_safe_restore": fs,
+                "idempotency_key": command.idempotency_key,
+            }
+
+        # Always execute the internal canonical command representation, never caller-mutated fields
+        canonical = self.safety_gate._trusted_commands[command.idempotency_key]
         headers = {
-            "Auth-Token": self.sonnen_token,
+            "Auth-Token": self.sonnen_token.strip(),
             "Content-Type": "application/json",
         }
         try:
-            if command.target_operating_mode == SonnenSafetyActuationGate.MODE_MANUAL_API:
+            if canonical.target_operating_mode == SonnenSafetyActuationGate.MODE_MANUAL_API:
                 mode_req = urllib.request.Request(
                     f"{self.sonnen_url}/api/v2/configurations",
                     data=json.dumps({"EM_OperatingMode": "1"}).encode("utf-8"),
@@ -1435,10 +1555,10 @@ class HomeAssistantTelemetryBridge:
                         raise RuntimeError(f"Mode 1 configuration write failed with HTTP {mode_resp.status}")
 
             cmd_req = urllib.request.Request(
-                command.endpoint,
-                data=json.dumps(command.payload).encode("utf-8"),
+                canonical.endpoint,
+                data=json.dumps(canonical.payload).encode("utf-8"),
                 headers=headers,
-                method=command.http_method,
+                method=canonical.http_method,
             )
             with urllib.request.urlopen(cmd_req, timeout=timeout_sec) as cmd_resp:
                 if not (200 <= cmd_resp.status < 300):
@@ -1450,7 +1570,7 @@ class HomeAssistantTelemetryBridge:
                 raise RuntimeError("Post-write GET /api/v2/status failed or missing USOC")
             verified_status = self.parse_sonnen_v2_status(status_json)
 
-            self._verify_post_write_setpoint_effect(command, status_json, verified_status)
+            self._verify_post_write_setpoint_effect(canonical, status_json, verified_status)
 
             return {
                 "executed": True,
@@ -1460,7 +1580,7 @@ class HomeAssistantTelemetryBridge:
                 "verified_operating_mode": verified_status["em_operating_mode"],
                 "verified_usoc_pct": verified_status["usoc_pct"],
                 "verified_pac_total_w": verified_status["pac_total_w"],
-                "idempotency_key": command.idempotency_key,
+                "idempotency_key": canonical.idempotency_key,
             }
 
         except Exception as exc:
@@ -1476,7 +1596,7 @@ class HomeAssistantTelemetryBridge:
                 "mode": "failed_with_failsafe_restore",
                 "error": str(exc),
                 "fail_safe_restore": fs,
-                "idempotency_key": command.idempotency_key,
+                "idempotency_key": canonical.idempotency_key,
             }
 
     def publish_to_home_assistant(
@@ -1490,7 +1610,7 @@ class HomeAssistantTelemetryBridge:
         When `dry_run=True` or no valid `HA_TOKEN` is configured, returns a complete verification
         receipt without opening network sockets.
         """
-        has_valid_token = bool(self.ha_token and "your_" not in self.ha_token)
+        has_valid_token = self.has_valid_ha_token()
         if dry_run or not has_valid_token:
             return {
                 "published": False,
@@ -1503,7 +1623,7 @@ class HomeAssistantTelemetryBridge:
 
         results: List[Dict[str, Any]] = []
         headers = {
-            "Authorization": f"Bearer {self.ha_token}",
+            "Authorization": f"Bearer {self.ha_token.strip()}",
             "Content-Type": "application/json",
         }
         for ent in package.entities:

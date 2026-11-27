@@ -10,9 +10,11 @@ Hardware safety architecture:
 - Home Assistant is strictly an **observer and operator UI** (`input_boolean.mysunshine_active_battery_control`).
   Home Assistant NEVER issues direct REST writes to SonnenBatterie 10 (`192.168.3.125`).
 - The **sole hardware actuation path** is `HomeAssistantTelemetryBridge.execute_sonnen_command()`
-  in Python, which enforces the synchronized dual safety gate, persistent disk-backed idempotency,
-  live `/api/v2/status` pre-write & post-write verification, and bounded-retry verified Mode 2
-  fail-safe restoration with a persistent latch on verification failure.
+  in Python, which validates commands against an internal canonical command registry (never trusting
+  caller-supplied endpoint/method/payload/action/mode/power/timestamp fields or published tokens),
+  enforces centralized live Home Assistant dual-gate synchronization, durable atomic disk-persisted
+  idempotency, live `/api/v2/status` pre-write & post-write verification, and bounded-retry verified
+  Mode 2 fail-safe restoration with a persistent latch on verification failure.
 """
 
 from dataclasses import dataclass, field
@@ -84,7 +86,8 @@ class SonnenWriteCommandPreview:
     actuation_semantics: str = "MANUAL_SETPOINT_OR_MODE2"
     idempotency_key: str = ""
     fail_safe_fallback_mode: int = 2
-    python_executor_token: str = ""
+    grid_precharge_kwh: float = 0.0
+    discharged_kwh: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -103,7 +106,8 @@ class SonnenWriteCommandPreview:
             "actuation_semantics": self.actuation_semantics,
             "idempotency_key": self.idempotency_key,
             "fail_safe_fallback_mode": self.fail_safe_fallback_mode,
-            "python_executor_token": self.python_executor_token,
+            "grid_precharge_kwh": round(self.grid_precharge_kwh, 3),
+            "discharged_kwh": round(self.discharged_kwh, 3),
         }
 
 
@@ -120,7 +124,8 @@ class SonnenSafetyActuationGate:
        and if `ha_env_opt_in_state` (`binary_sensor.mysunshine_env_active_control_opt_in`) is reported
        by Home Assistant, it must match (`"on"`) and not be stale or conflicting.
     2. `ha_switch_on` (`input_boolean.mysunshine_active_battery_control == 'on'`) is active and fresh.
-    3. `emergency_latch_locked` is `False` (no unverified Mode 2 fail-safe restoration failure has occurred).
+    3. `emergency_latch_locked` is `False` (no unverified Mode 2 fail-safe restoration failure or state
+       persistence failure has occurred).
     """
 
     MODE_MANUAL_API = 1
@@ -154,6 +159,7 @@ class SonnenSafetyActuationGate:
         self.enable_direct_discharge_setpoint = bool(enable_direct_discharge_setpoint)
         self.emergency_latch_locked = bool(emergency_latch_locked)
         self.emergency_latch_reason = emergency_latch_reason
+        self._trusted_commands: Dict[str, SonnenWriteCommandPreview] = {}
 
     def trip_emergency_latch(self, reason: str) -> None:
         """Permanently lock out future actuation until explicitly reset."""
@@ -233,12 +239,48 @@ class SonnenSafetyActuationGate:
         raw = f"{timestamp_local}|{shadow_action}|{target_operating_mode}|{target_power_watts}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
-    def compute_executor_token(self, idempotency_key: str) -> str:
-        """Compute cryptographic token proving Python safety gate authorized this exact command."""
-        if not self.is_unlocked:
-            return ""
-        raw = f"PY_AUTH|{idempotency_key}|{self.env_opt_in_enabled}|{self.ha_switch_on}"
-        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+    def verify_against_trusted_command(
+        self,
+        command: SonnenWriteCommandPreview,
+    ) -> tuple[bool, Optional[str]]:
+        """Verify a candidate command against the gate's internal canonical representation.
+
+        Never trusts caller-supplied endpoint, method, payload, action, mode, power, or timestamp
+        fields if they deviate from the internally derived canonical command.
+        """
+        trusted = self._trusted_commands.get(command.idempotency_key)
+        if trusted is None:
+            return False, "Command not found in trusted internal command registry."
+
+        canonical = self._derive_canonical_preview(
+            hour=trusted.hour,
+            timestamp_local=trusted.timestamp_local,
+            shadow_action=trusted.shadow_action,
+            grid_precharge_kwh=trusted.grid_precharge_kwh,
+            discharged_kwh=trusted.discharged_kwh,
+            current_soc_pct=None,
+        )
+        checked_fields = (
+            "hour",
+            "timestamp_local",
+            "shadow_action",
+            "target_operating_mode",
+            "target_power_watts",
+            "endpoint",
+            "http_method",
+            "payload",
+            "actuation_semantics",
+            "idempotency_key",
+        )
+        mismatches = [
+            f_name for f_name in checked_fields if getattr(command, f_name) != getattr(canonical, f_name)
+        ]
+        if mismatches:
+            return (
+                False,
+                f"Caller command fields deviate from canonical representation: {', '.join(mismatches)}",
+            )
+        return True, None
 
     def _resolve_target_command(
         self,
@@ -342,7 +384,7 @@ class SonnenSafetyActuationGate:
             None,
         )
 
-    def evaluate_hourly_command(
+    def _derive_canonical_preview(
         self,
         hour: int,
         timestamp_local: str,
@@ -351,7 +393,6 @@ class SonnenSafetyActuationGate:
         discharged_kwh: float = 0.0,
         current_soc_pct: Optional[float] = None,
     ) -> SonnenWriteCommandPreview:
-        """Translate a Shadow Mode action into a SonnenBatterie 10 API v2 command and apply safety gate."""
         (
             mode,
             mode_label,
@@ -408,8 +449,6 @@ class SonnenSafetyActuationGate:
                 "physical Sonnen API write blocked; telemetry recorded for shadow verification."
             )
 
-        executor_token = self.compute_executor_token(idempotency_key) if would_actuate else ""
-
         return SonnenWriteCommandPreview(
             hour=hour,
             timestamp_local=timestamp_local,
@@ -419,15 +458,46 @@ class SonnenSafetyActuationGate:
             target_power_watts=watts,
             endpoint=endpoint,
             http_method="PUT" if "configurations" in endpoint else "POST",
-            payload=payload,
+            payload=dict(payload),
             would_actuate=would_actuate,
             safety_gate_status=self.gate_state_label,
             blocked_reason=blocked_reason,
             actuation_semantics=actuation_semantics,
             idempotency_key=idempotency_key,
             fail_safe_fallback_mode=self.MODE_SELF_CONSUMPTION,
-            python_executor_token=executor_token,
+            grid_precharge_kwh=float(grid_precharge_kwh),
+            discharged_kwh=float(discharged_kwh),
         )
+
+    def evaluate_hourly_command(
+        self,
+        hour: int,
+        timestamp_local: str,
+        shadow_action: str,
+        grid_precharge_kwh: float = 0.0,
+        discharged_kwh: float = 0.0,
+        current_soc_pct: Optional[float] = None,
+    ) -> SonnenWriteCommandPreview:
+        """Translate a Shadow Mode action into a SonnenBatterie 10 API v2 command and register it internally."""
+        preview = self._derive_canonical_preview(
+            hour=hour,
+            timestamp_local=timestamp_local,
+            shadow_action=shadow_action,
+            grid_precharge_kwh=grid_precharge_kwh,
+            discharged_kwh=discharged_kwh,
+            current_soc_pct=current_soc_pct,
+        )
+        # Store an immutable canonical copy in the internal registry for pre-execution verification
+        if preview.idempotency_key:
+            self._trusted_commands[preview.idempotency_key] = self._derive_canonical_preview(
+                hour=hour,
+                timestamp_local=timestamp_local,
+                shadow_action=shadow_action,
+                grid_precharge_kwh=grid_precharge_kwh,
+                discharged_kwh=discharged_kwh,
+                current_soc_pct=current_soc_pct,
+            )
+        return preview
 
 
 @dataclass
