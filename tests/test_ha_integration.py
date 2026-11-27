@@ -522,11 +522,17 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             self.assertTrue(res_effect_fail["fail_safe_restore"]["restored_to_mode_2"])
 
         # 4. Live execution success + persistent idempotency surviving process restart (new bridge instance)
+        cmd_chg_success = bridge.safety_gate.evaluate_hourly_command(
+            hour=3,
+            timestamp_local="2026-11-15T03:00:00",
+            shadow_action="GRID_PRECHARGE",
+            grid_precharge_kwh=4.8,
+        )
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = [
                 _FakeHTTPResponse(200, {"USOC": 20.0, "EM_OperatingMode": 2}),  # Pre-write GET
                 _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT Mode 1
-                _FakeHTTPResponse(200, {}),  # POST charge setpoint 4500W
+                _FakeHTTPResponse(200, {}),  # POST charge setpoint 4800W
                 _FakeHTTPResponse(
                     200,
                     {
@@ -539,7 +545,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
                 ),  # Post-write GET verifies BOTH Mode 1 AND charging effect
             ]
             res_live = bridge.execute_sonnen_command(
-                cmd_chg,
+                cmd_chg_success,
                 dry_run=False,
                 reference_now=valid_now,
             )
@@ -555,7 +561,7 @@ class TestHomeAssistantIntegration(unittest.TestCase):
             state_store_path=store_path,
         )
         res_dup_after_restart = restarted_bridge.execute_sonnen_command(
-            cmd_chg,
+            cmd_chg_success,
             dry_run=False,
             reference_now=valid_now,
         )
@@ -611,6 +617,81 @@ class TestHomeAssistantIntegration(unittest.TestCase):
         self.assertTrue(post_latch_bridge.safety_gate.emergency_latch_locked)
         self.assertFalse(post_latch_bridge.safety_gate.is_unlocked)
         self.assertEqual(post_latch_bridge.safety_gate.gate_state_label, "LOCKED_EMERGENCY_FAILSAFE_LATCH")
+
+    def test_authenticated_telemetry_enforcement_and_crash_replay_protection(self):
+        """Verify unauthenticated Sonnen requests fail closed and failed writes cannot be replayed after restart."""
+        store_path = self._new_temp_state_path()
+        # 1. Missing or placeholder SONNEN_API_TOKEN is rejected before any live actuation or status fetch
+        unauth_bridge = HomeAssistantTelemetryBridge(
+            sonnen_token="your_sonnen_token_here",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=store_path,
+        )
+        self.assertFalse(unauth_bridge.has_valid_sonnen_token())
+        self.assertIsNone(unauth_bridge.fetch_live_sonnen_status())
+
+        cmd = unauth_bridge.safety_gate.evaluate_hourly_command(
+            hour=3,
+            timestamp_local="2026-11-15T03:00:00",
+            shadow_action="GRID_PRECHARGE",
+            grid_precharge_kwh=4.5,
+        )
+        res_unauth = unauth_bridge.execute_sonnen_command(
+            cmd,
+            dry_run=False,
+            reference_now=datetime.fromisoformat("2026-11-15T03:05:00"),
+        )
+        self.assertFalse(res_unauth["executed"])
+        self.assertTrue(res_unauth["blocked"])
+        self.assertEqual(res_unauth["reason"], "unauthenticated_sonnen_telemetry_rejected")
+
+        # 2. If a live write fails mid-flight (after pre-write status check) and triggers verified Mode 2 restore,
+        # the idempotency key is already persisted to disk so a restarted process cannot replay the failed command.
+        auth_bridge = HomeAssistantTelemetryBridge(
+            sonnen_token="valid_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=store_path,
+        )
+        cmd_h3 = auth_bridge.safety_gate.evaluate_hourly_command(
+            hour=3,
+            timestamp_local="2026-11-15T03:00:00",
+            shadow_action="GRID_PRECHARGE",
+            grid_precharge_kwh=4.5,
+        )
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = [
+                _FakeHTTPResponse(200, {"USOC": 25.0, "EM_OperatingMode": 2}),  # Pre-write GET status
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "1"}),  # PUT Mode 1
+                urllib.error.URLError("Connection reset during setpoint POST"),  # Mid-write network drop!
+                _FakeHTTPResponse(200, {"EM_OperatingMode": "2"}),  # Fail-safe PUT Mode 2
+                _FakeHTTPResponse(200, {"USOC": 25.0, "EM_OperatingMode": 2}),  # Fail-safe verify GET Mode 2
+            ]
+            res_mid_fail = auth_bridge.execute_sonnen_command(
+                cmd_h3,
+                dry_run=False,
+                reference_now=datetime.fromisoformat("2026-11-15T03:05:00"),
+            )
+            self.assertFalse(res_mid_fail["executed"])
+            self.assertEqual(res_mid_fail["mode"], "failed_with_failsafe_restore")
+            self.assertTrue(res_mid_fail["fail_safe_restore"]["restored_to_mode_2"])
+
+        # New process instance after recovery attempts to replay the same command -> blocked by persisted key
+        recovered_bridge = HomeAssistantTelemetryBridge(
+            sonnen_token="valid_sonnen_token",
+            env_opt_in_enabled=True,
+            ha_switch_on=True,
+            state_store_path=store_path,
+        )
+        res_replay = recovered_bridge.execute_sonnen_command(
+            cmd_h3,
+            dry_run=False,
+            reference_now=datetime.fromisoformat("2026-11-15T03:06:00"),
+        )
+        self.assertFalse(res_replay["executed"])
+        self.assertTrue(res_replay["blocked"])
+        self.assertEqual(res_replay["reason"], "duplicate_idempotency_key_blocked")
 
     def test_sonnen_v2_status_parser(self):
         """Verify live and offline fallback parsing of SonnenBatterie 10 /api/v2/status."""

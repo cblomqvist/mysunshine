@@ -2,7 +2,7 @@
   "metadata": {
     "app": "MySunshine",
     "version": "1.2.0",
-    "generated_at": "2026-11-27T21:37:52.290431",
+    "generated_at": "2026-11-27T22:02:23.525426",
     "bidding_zone": "SE3",
     "retailer": "Tibber",
     "grid_operator": "Eskilstuna Energi & Milj\u00f6 (EEM)",
@@ -26309,7 +26309,7 @@
     }
   },
   "ha_integration": {
-    "generated_at": "2026-11-27T21:37:52.290384",
+    "generated_at": "2026-11-27T22:02:23.525376",
     "target_date": "2026-11-15",
     "endpoints": {
       "ha_url": "http://192.168.3.138:8123",

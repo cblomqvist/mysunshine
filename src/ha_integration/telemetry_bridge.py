@@ -78,7 +78,7 @@ class HomeAssistantTelemetryBridge:
         if state_store_path is None:
             default_store = os.path.join(
                 tempfile.gettempdir(),
-                f"mysunshine_ha_executor_state_{os.getpid()}.json",
+                "mysunshine_ha_executor_state.json",
             )
             self.state_store_path = os.getenv("MYSUNSHINE_EXECUTOR_STATE_PATH", default_store)
         else:
@@ -217,11 +217,16 @@ class HomeAssistantTelemetryBridge:
             "system_status": str(raw_status.get("SystemStatus", "OnGrid")),
         }
 
+    def has_valid_sonnen_token(self) -> bool:
+        """Return True only when an explicit, non-placeholder Sonnen API token is configured."""
+        return bool(self.sonnen_token and self.sonnen_token.strip() and "your_" not in self.sonnen_token)
+
     def fetch_live_sonnen_status(self, timeout_sec: float = 5.0) -> Optional[Dict[str, Any]]:
-        """Query SonnenBatterie 10 `GET /api/v2/status` directly with `Auth-Token` header."""
-        headers: Dict[str, str] = {}
-        if self.sonnen_token and "your_" not in self.sonnen_token:
-            headers["Auth-Token"] = self.sonnen_token
+        """Query SonnenBatterie 10 `GET /api/v2/status` directly with mandatory `Auth-Token` header."""
+        if not self.has_valid_sonnen_token():
+            logger.error("Refusing unauthenticated Sonnen /api/v2/status request: SONNEN_API_TOKEN missing")
+            return None
+        headers: Dict[str, str] = {"Auth-Token": self.sonnen_token.strip()}
         req = urllib.request.Request(
             f"{self.sonnen_url}/api/v2/status",
             headers=headers,
@@ -869,19 +874,17 @@ class HomeAssistantTelemetryBridge:
             "error": last_error or "Mode 2 verification polling exhausted",
         }
 
-    def _check_pre_execution_guards(
+    def _check_authority_and_latch(
         self,
         command: SonnenWriteCommandPreview,
         dry_run: bool,
-        reference_now: Optional[datetime],
-        current_status: Optional[Dict[str, Any]],
         caller_authority: str,
         timeout_sec: float,
     ) -> Optional[Dict[str, Any]]:
-        """Evaluate fail-closed executor authority, emergency latch, dual gate, conflict, idempotency,
-        staleness, action-specific power bounds, and live USOC bounds.
-        """
-        # 0. Reject any bypass attempt from outside the Python executor
+        persisted_latch_locked, persisted_latch_reason = self._load_persistent_state()
+        if persisted_latch_locked and not self.safety_gate.emergency_latch_locked:
+            self.safety_gate.trip_emergency_latch(persisted_latch_reason or "Persisted emergency latch")
+
         expected_token = self.safety_gate.compute_executor_token(command.idempotency_key)
         if (
             caller_authority != "python_executor"
@@ -901,6 +904,14 @@ class HomeAssistantTelemetryBridge:
                 "fail_safe_restore": fs,
             }
 
+        if not dry_run and not self.has_valid_sonnen_token():
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "unauthenticated_sonnen_telemetry_rejected",
+                "safety_gate_status": self.safety_gate.gate_state_label,
+            }
+
         if self.safety_gate.emergency_latch_locked:
             return {
                 "executed": False,
@@ -909,6 +920,28 @@ class HomeAssistantTelemetryBridge:
                 "safety_gate_status": self.safety_gate.gate_state_label,
                 "latch_reason": self.safety_gate.emergency_latch_reason,
             }
+        return None
+
+    def _check_pre_execution_guards(
+        self,
+        command: SonnenWriteCommandPreview,
+        dry_run: bool,
+        reference_now: Optional[datetime],
+        current_status: Optional[Dict[str, Any]],
+        caller_authority: str,
+        timeout_sec: float,
+    ) -> Optional[Dict[str, Any]]:
+        """Evaluate fail-closed executor authority, emergency latch, dual gate, conflict, idempotency,
+        staleness, action-specific power bounds, and live USOC bounds.
+        """
+        auth_res = self._check_authority_and_latch(
+            command=command,
+            dry_run=dry_run,
+            caller_authority=caller_authority,
+            timeout_sec=timeout_sec,
+        )
+        if auth_res is not None:
+            return auth_res
 
         if self.safety_gate.has_gate_conflict:
             fs = self.restore_sonnen_safe_mode(
@@ -944,17 +977,13 @@ class HomeAssistantTelemetryBridge:
                 "idempotency_key": command.idempotency_key,
             }
 
-        age_res = self._check_staleness(command, reference_now, dry_run, timeout_sec)
-        if age_res is not None:
-            return age_res
-
-        pwr_res = self._check_action_power_bounds(command, dry_run, timeout_sec)
-        if pwr_res is not None:
-            return pwr_res
-
-        soc_res = self._check_soc_bounds(command, current_status, reference_now, dry_run, timeout_sec)
-        if soc_res is not None:
-            return soc_res
+        for check_res in (
+            self._check_staleness(command, reference_now, dry_run, timeout_sec),
+            self._check_action_power_bounds(command, dry_run, timeout_sec),
+            self._check_soc_bounds(command, current_status, reference_now, dry_run, timeout_sec),
+        ):
+            if check_res is not None:
+                return check_res
 
         return None
 
@@ -1318,6 +1347,9 @@ class HomeAssistantTelemetryBridge:
         command: SonnenWriteCommandPreview,
         timeout_sec: float,
     ) -> Dict[str, Any]:
+        # Record idempotency key to persistent disk BEFORE issuing network write so an interrupted/crashed
+        # process or recovery loop can never replay or duplicate a partially-sent write.
+        self._record_executed_idempotency_key(command.idempotency_key)
         headers = {
             "Auth-Token": self.sonnen_token,
             "Content-Type": "application/json",
@@ -1351,7 +1383,6 @@ class HomeAssistantTelemetryBridge:
             verified_status = self.parse_sonnen_v2_status(status_json)
 
             self._verify_post_write_setpoint_effect(command, status_json, verified_status)
-            self._record_executed_idempotency_key(command.idempotency_key)
 
             return {
                 "executed": True,

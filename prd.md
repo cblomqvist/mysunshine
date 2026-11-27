@@ -315,7 +315,58 @@ flowchart TD
   * `7.2 Dual Hardware Safety Actuation Gate & Fail-Safe Executor`: Built `SonnenSafetyActuationGate` and `execute_sonnen_command` ensuring physical SonnenBatterie 10 API v2 writes (`/api/v2/configurations` and `/api/v2/setpoint/charge|discharge/<watts>`) remain strictly blocked (`LOCKED_SHADOW_MODE_ONLY`) across both Python and Home Assistant YAML unless both `MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true` and `input_boolean.mysunshine_active_battery_control=on` are explicitly enabled, with SoC/power bounds, idempotency, post-write verification, and automatic fail-safe restoration to `EM_OperatingMode=2`.
   * `7.3 Live Telemetry Bridge & Dashboard Integration`: Built `HomeAssistantTelemetryBridge` (`src/ha_integration/telemetry_bridge.py`) normalizing SonnenBatterie 10 `/api/v2/status` telemetry (`192.168.3.125`), Home Assistant Green REST push (`192.168.3.138:8123`), and ready-to-paste `configuration.yaml` / `automations.yaml` blueprints, integrated into the web dashboard (**Home Assistant Bridge** tab).
 * **Verification Gate**:
-  * All 12 custom Home Assistant entities, 24-hour safety-gated Sonnen command previews, PyYAML syntax validation, sole Python executor authority (zero HA direct Sonnen `rest_command` writes), disk-persisted idempotency & emergency fail-safe lockout latch, independent live USOC & Mode 2 fail-safe restoration verification, and dry-run/live REST publication verified; 62/62 CI unit and integration tests passing.
+  * All 12 custom Home Assistant entities, 24-hour safety-gated Sonnen command previews, PyYAML syntax validation, sole Python executor authority (zero HA direct Sonnen `rest_command` writes), disk-persisted idempotency & emergency fail-safe lockout latch, independent live USOC & Mode 2 fail-safe restoration verification, and dry-run/live REST publication verified; 63/63 CI unit and integration tests passing.
+
+---
+
+### Phase 3.5: Concrete Staging Requirements, Safety Boundaries & Permanent Shadow-Only Fallback Specification
+
+Before enabling physical actuation on the household SonnenBatterie 10 (`192.168.3.125`), the system must satisfy the following mandatory staging and safety specifications:
+
+#### 1. Permanent Shadow-Only Fallback & Single Actuation Authority
+* **Permanent Shadow-Only Default**: MySunshine defaults permanently to **Shadow Mode Only** (`MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false`, `input_boolean.mysunshine_active_battery_control=off`, `LOCKED_SHADOW_MODE_ONLY`). If active control is never enabled—or if any staging or runtime check fails—the system operates indefinitely as a zero-risk telemetry and financial shadow advisor while the SonnenBatterie 10 remains in its factory default `EM_OperatingMode=2` (*Eigenverbrauch* / Automatic Self-Consumption).
+* **Single Authoritative Actuation Executor**: `HomeAssistantTelemetryBridge.execute_sonnen_command()` in Python (`src/ha_integration/telemetry_bridge.py`) is the **sole** hardware actuation authority. Home Assistant (`192.168.3.138:8123`) is strictly an observer and Gate 2 operator UI (`input_boolean.mysunshine_active_battery_control`); Home Assistant must never contain `rest_command` definitions that write directly to SonnenBatterie 10.
+* **Bidirectional Gate Synchronization**: Python's `MYSUNSHINE_ACTIVE_CONTROL_ENABLED` is the authoritative source for Gate 1 (`binary_sensor.mysunshine_env_active_control_opt_in`) and is pushed and read-back verified against Home Assistant's Gate 2 (`input_boolean.mysunshine_active_battery_control`). Any missing, stale, unknown, or conflicting state between Python and Home Assistant immediately fails closed (`LOCKED_GATE_CONFLICT_FAIL_CLOSED`).
+
+#### 2. Freshness, SoC, Power, Retry, Watchdog & Kill-Switch Requirements
+* **Telemetry & Command Freshness**:
+  * **Hourly Command Max Age**: Commands older than **`3,900 seconds` (65 minutes)** from `timestamp_local` (or with missing/malformed timestamps) are rejected (`stale_command_rejected`) and trigger Mode 2 fail-safe restoration.
+  * **Live Sonnen Status Max Age**: Live `/api/v2/status` telemetry must be fetched immediately prior to every live write; any payload with a timestamp older than **`120 seconds`** or with missing/non-numeric/`unavailable` `USOC` is rejected (`stale_usoc_status_rejected` / `live_status_unavailable_or_missing_usoc`).
+  * **Home Assistant Gate Entity Max Age**: Synchronized Gate 1 and Gate 2 entity states older than **`3,900 seconds`** fail closed (`stale_ha_gate_entity`).
+* **State-of-Charge (USOC) Boundaries**:
+  * **Physical Range Validation**: `0.0% <= USOC <= 100.0%` (values outside `[0, 100]` are rejected as sensor faults).
+  * **Minimum SoC Floor (`min_soc_pct`)**: Default **`5.0%`** (configurable, recommended `10.0%` in winter staging). Any active discharge command at or below `min_soc_pct` is blocked and restores Mode 2.
+  * **Maximum SoC Ceiling (`max_soc_pct`)**: Default **`100.0%`** (configurable, e.g., `95.0%` in staging). Any `GRID_PRECHARGE` command at or above `max_soc_pct` is blocked and restores Mode 2.
+* **Action-Specific Power Limits**:
+  * **`GRID_PRECHARGE`**: `0 W < target_power_watts <= 6,500 W` (`max_charge_watts`).
+  * **`HOLD_FOR_PEAK`**: `target_power_watts == 0 W` (`/api/v2/setpoint/discharge/0`).
+  * **`PEAK_DISCHARGE`**: `0 W < target_power_watts <= 6,000 W` (`max_discharge_watts`) when direct discharge is enabled; `0 W` (passive Mode 2) by default.
+* **Persistent Idempotency & Crash/Restart Replay Protection**:
+  * Every command is assigned a deterministic SHA-256 `idempotency_key` (`timestamp_local | shadow_action | target_operating_mode | target_power_watts`).
+  * The key is flushed to persistent disk storage (`MYSUNSHINE_EXECUTOR_STATE_PATH`) **before** issuing the live HTTP write so that process restarts, crashes, or recovery loops can never duplicate or replay a command.
+* **Bounded-Retry Verified Mode 2 Restoration & Persistent Kill-Switch Latch**:
+  * On any write error, post-write mode/power-flow verification mismatch, stale telemetry, or gate lock, `restore_sonnen_safe_mode()` issues `PUT /api/v2/configurations` (`{"EM_OperatingMode": "2"}`) up to **`3` bounded attempts**, polling `GET /api/v2/status` up to **`2` times per attempt**.
+  * Restoration **never** reports success unless `GET /api/v2/status` independently confirms `EM_OperatingMode == 2`.
+  * **Emergency Kill-Switch & Persistent Lockout Latch**: Turning `input_boolean.mysunshine_active_battery_control` to `off` in Home Assistant or setting `MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false` immediately revokes actuation permission. Furthermore, if Mode 2 restoration verification ever fails after exhausting bounded retries, the executor trips `emergency_latch_locked = True` on disk (`LOCKED_EMERGENCY_FAILSAFE_LATCH`), permanently disabling all future actuation across process restarts until manual operator intervention.
+* **Sonnen Watchdog Requirement**:
+  * Because SonnenBatterie 10 manual API setpoints (`EM_OperatingMode=1`) require periodic heartbeat refreshes on certain firmware revisions, any future active-control daemon must either refresh the active setpoint within the firmware watchdog window or allow the inverter to revert safely to `0 W` / `EM_OperatingMode=2`.
+
+#### 3. Direct `PEAK_DISCHARGE` Policy (Optional & Unapproved Until Staged)
+* **Default Non-Actuating Policy (`enable_direct_discharge_setpoint = False`)**: By default, `PEAK_DISCHARGE` is **strictly non-actuating** (`would_actuate = False`, `actuation_semantics = "SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE"`). During peak hours, the battery simply operates in passive `EM_OperatingMode=2` (*Eigenverbrauch*), where the SonnenBatterie 10 internal meter automatically discharges to cover household load without risking unintended grid export.
+* **Direct Discharge Setpoint (`enable_direct_discharge_setpoint = True`)**: Using `POST /api/v2/setpoint/discharge/<watts>` under `EM_OperatingMode=1` is marked **OPTIONAL and UNAPPROVED for production** until explicitly tested during staging to confirm that manual discharge setpoints do not dump battery energy to the grid when household load drops mid-hour.
+
+#### 4. Telemetry Authentication, Staging Sign-Off & Rollback Criteria
+* **Mandatory Authenticated Telemetry**: Both Python (`fetch_live_sonnen_status`, `_perform_live_sonnen_write`, `restore_sonnen_safe_mode`) and Home Assistant (`sensor.sonnenbatterie_10_live_status`) must authenticate every SonnenBatterie 10 API v2 request using `Auth-Token: <SONNEN_API_TOKEN>`, and Home Assistant REST pushes must use `Authorization: Bearer <HA_TOKEN>`. Unauthenticated live requests are rejected (`unauthenticated_sonnen_telemetry_rejected`).
+* **Staging Acceptance & Sign-Off Checklist**:
+  1. **Phase A (7-Day Live Telemetry & Shadow Observation)**: Run `HomeAssistantTelemetryBridge` in `dry_run=True` mode pushing the 12 entities to Home Assistant Green (`192.168.3.138:8123`), confirming zero gaps in `sensor.sonnenbatterie_10_live_status` and verifying daily shadow recommendations against realized Tibber/EEM costs.
+  2. **Phase B (Supervised Single-Window Night Pre-Charge Test)**: With operator supervision, unlock Gate 1 and Gate 2 for a single `GRID_PRECHARGE` trough hour, verify `EM_OperatingMode=1` and charging wattage (`Pac_total_W < 0`), then toggle Gate 2 (`input_boolean.mysunshine_active_battery_control`) `off` and verify automatic restoration to `EM_OperatingMode=2` within 15 seconds.
+  3. **Phase C (Fault-Injection Drill)**: Simulate stale USOC and HTTP timeout in staging and verify that `LOCKED_EMERGENCY_FAILSAFE_LATCH` trips and persists across process restart.
+* **Immediate Rollback Criteria**:
+  * Roll back immediately to permanent Shadow-Only mode (`MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false`, `input_boolean.mysunshine_active_battery_control=off`, and Sonnen `EM_OperatingMode=2`) if any of the following occur:
+    1. Any unverified Mode 2 restoration (`verified_mode_2 == False`) or emergency latch trip (`LOCKED_EMERGENCY_FAILSAFE_LATCH`).
+    2. Unintended battery-to-grid export (`> 0.2 kWh` in any hour) during `GRID_PRECHARGE` or `HOLD_FOR_PEAK`.
+    3. More than 2 consecutive `/api/v2/status` polling timeouts (`> 5 seconds`) on the local LAN (`192.168.3.125`).
+    4. Realized 7-day rolling shadow dispatch net cost exceeds Default Self-Consumption (`EM_OperatingMode=2`) net cost.
 
 ---
 
