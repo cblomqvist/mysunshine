@@ -1681,14 +1681,19 @@ function populateHomeAssistantBridgeTab() {
     if (!haPkg) return;
 
     const simUnlocked = haSafetySimToggle && haSafetySimToggle.value === 'unlocked';
+    const realUnlocked = Boolean(haPkg.safety_gate?.active_control_enabled);
+    const realGateStatus = haPkg.safety_gate?.status || 'LOCKED_SHADOW_MODE_ONLY';
     const gateBadge = document.getElementById('ha-safety-gate-badge');
     if (gateBadge) {
-        if (simUnlocked) {
+        if (realUnlocked && realGateStatus === 'UNLOCKED_ACTIVE_CONTROL') {
             gateBadge.className = 'badge badge-success';
-            gateBadge.innerHTML = '<i class="fa-solid fa-shield-check"></i> PREVIEW: DUAL SAFETY GATE UNLOCKED';
+            gateBadge.innerHTML = '<i class="fa-solid fa-shield-check"></i> REAL GATE: UNLOCKED_ACTIVE_CONTROL';
+        } else if (simUnlocked) {
+            gateBadge.className = 'badge badge-accent';
+            gateBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> REAL GATE: ${realGateStatus} (UI DRY-RUN PREVIEW ONLY)`;
         } else {
             gateBadge.className = 'badge badge-accent';
-            gateBadge.innerHTML = '<i class="fa-solid fa-shield-halved"></i> SAFETY GATE: LOCKED (SHADOW MODE ONLY)';
+            gateBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> SAFETY GATE: ${realGateStatus}`;
         }
     }
 
@@ -1715,9 +1720,8 @@ function populateHomeAssistantBridgeTab() {
     if (ledgerHaEntitiesBody) {
         let entHtml = '';
         entities.forEach(e => {
-            const stateVal = (e.entity_id === 'input_boolean.mysunshine_active_battery_control' && simUnlocked)
-                ? 'on'
-                : e.state;
+            // Always show real baked entity state; never spoof input_boolean or env gate in UI preview
+            const stateVal = e.state;
             const unitStr = e.unit_of_measurement || '—';
             const clsParts = [];
             if (e.device_class) clsParts.push(e.device_class);
@@ -1747,10 +1751,14 @@ function populateHomeAssistantBridgeTab() {
     if (ledgerHaCommandsBody) {
         let cmdHtml = '';
         commands.forEach(c => {
-            const actuateNow = simUnlocked ? true : c.would_actuate;
-            const gateTag = actuateNow
-                ? '<span class="era-tag era-batt2">WOULD ACTUATE (ACTIVE)</span>'
-                : '<span class="era-tag" style="background:rgba(245,158,11,0.16);color:#fbbf24;">BLOCKED (SHADOW SAFE)</span>';
+            let gateTag = '<span class="era-tag" style="background:rgba(245,158,11,0.16);color:#fbbf24;">BLOCKED (LOCKED_SHADOW_MODE_ONLY)</span>';
+            if (c.actuation_semantics === 'SHADOW_ONLY_NON_ACTUATING_PEAK_SHAVE') {
+                gateTag = '<span class="era-tag" style="background:rgba(148,163,184,0.16);color:#94a3b8;">SHADOW-ONLY (NON-ACTUATING MODE 2)</span>';
+            } else if (realUnlocked && c.would_actuate) {
+                gateTag = '<span class="era-tag era-batt2">REAL GATE UNLOCKED (ACTIVE)</span>';
+            } else if (simUnlocked) {
+                gateTag = '<span class="era-tag" style="background:rgba(6,182,212,0.16);color:#38bdf8;">DRY-RUN PREVIEW (REAL GATE LOCKED)</span>';
+            }
 
             cmdHtml += `
                 <tr>

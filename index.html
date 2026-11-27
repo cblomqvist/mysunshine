@@ -595,10 +595,10 @@
                                     <p id="ha-bridge-summary-text">Exposes MySunshine's Day-1 ROI statistics, next-day shadow dispatch advice, and η=76.8% break-even price threshold to Home Assistant Green (192.168.3.138:8123) while keeping physical SonnenBatterie 10 (192.168.3.125) write actuation locked behind a dual hardware safety gate.</p>
                                 </div>
                                 <div class="shadow-scenario-controls">
-                                    <label for="ha-safety-sim-toggle">Simulate Dual Safety Gate Unlock (Dry-Run Preview):</label>
+                                    <label for="ha-safety-sim-toggle">Command Table Display Mode (UI Dry-Run Only):</label>
                                     <select id="ha-safety-sim-toggle" class="custom-select">
-                                        <option value="locked" selected>Locked — Shadow Mode Telemetry Only (Default Safe)</option>
-                                        <option value="unlocked">Unlocked — Preview Active Sonnen API v2 Commands</option>
+                                        <option value="locked" selected>Real Hardware Gate State (LOCKED_SHADOW_MODE_ONLY)</option>
+                                        <option value="unlocked">UI Dry-Run Preview — Inspect Candidate API v2 Setpoints (No Hardware Write)</option>
                                     </select>
                                 </div>
                             </div>

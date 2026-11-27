@@ -4,16 +4,19 @@ Builds and optionally publishes Home Assistant custom sensor states (`POST /api/
 representing:
 1. Long-Term Statistics ROI & Capex Payback Entities (`state_class: total_increasing`, `measurement`)
 2. Day-Ahead Forecast & Shadow Mode Dispatch Advisor Entities (`sensor.mysunshine_shadow_action`,
-   `sensor.mysunshine_breakeven_spot_ore`, `sensor.mysunshine_expected_savings_sek`, etc.)
+   `sensor.mysunshine_target_power_watts`, `sensor.mysunshine_breakeven_spot_ore`,
+   `sensor.mysunshine_expected_savings_sek`, etc.)
 3. Local Hardware Telemetry Normalization (SonnenBatterie 10 `/api/v2/status` at `192.168.3.125`,
    SMA STP8.0-3AV-40 at `192.168.3.61`, and Home Assistant Green at `192.168.3.138:8123`)
-4. Safety-Gated SonnenBatterie 10 Operating Mode command preview & dry-run protection.
+4. Safety-Gated SonnenBatterie 10 Operating Mode command preview, dry-run protection, and fail-safe
+   restoration to `EM_OperatingMode=2` on any fault, timeout, SoC violation, or interruption.
 """
 
 from datetime import datetime
 import json
+import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 import urllib.error
 import urllib.request
 
@@ -23,6 +26,8 @@ from .sensor_models import (
     SonnenSafetyActuationGate,
     SonnenWriteCommandPreview,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class HomeAssistantTelemetryBridge:
@@ -37,12 +42,20 @@ class HomeAssistantTelemetryBridge:
         sma_url: Optional[str] = None,
         env_opt_in_enabled: Optional[bool] = None,
         ha_switch_on: bool = False,
+        min_soc_pct: float = 5.0,
+        max_soc_pct: float = 100.0,
+        max_charge_watts: int = 6500,
+        max_discharge_watts: int = 6000,
+        enable_direct_discharge_setpoint: bool = False,
+        command_max_age_seconds: int = 3900,
     ):
         self.ha_url = (ha_url or os.getenv("HA_URL", "http://192.168.3.138:8123")).rstrip("/")
         self.ha_token = ha_token if ha_token is not None else os.getenv("HA_TOKEN", "")
         self.sonnen_url = (sonnen_url or os.getenv("SONNEN_URL", "http://192.168.3.125")).rstrip("/")
         self.sonnen_token = sonnen_token if sonnen_token is not None else os.getenv("SONNEN_API_TOKEN", "")
         self.sma_url = (sma_url or os.getenv("SMA_URL", "http://192.168.3.61")).rstrip("/")
+        self.command_max_age_seconds = int(command_max_age_seconds)
+        self._executed_idempotency_keys: Set[str] = set()
 
         if env_opt_in_enabled is None:
             env_val = os.getenv("MYSUNSHINE_ACTIVE_CONTROL_ENABLED", "false").strip().lower()
@@ -52,6 +65,11 @@ class HomeAssistantTelemetryBridge:
             env_opt_in_enabled=env_opt_in_enabled,
             ha_switch_on=ha_switch_on,
             sonnen_base_url=self.sonnen_url,
+            min_soc_pct=min_soc_pct,
+            max_soc_pct=max_soc_pct,
+            max_charge_watts=max_charge_watts,
+            max_discharge_watts=max_discharge_watts,
+            enable_direct_discharge_setpoint=enable_direct_discharge_setpoint,
         )
 
     @staticmethod
@@ -61,7 +79,6 @@ class HomeAssistantTelemetryBridge:
     ) -> Dict[str, Any]:
         """Normalize SonnenBatterie 10 `/api/v2/status` JSON payload into clean telemetry."""
         if not raw_status:
-            # Deterministic offline snapshot representing late-autumn evening status prior to Nov 15 pre-charge
             soc_pct = round(fallback_soc_pct, 1)
             usable_kwh = round((soc_pct / 100.0) * 20.0, 2)
             return {
@@ -144,10 +161,6 @@ class HomeAssistantTelemetryBridge:
             fallback_soc_pct=init_soc_pct,
         )
 
-        # Select representative focus step (default 03:00 night trough pre-charge hour)
-        focus_step = steps[focus_hour] if 0 <= focus_hour < len(steps) else (steps[0] if steps else {})
-        current_action = str(focus_step.get("shadow_action", "GRID_PRECHARGE"))
-
         # Build 24-hour Sonnen command previews gated by SonnenSafetyActuationGate
         command_previews: List[SonnenWriteCommandPreview] = []
         for s in steps:
@@ -157,25 +170,50 @@ class HomeAssistantTelemetryBridge:
                 shadow_action=str(s.get("shadow_action", "IDLE")),
                 grid_precharge_kwh=float(s.get("shadow_grid_precharged_kwh", 0.0)),
                 discharged_kwh=float(s.get("shadow_discharged_kwh", 0.0)),
+                current_soc_pct=sonnen_telemetry["usoc_pct"] if sonnen_raw_status else None,
             )
             command_previews.append(cmd)
 
-        # Build compact 24-hour schedule attribute list for Home Assistant Lovelace cards / automations
-        compact_schedule = [
-            {
-                "hour": f"{int(s.get('hour', 0)):02d}:00",
-                "action": s.get("shadow_action"),
-                "spot_ore": s.get("spot_price_ore_kwh"),
-                "import_sek": s.get("import_price_sek_kwh"),
-                "pv_kwh": s.get("pv_kwh"),
-                "load_kwh": s.get("load_kwh"),
-                "precharge_kwh": s.get("shadow_grid_precharged_kwh"),
-                "discharge_kwh": s.get("shadow_discharged_kwh"),
-                "shadow_soc_pct": s.get("shadow_soc_pct"),
-                "default_soc_pct": s.get("default_soc_pct"),
-            }
-            for s in steps
-        ]
+        # Select representative focus step & matching command preview (default 03:00 night trough)
+        focus_step = steps[focus_hour] if 0 <= focus_hour < len(steps) else (steps[0] if steps else {})
+        focus_cmd = (
+            command_previews[focus_hour]
+            if 0 <= focus_hour < len(command_previews)
+            else (
+                command_previews[0]
+                if command_previews
+                else self.safety_gate.evaluate_hourly_command(
+                    hour=focus_hour,
+                    timestamp_local=f"{target_date}T{focus_hour:02d}:00:00",
+                    shadow_action="IDLE",
+                )
+            )
+        )
+        current_action = str(focus_step.get("shadow_action", "GRID_PRECHARGE"))
+
+        # Build compact 24-hour schedule attribute list including exact hourly command parameters
+        compact_schedule = []
+        for idx, s in enumerate(steps):
+            c_prev = command_previews[idx] if idx < len(command_previews) else focus_cmd
+            compact_schedule.append(
+                {
+                    "hour": f"{int(s.get('hour', 0)):02d}:00",
+                    "action": s.get("shadow_action"),
+                    "target_operating_mode": c_prev.target_operating_mode,
+                    "target_power_watts": c_prev.target_power_watts,
+                    "actuation_semantics": c_prev.actuation_semantics,
+                    "would_actuate": c_prev.would_actuate,
+                    "idempotency_key": c_prev.idempotency_key,
+                    "spot_ore": s.get("spot_price_ore_kwh"),
+                    "import_sek": s.get("import_price_sek_kwh"),
+                    "pv_kwh": s.get("pv_kwh"),
+                    "load_kwh": s.get("load_kwh"),
+                    "precharge_kwh": s.get("shadow_grid_precharged_kwh"),
+                    "discharge_kwh": s.get("shadow_discharged_kwh"),
+                    "shadow_soc_pct": s.get("shadow_soc_pct"),
+                    "default_soc_pct": s.get("default_soc_pct"),
+                }
+            )
 
         # Extract multi-year ROI figures
         cum_savings_sek = round(float(multi_year_summary.get("total_Historical_savings_sek", 72247.07)), 2)
@@ -203,7 +241,7 @@ class HomeAssistantTelemetryBridge:
         raw_ct_121d_sek = round(float(bt_totals.get("oracle_upside_vs_actual_sonnen_sek", 247.12)), 2)
 
         entities: List[HomeAssistantEntityPayload] = [
-            # 1. Primary Shadow Advisor Action Sensor
+            # 1. Primary Shadow Advisor Action Sensor (exposes dynamic hourly target_power_watts & mode)
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_shadow_action",
                 state=current_action,
@@ -212,6 +250,12 @@ class HomeAssistantTelemetryBridge:
                 attributes={
                     "target_date": target_date,
                     "focus_hour": f"{focus_hour:02d}:00",
+                    "target_operating_mode": focus_cmd.target_operating_mode,
+                    "target_operating_mode_label": focus_cmd.target_operating_mode_label,
+                    "target_power_watts": focus_cmd.target_power_watts,
+                    "actuation_semantics": focus_cmd.actuation_semantics,
+                    "would_actuate": focus_cmd.would_actuate,
+                    "idempotency_key": focus_cmd.idempotency_key,
                     "headline_recommendation": diag.get("headline_recommendation", ""),
                     "efficiency_gate_passed": gate_passed,
                     "cheapest_trough_window": diag.get("cheapest_trough_window", "03:00–05:00"),
@@ -221,11 +265,36 @@ class HomeAssistantTelemetryBridge:
                     "breakeven_peak_spot_ore_kwh": be_spot_ore,
                     "recommended_grid_precharge_kwh": precharge_kwh,
                     "safety_gate_status": self.safety_gate.gate_state_label,
+                    "env_opt_in_enabled": self.safety_gate.env_opt_in_enabled,
+                    "ha_switch_on": self.safety_gate.ha_switch_on,
                     "active_control_enabled": self.safety_gate.is_unlocked,
                     "hourly_schedule_24h": compact_schedule,
                 },
             ),
-            # 2. Efficiency-Gate Break-Even Spot Threshold Sensor
+            # 2. Dedicated Hourly Target Power Watts Sensor (eliminates hard-coded setpoints in HA)
+            HomeAssistantEntityPayload(
+                entity_id="sensor.mysunshine_target_power_watts",
+                state=focus_cmd.target_power_watts,
+                friendly_name="MySunshine Hourly Target Power Setpoint",
+                unit_of_measurement="W",
+                device_class="power",
+                state_class="measurement",
+                icon="mdi:flash-triangle-outline",
+                attributes={
+                    "target_date": target_date,
+                    "focus_hour": f"{focus_hour:02d}:00",
+                    "shadow_action": current_action,
+                    "target_operating_mode": focus_cmd.target_operating_mode,
+                    "actuation_semantics": focus_cmd.actuation_semantics,
+                    "max_charge_watts": self.safety_gate.max_charge_watts,
+                    "max_discharge_watts": self.safety_gate.max_discharge_watts,
+                    "min_soc_pct": self.safety_gate.min_soc_pct,
+                    "max_soc_pct": self.safety_gate.max_soc_pct,
+                    "idempotency_key": focus_cmd.idempotency_key,
+                    "would_actuate": focus_cmd.would_actuate,
+                },
+            ),
+            # 3. Efficiency-Gate Break-Even Spot Threshold Sensor
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_breakeven_spot_ore",
                 state=be_spot_ore,
@@ -244,7 +313,7 @@ class HomeAssistantTelemetryBridge:
                     "efficiency_gate_passed": gate_passed,
                 },
             ),
-            # 3. Expected Shadow Savings vs Default Self-Consumption
+            # 4. Expected Shadow Savings vs Default Self-Consumption
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_expected_savings_sek",
                 state=shd_delta_sek,
@@ -264,7 +333,7 @@ class HomeAssistantTelemetryBridge:
                     "avg_temp_c": weather_info.get("avg_temp_c", 2.6),
                 },
             ),
-            # 4. Recommended Night Grid Pre-Charge Energy
+            # 5. Recommended Night Grid Pre-Charge Energy
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_recommended_precharge_kwh",
                 state=precharge_kwh,
@@ -282,7 +351,7 @@ class HomeAssistantTelemetryBridge:
                     "max_charge_kw": 6.5,
                 },
             ),
-            # 5. Next-Day Projected Net Bill
+            # 6. Next-Day Projected Net Bill
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_next_day_projected_bill_sek",
                 state=shd_bill_sek,
@@ -299,7 +368,7 @@ class HomeAssistantTelemetryBridge:
                     "predicted_load_kwh": scen_proj.get("shadow_optimized", {}).get("consumed_kwh", 27.63),
                 },
             ),
-            # 6. Long-Term Statistics: Cumulative Realized Savings (2021–2026)
+            # 7. Long-Term Statistics: Cumulative Realized Savings (2021–2026)
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_cumulative_savings_sek",
                 state=cum_savings_sek,
@@ -319,7 +388,7 @@ class HomeAssistantTelemetryBridge:
                     "eem_invoice_audit_match": f"{post_switch_matches}/{post_switch_months} (100%)",
                 },
             ),
-            # 7. Long-Term Statistics: Capex Recouped Percentage
+            # 8. Long-Term Statistics: Capex Recouped Percentage
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_capex_recouped_pct",
                 state=recouped_pct,
@@ -336,7 +405,7 @@ class HomeAssistantTelemetryBridge:
                     "remaining_unrecovered_sek": rem_capex_sek,
                 },
             ),
-            # 8. 121-Day Backtest Cumulative Upside Sensor
+            # 9. 121-Day Backtest Cumulative Upside Sensor
             HomeAssistantEntityPayload(
                 entity_id="sensor.mysunshine_backtest_121d_upside_sek",
                 state=oracle_121d_sek,
@@ -360,7 +429,7 @@ class HomeAssistantTelemetryBridge:
                     "smart_hold_days_count": bt_trig.get("smart_hold_days_count", 6),
                 },
             ),
-            # 9. Binary Sensor: Efficiency Gate Active
+            # 10. Binary Sensor: Efficiency Gate Active
             HomeAssistantEntityPayload(
                 entity_id="binary_sensor.mysunshine_efficiency_gate_passed",
                 state="on" if gate_passed else "off",
@@ -374,7 +443,21 @@ class HomeAssistantTelemetryBridge:
                     "recommended_grid_precharge_kwh": precharge_kwh,
                 },
             ),
-            # 10. Safety-Gated Active Control Switch State Mirror
+            # 11. Binary Sensor: Environment Opt-In Gate (MYSUNSHINE_ACTIVE_CONTROL_ENABLED)
+            HomeAssistantEntityPayload(
+                entity_id="binary_sensor.mysunshine_env_active_control_opt_in",
+                state="on" if self.safety_gate.env_opt_in_enabled else "off",
+                friendly_name="MySunshine Environment Active Control Opt-In (Gate 1)",
+                device_class="safety",
+                icon="mdi:key-chain",
+                attributes={
+                    "env_variable": "MYSUNSHINE_ACTIVE_CONTROL_ENABLED",
+                    "env_opt_in_enabled": self.safety_gate.env_opt_in_enabled,
+                    "secrets_yaml_key": "mysunshine_active_control_enabled",
+                    "safety_gate_status": self.safety_gate.gate_state_label,
+                },
+            ),
+            # 12. Safety-Gated Active Control Switch State Mirror (Gate 2)
             HomeAssistantEntityPayload(
                 entity_id="input_boolean.mysunshine_active_battery_control",
                 state="on" if self.safety_gate.is_unlocked else "off",
@@ -427,6 +510,300 @@ class HomeAssistantTelemetryBridge:
             automations_yaml_snippet=self.generate_automations_yaml_snippet(),
         )
 
+    def restore_sonnen_safe_mode(
+        self,
+        reason: str,
+        dry_run: bool = False,
+        timeout_sec: float = 5.0,
+    ) -> Dict[str, Any]:
+        """Fail-safe restore of SonnenBatterie 10 to `EM_OperatingMode=2` (Automatic Self-Consumption)."""
+        endpoint = f"{self.sonnen_url}/api/v2/configurations"
+        payload = {"EM_OperatingMode": "2"}
+        has_valid_token = bool(self.sonnen_token and "your_" not in self.sonnen_token)
+
+        if dry_run or not has_valid_token:
+            logger.warning("Fail-safe restore to EM_OperatingMode=2 (dry_run/no_token): %s", reason)
+            return {
+                "restored_to_mode_2": True,
+                "mode": "dry_run" if dry_run else "skipped_no_token",
+                "endpoint": endpoint,
+                "payload": payload,
+                "reason": reason,
+            }
+
+        headers = {
+            "Auth-Token": self.sonnen_token,
+            "Content-Type": "application/json",
+        }
+        req = urllib.request.Request(
+            endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="PUT",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+                raw_body = resp.read().decode("utf-8", errors="replace")
+                ok = 200 <= resp.status < 300
+                if not ok:
+                    logger.error(
+                        "Fail-safe Mode 2 restore returned HTTP %s: %s (reason: %s)",
+                        resp.status,
+                        raw_body,
+                        reason,
+                    )
+                return {
+                    "restored_to_mode_2": ok,
+                    "mode": "live_fail_safe_restore",
+                    "status_code": resp.status,
+                    "endpoint": endpoint,
+                    "payload": payload,
+                    "reason": reason,
+                }
+        except Exception as exc:
+            logger.error("Fail-safe Mode 2 restore raised exception (%s): %s", reason, exc)
+            return {
+                "restored_to_mode_2": False,
+                "mode": "live_fail_safe_restore",
+                "status_code": None,
+                "endpoint": endpoint,
+                "payload": payload,
+                "reason": reason,
+                "error": str(exc),
+            }
+
+    def _check_pre_execution_guards(
+        self,
+        command: SonnenWriteCommandPreview,
+        dry_run: bool,
+        reference_now: Optional[datetime],
+        current_status: Optional[Dict[str, Any]],
+        timeout_sec: float,
+    ) -> Optional[Dict[str, Any]]:
+        """Evaluate fail-closed dual gate, idempotency, staleness, SoC, and power bounds before any write."""
+        if not self.safety_gate.is_unlocked or not command.would_actuate:
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "dual_safety_gate_locked_or_non_actuating",
+                "safety_gate_status": self.safety_gate.gate_state_label,
+                "actuation_semantics": command.actuation_semantics,
+                "idempotency_key": command.idempotency_key,
+            }
+
+        if command.idempotency_key and command.idempotency_key in self._executed_idempotency_keys:
+            logger.info("Skipping duplicate Sonnen command (%s)", command.idempotency_key)
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "duplicate_idempotency_key_blocked",
+                "idempotency_key": command.idempotency_key,
+            }
+
+        if reference_now is not None and command.timestamp_local:
+            age_res = self._check_staleness(command, reference_now, dry_run, timeout_sec)
+            if age_res is not None:
+                return age_res
+
+        if current_status is not None:
+            soc_res = self._check_soc_bounds(command, current_status, dry_run, timeout_sec)
+            if soc_res is not None:
+                return soc_res
+
+        max_w = max(self.safety_gate.max_charge_watts, self.safety_gate.max_discharge_watts)
+        if command.target_power_watts < 0 or command.target_power_watts > max_w:
+            fs = self.restore_sonnen_safe_mode(
+                reason=f"Target power {command.target_power_watts} W outside hardware limits",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "power_limit_exceeded",
+                "fail_safe_restore": fs,
+            }
+        return None
+
+    def _check_staleness(
+        self,
+        command: SonnenWriteCommandPreview,
+        reference_now: datetime,
+        dry_run: bool,
+        timeout_sec: float,
+    ) -> Optional[Dict[str, Any]]:
+        try:
+            cmd_dt = datetime.fromisoformat(command.timestamp_local)
+            if cmd_dt.tzinfo is not None and reference_now.tzinfo is None:
+                cmd_dt = cmd_dt.replace(tzinfo=None)
+            age_sec = abs((reference_now - cmd_dt).total_seconds())
+            if age_sec > self.command_max_age_seconds:
+                fs = self.restore_sonnen_safe_mode(
+                    reason=f"Stale command age {age_sec:.0f}s > {self.command_max_age_seconds}s",
+                    dry_run=dry_run,
+                    timeout_sec=timeout_sec,
+                )
+                return {
+                    "executed": False,
+                    "blocked": True,
+                    "reason": "stale_command_rejected",
+                    "command_age_seconds": age_sec,
+                    "fail_safe_restore": fs,
+                }
+        except ValueError:
+            pass
+        return None
+
+    def _check_soc_bounds(
+        self,
+        command: SonnenWriteCommandPreview,
+        current_status: Dict[str, Any],
+        dry_run: bool,
+        timeout_sec: float,
+    ) -> Optional[Dict[str, Any]]:
+        parsed_pre = self.parse_sonnen_v2_status(current_status)
+        usoc = parsed_pre["usoc_pct"]
+        if command.shadow_action == "GRID_PRECHARGE" and usoc >= self.safety_gate.max_soc_pct:
+            fs = self.restore_sonnen_safe_mode(
+                reason=f"USOC {usoc}% >= max_soc_pct {self.safety_gate.max_soc_pct}%",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "soc_upper_limit_reached",
+                "usoc_pct": usoc,
+                "fail_safe_restore": fs,
+            }
+        if command.shadow_action == "PEAK_DISCHARGE" and usoc <= self.safety_gate.min_soc_pct:
+            fs = self.restore_sonnen_safe_mode(
+                reason=f"USOC {usoc}% <= min_soc_pct {self.safety_gate.min_soc_pct}%",
+                dry_run=dry_run,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": True,
+                "reason": "soc_lower_limit_reached",
+                "usoc_pct": usoc,
+                "fail_safe_restore": fs,
+            }
+        return None
+
+    def execute_sonnen_command(
+        self,
+        command: SonnenWriteCommandPreview,
+        dry_run: bool = True,
+        reference_now: Optional[datetime] = None,
+        current_status: Optional[Dict[str, Any]] = None,
+        timeout_sec: float = 5.0,
+    ) -> Dict[str, Any]:
+        """Execute a single SonnenBatterie 10 command with strict dual-gate, staleness, idempotency,
+        SoC/power boundary checks, post-write verification, and automatic fail-safe fallback to Mode 2.
+        """
+        guard_result = self._check_pre_execution_guards(
+            command=command,
+            dry_run=dry_run,
+            reference_now=reference_now,
+            current_status=current_status,
+            timeout_sec=timeout_sec,
+        )
+        if guard_result is not None:
+            return guard_result
+
+        has_valid_token = bool(self.sonnen_token and "your_" not in self.sonnen_token)
+        if dry_run or not has_valid_token:
+            return {
+                "executed": False,
+                "blocked": False,
+                "mode": "dry_run" if dry_run else "skipped_no_token",
+                "endpoint": command.endpoint,
+                "http_method": command.http_method,
+                "payload": command.payload,
+                "target_operating_mode": command.target_operating_mode,
+                "target_power_watts": command.target_power_watts,
+                "idempotency_key": command.idempotency_key,
+            }
+
+        return self._perform_live_sonnen_write(command=command, timeout_sec=timeout_sec)
+
+    def _perform_live_sonnen_write(
+        self,
+        command: SonnenWriteCommandPreview,
+        timeout_sec: float,
+    ) -> Dict[str, Any]:
+        headers = {
+            "Auth-Token": self.sonnen_token,
+            "Content-Type": "application/json",
+        }
+        try:
+            if command.target_operating_mode == SonnenSafetyActuationGate.MODE_MANUAL_API:
+                mode_req = urllib.request.Request(
+                    f"{self.sonnen_url}/api/v2/configurations",
+                    data=json.dumps({"EM_OperatingMode": "1"}).encode("utf-8"),
+                    headers=headers,
+                    method="PUT",
+                )
+                with urllib.request.urlopen(mode_req, timeout=timeout_sec) as mode_resp:
+                    if not (200 <= mode_resp.status < 300):
+                        raise RuntimeError(f"Mode 1 configuration write failed with HTTP {mode_resp.status}")
+
+            cmd_req = urllib.request.Request(
+                command.endpoint,
+                data=json.dumps(command.payload).encode("utf-8"),
+                headers=headers,
+                method=command.http_method,
+            )
+            with urllib.request.urlopen(cmd_req, timeout=timeout_sec) as cmd_resp:
+                if not (200 <= cmd_resp.status < 300):
+                    raise RuntimeError(f"Setpoint write failed with HTTP {cmd_resp.status}")
+                write_status_code = cmd_resp.status
+
+            status_req = urllib.request.Request(
+                f"{self.sonnen_url}/api/v2/status",
+                headers={"Auth-Token": self.sonnen_token},
+                method="GET",
+            )
+            with urllib.request.urlopen(status_req, timeout=timeout_sec) as status_resp:
+                if not (200 <= status_resp.status < 300):
+                    raise RuntimeError(f"Post-write status check failed with HTTP {status_resp.status}")
+                status_json = json.loads(status_resp.read().decode("utf-8"))
+                verified_status = self.parse_sonnen_v2_status(status_json)
+
+            if verified_status["em_operating_mode"] != command.target_operating_mode:
+                raise RuntimeError(
+                    f"Post-write verification mismatch: expected EM_OperatingMode={command.target_operating_mode}, "
+                    f"got {verified_status['em_operating_mode']}"
+                )
+
+            self._executed_idempotency_keys.add(command.idempotency_key)
+            return {
+                "executed": True,
+                "blocked": False,
+                "mode": "live_sonnen_write",
+                "status_code": write_status_code,
+                "verified_operating_mode": verified_status["em_operating_mode"],
+                "verified_usoc_pct": verified_status["usoc_pct"],
+                "idempotency_key": command.idempotency_key,
+            }
+
+        except Exception as exc:
+            logger.error("Sonnen actuation failed (%s); triggering fail-safe restore to Mode 2", exc)
+            fs = self.restore_sonnen_safe_mode(
+                reason=f"Actuation or post-write verification failure: {exc}",
+                dry_run=False,
+                timeout_sec=timeout_sec,
+            )
+            return {
+                "executed": False,
+                "blocked": False,
+                "mode": "failed_with_failsafe_restore",
+                "error": str(exc),
+                "fail_safe_restore": fs,
+                "idempotency_key": command.idempotency_key,
+            }
+
     def publish_to_home_assistant(
         self,
         package: HomeAssistantStatePackage,
@@ -460,14 +837,18 @@ class HomeAssistantTelemetryBridge:
             req = urllib.request.Request(url, data=body_bytes, headers=headers, method="POST")
             try:
                 with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+                    ok = 200 <= resp.status < 300
+                    if not ok:
+                        logger.error("HA state publish for %s failed with HTTP %s", ent.entity_id, resp.status)
                     results.append(
                         {
                             "entity_id": ent.entity_id,
                             "status_code": resp.status,
-                            "ok": 200 <= resp.status < 300,
+                            "ok": ok,
                         }
                     )
-            except urllib.error.URLError as exc:
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                logger.error("HA state publish for %s raised error: %s", ent.entity_id, exc)
                 results.append(
                     {
                         "entity_id": ent.entity_id,
@@ -478,7 +859,7 @@ class HomeAssistantTelemetryBridge:
                 )
 
         return {
-            "published": all(r["ok"] for r in results),
+            "published": bool(results) and all(r["ok"] for r in results),
             "mode": "live_rest_push",
             "ha_url": self.ha_url,
             "entities_pushed": len(results),
@@ -491,62 +872,96 @@ class HomeAssistantTelemetryBridge:
         """Return ready-to-paste Home Assistant `configuration.yaml` package for MySunshine."""
         return (
             "# MySunshine Home Assistant Green Package (configuration.yaml)\n"
+            "# In secrets.yaml, define:\n"
+            "#   mysunshine_active_control_enabled: \"false\"  # Set to \"true\" ONLY after staging sign-off\n"
+            "#   sonnen_api_token: \"your_sonnen_local_api_token\"\n\n"
             "input_boolean:\n"
             "  mysunshine_active_battery_control:\n"
-            "    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate)\"\n"
+            "    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate 2)\"\n"
             "    initial: false\n"
             "    icon: mdi:shield-lock-outline\n\n"
+            "template:\n"
+            "  - binary_sensor:\n"
+            "      - name: \"MySunshine Environment Active Control Opt-In (Safety Gate 1)\"\n"
+            "        unique_id: mysunshine_env_active_control_opt_in\n"
+            "        state: >\n"
+            "          {{ (!secret mysunshine_active_control_enabled) | lower in ['true', '1', 'yes', 'on'] }}\n"
+            "        device_class: safety\n"
+            "        icon: mdi:key-chain\n\n"
             "rest_command:\n"
             "  sonnen_set_operating_mode:\n"
             "    url: \"http://192.168.3.125/api/v2/configurations\"\n"
             "    method: PUT\n"
+            "    timeout: 5\n"
             "    headers:\n"
             "      Auth-Token: !secret sonnen_api_token\n"
             "      Content-Type: application/json\n"
             "    payload: '{\"EM_OperatingMode\": \"{{ mode }}\"}'\n"
             "  sonnen_charge_setpoint_w:\n"
-            "    url: \"http://192.168.3.125/api/v2/setpoint/charge/{{ watts }}\"\n"
+            "    url: \"http://192.168.3.125/api/v2/setpoint/charge/{{ watts | int(0) }}\"\n"
             "    method: POST\n"
+            "    timeout: 5\n"
             "    headers:\n"
             "      Auth-Token: !secret sonnen_api_token\n"
             "  sonnen_discharge_setpoint_w:\n"
-            "    url: \"http://192.168.3.125/api/v2/setpoint/discharge/{{ watts }}\"\n"
+            "    url: \"http://192.168.3.125/api/v2/setpoint/discharge/{{ watts | int(0) }}\"\n"
             "    method: POST\n"
+            "    timeout: 5\n"
             "    headers:\n"
             "      Auth-Token: !secret sonnen_api_token\n"
         )
 
     @staticmethod
     def generate_automations_yaml_snippet() -> str:
-        """Return ready-to-paste Home Assistant `automations.yaml` blueprint with safety gate check."""
+        """Return ready-to-paste Home Assistant `automations.yaml` blueprint enforcing dual safety gate,
+        dynamic hourly target_power_watts, SoC bounds, and fail-safe restoration to EM_OperatingMode=2.
+        """
         return (
-            "# MySunshine Safety-Gated Arbitrage Automation Blueprint (automations.yaml)\n"
+            "# MySunshine Dual-Safety-Gated Arbitrage & Fail-Safe Automation Blueprint (automations.yaml)\n"
             "- id: mysunshine_shadow_or_active_dispatch\n"
-            "  alias: \"MySunshine — Hourly Shadow / Safety-Gated Sonnen Dispatch\"\n"
+            "  alias: \"MySunshine — Hourly Dual-Gated Sonnen Dispatch\"\n"
             "  mode: single\n"
+            "  max_exceeded: silent\n"
             "  trigger:\n"
             "    - platform: time_pattern\n"
             "      minutes: 0\n"
             "  condition:\n"
+            "    # Gate 1: Environment / secrets.yaml opt-in (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true)\n"
+            "    - condition: state\n"
+            "      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n"
+            "      state: \"on\"\n"
+            "    # Gate 2: Explicit Home Assistant operator switch\n"
             "    - condition: state\n"
             "      entity_id: input_boolean.mysunshine_active_battery_control\n"
             "      state: \"on\"\n"
+            "    # Gate 3: MySunshine bridge confirms dual gate is unlocked & fresh\n"
+            "    - condition: template\n"
+            "      value_template: >\n"
+            "        {{ state_attr('sensor.mysunshine_shadow_action', 'active_control_enabled') == true\n"
+            "           and state_attr('sensor.mysunshine_shadow_action',\n"
+            "                          'safety_gate_status') == 'UNLOCKED_ACTIVE_CONTROL' }}\n"
+            "    # Gate 4: Round-trip efficiency gate (eta_rt = 76.8%) passed\n"
             "    - condition: state\n"
             "      entity_id: binary_sensor.mysunshine_efficiency_gate_passed\n"
             "      state: \"on\"\n"
             "  action:\n"
+            "    - variables:\n"
+            "        target_watts: >\n"
+            "          {{ [0, [6500, states('sensor.mysunshine_target_power_watts') | int(0)] | min] | max }}\n"
             "    - choose:\n"
             "        - conditions:\n"
             "            - condition: state\n"
             "              entity_id: sensor.mysunshine_shadow_action\n"
             "              state: \"GRID_PRECHARGE\"\n"
+            "            - condition: template\n"
+            "              value_template: \"{{ target_watts > 0 }}\"\n"
             "          sequence:\n"
             "            - service: rest_command.sonnen_set_operating_mode\n"
             "              data:\n"
             "                mode: \"1\"\n"
             "            - service: rest_command.sonnen_charge_setpoint_w\n"
             "              data:\n"
-            "                watts: 6200\n"
+            "                watts: \"{{ target_watts }}\"\n"
             "        - conditions:\n"
             "            - condition: state\n"
             "              entity_id: sensor.mysunshine_shadow_action\n"
@@ -559,7 +974,29 @@ class HomeAssistantTelemetryBridge:
             "              data:\n"
             "                watts: 0\n"
             "      default:\n"
+            "        # PEAK_DISCHARGE, SOLAR_CHARGE, SELF_CONSUMPTION, and IDLE restore passive Mode 2\n"
             "        - service: rest_command.sonnen_set_operating_mode\n"
             "          data:\n"
-            "            mode: \"2\"\n"
+            "            mode: \"2\"\n\n"
+            "- id: mysunshine_failsafe_restore_mode_2\n"
+            "  alias: \"MySunshine — Fail-Safe Restore to EM_OperatingMode=2 on Gate Lock or Interruption\"\n"
+            "  mode: single\n"
+            "  trigger:\n"
+            "    - platform: state\n"
+            "      entity_id: input_boolean.mysunshine_active_battery_control\n"
+            "      to: \"off\"\n"
+            "    - platform: state\n"
+            "      entity_id: binary_sensor.mysunshine_env_active_control_opt_in\n"
+            "      to: \"off\"\n"
+            "    - platform: state\n"
+            "      entity_id: sensor.mysunshine_shadow_action\n"
+            "      to:\n"
+            "        - \"unavailable\"\n"
+            "        - \"unknown\"\n"
+            "    - platform: homeassistant\n"
+            "      event: shutdown\n"
+            "  action:\n"
+            "    - service: rest_command.sonnen_set_operating_mode\n"
+            "      data:\n"
+            "        mode: \"2\"\n"
         )
