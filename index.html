@@ -332,6 +332,7 @@
                             <button type="button" class="tab-btn" data-tab="tab-variance-benchmark"><i class="fa-solid fa-microscope"></i> High-Res Estimation Variance</button>
                             <button type="button" class="tab-btn" data-tab="tab-utility-audit"><i class="fa-solid fa-file-invoice-dollar"></i> Utility Billing Audit</button>
                             <button type="button" class="tab-btn" data-tab="tab-shadow-forecast" id="tab-btn-shadow"><i class="fa-solid fa-wand-magic-sparkles"></i> Next-Day Forecast &amp; Shadow Advisor</button>
+                            <button type="button" class="tab-btn" data-tab="tab-ha-bridge" id="tab-btn-ha"><i class="fa-solid fa-house-signal"></i> Home Assistant Bridge</button>
                         </div>
                     </div>
 
@@ -576,6 +577,112 @@
                                             <!-- Populated by JS -->
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 6: Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge (Milestone 7) -->
+                    <div class="tab-content" id="tab-ha-bridge">
+                        <div class="shadow-advisor-header-box">
+                            <div class="shadow-top-bar">
+                                <div class="shadow-title-group">
+                                    <h4>
+                                        <i class="fa-solid fa-house-signal"></i>
+                                        <span>Home Assistant Custom Sensor Integration &amp; Safety-Gated Sonnen Telemetry Bridge</span>
+                                        <span class="badge badge-accent" id="ha-safety-gate-badge"><i class="fa-solid fa-shield-halved"></i> SAFETY GATE: LOCKED (SHADOW MODE ONLY)</span>
+                                    </h4>
+                                    <p id="ha-bridge-summary-text">Exposes MySunshine's Day-1 ROI statistics, next-day shadow dispatch advice, and η=76.8% break-even price threshold to Home Assistant Green (192.168.3.138:8123) while keeping physical SonnenBatterie 10 (192.168.3.125) write actuation locked behind a dual hardware safety gate.</p>
+                                </div>
+                                <div class="shadow-scenario-controls">
+                                    <label for="ha-safety-sim-toggle">Simulate Dual Safety Gate Unlock (Dry-Run Preview):</label>
+                                    <select id="ha-safety-sim-toggle" class="custom-select">
+                                        <option value="locked" selected>Locked — Shadow Mode Telemetry Only (Default Safe)</option>
+                                        <option value="unlocked">Unlocked — Preview Active Sonnen API v2 Commands</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 4-Card Hardware & Bridge Status Strip -->
+                            <div class="shadow-kpi-strip">
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">Home Assistant Green Hub</span>
+                                    <strong class="shadow-mini-val text-savings" id="ha-val-entities-count">10 Entities</strong>
+                                    <span class="shadow-mini-sub" id="ha-sub-endpoint">POST http://192.168.3.138:8123/api/states</span>
+                                </div>
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">SonnenBatterie 10 Local API v2</span>
+                                    <strong class="shadow-mini-val text-solar" id="ha-val-sonnen-mode">Mode 2 (Auto SC)</strong>
+                                    <span class="shadow-mini-sub" id="ha-sub-sonnen-endpoint">http://192.168.3.125/api/v2/status (USOC: 12.5%)</span>
+                                </div>
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">Primary Shadow Sensor State</span>
+                                    <strong class="shadow-mini-val text-savings" id="ha-val-primary-sensor">GRID_PRECHARGE</strong>
+                                    <span class="shadow-mini-sub" id="ha-sub-primary-sensor">Break-Even: 41.6 öre/kWh | Gain: +9.65 SEK</span>
+                                </div>
+                                <div class="shadow-mini-card">
+                                    <span class="shadow-mini-label">Long-Term Statistics (total_increasing)</span>
+                                    <strong class="shadow-mini-val" id="ha-val-lts-savings">72,247.07 SEK</strong>
+                                    <span class="shadow-mini-sub" id="ha-sub-lts-capex">22.94% Capex Recouped (24/24 EEM Audit Match)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="shadow-tables-grid">
+                            <!-- Sub-table 1: Home Assistant Custom Entities -->
+                            <div>
+                                <h4 class="shadow-subtable-title"><i class="fa-solid fa-satellite-dish"></i> Home Assistant Custom Entities &amp; Long-Term Statistics (`POST /api/states/&lt;entity_id&gt;`)</h4>
+                                <div class="table-responsive" style="max-height: 360px;">
+                                    <table class="ledger-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Entity ID</th>
+                                                <th>Friendly Name</th>
+                                                <th>State</th>
+                                                <th>Unit</th>
+                                                <th>Device / State Class</th>
+                                                <th>Key Telemetry Attributes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ledger-ha-entities-body">
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Sub-table 2: 24-Hour Safety-Gated SonnenBatterie 10 API v2 Command Previews -->
+                            <div>
+                                <h4 class="shadow-subtable-title"><i class="fa-solid fa-shield-halved"></i> 24-Hour Safety-Gated SonnenBatterie 10 API v2 Command Previews (`192.168.3.125`)</h4>
+                                <div class="table-responsive" style="max-height: 340px;">
+                                    <table class="ledger-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Hour</th>
+                                                <th>Shadow Action</th>
+                                                <th>Sonnen Target Mode</th>
+                                                <th>Setpoint (W)</th>
+                                                <th>Local HTTP Endpoint</th>
+                                                <th>JSON Payload</th>
+                                                <th>Actuation Gate Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ledger-ha-commands-body">
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Ready-to-Use Home Assistant YAML Snippets -->
+                            <div class="ha-yaml-grid">
+                                <div class="ha-yaml-card">
+                                    <h4 class="shadow-subtable-title"><i class="fa-solid fa-code"></i> Home Assistant `configuration.yaml` Package</h4>
+                                    <pre class="ha-code-block" id="ha-config-yaml-code"></pre>
+                                </div>
+                                <div class="ha-yaml-card">
+                                    <h4 class="shadow-subtable-title"><i class="fa-solid fa-gears"></i> Safety-Gated `automations.yaml` Blueprint</h4>
+                                    <pre class="ha-code-block" id="ha-automations-yaml-code"></pre>
                                 </div>
                             </div>
                         </div>

@@ -62,6 +62,9 @@ const ledgerUtilityAuditBody = document.getElementById('ledger-utility-audit-bod
 const shadowScenarioSelect = document.getElementById('shadow-scenario-select');
 const ledgerShadowHourlyBody = document.getElementById('ledger-shadow-hourly-body');
 const ledgerShadowBacktestBody = document.getElementById('ledger-shadow-backtest-body');
+const haSafetySimToggle = document.getElementById('ha-safety-sim-toggle');
+const ledgerHaEntitiesBody = document.getElementById('ledger-ha-entities-body');
+const ledgerHaCommandsBody = document.getElementById('ledger-ha-commands-body');
 
 // Formatting Helpers
 function formatSEK(num) {
@@ -93,6 +96,7 @@ async function initApp() {
         populateVarianceTable();
         populateUtilityAuditTable();
         populateShadowAdvisorTab();
+        populateHomeAssistantBridgeTab();
         updateSimulation();
     } catch (err) {
         console.error('Failed to load dashboard data:', err);
@@ -186,12 +190,18 @@ function setupEventListeners() {
             if (targetEl) targetEl.classList.add('active');
             if (target === 'tab-shadow-forecast') {
                 updateShadowAdvisorView();
+            } else if (target === 'tab-ha-bridge') {
+                populateHomeAssistantBridgeTab();
             }
         });
     });
 
     if (shadowScenarioSelect) {
         shadowScenarioSelect.addEventListener('change', updateShadowAdvisorView);
+    }
+
+    if (haSafetySimToggle) {
+        haSafetySimToggle.addEventListener('change', populateHomeAssistantBridgeTab);
     }
 }
 
@@ -1663,6 +1673,104 @@ function renderShadowBacktestTable(backtest) {
             });
         }
     });
+}
+
+// Milestone 7: Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge
+function populateHomeAssistantBridgeTab() {
+    const haPkg = dashboardData?.ha_integration;
+    if (!haPkg) return;
+
+    const simUnlocked = haSafetySimToggle && haSafetySimToggle.value === 'unlocked';
+    const gateBadge = document.getElementById('ha-safety-gate-badge');
+    if (gateBadge) {
+        if (simUnlocked) {
+            gateBadge.className = 'badge badge-success';
+            gateBadge.innerHTML = '<i class="fa-solid fa-shield-check"></i> PREVIEW: DUAL SAFETY GATE UNLOCKED';
+        } else {
+            gateBadge.className = 'badge badge-accent';
+            gateBadge.innerHTML = '<i class="fa-solid fa-shield-halved"></i> SAFETY GATE: LOCKED (SHADOW MODE ONLY)';
+        }
+    }
+
+    const entities = haPkg.entities || [];
+    const commands = haPkg.sonnen_command_previews || [];
+    const hw = haPkg.hardware_telemetry || {};
+
+    const valCount = document.getElementById('ha-val-entities-count');
+    const subEndpoint = document.getElementById('ha-sub-endpoint');
+    const valSonnenMode = document.getElementById('ha-val-sonnen-mode');
+    const subSonnenEndpoint = document.getElementById('ha-sub-sonnen-endpoint');
+
+    if (valCount) valCount.innerText = `${entities.length} Entities`;
+    if (subEndpoint && hw.home_assistant) {
+        subEndpoint.innerText = `POST ${hw.home_assistant.rest_api_endpoint}`;
+    }
+    if (valSonnenMode && hw.sonnen_batterie_10) {
+        valSonnenMode.innerText = `Mode ${hw.sonnen_batterie_10.em_operating_mode} (Auto SC)`;
+    }
+    if (subSonnenEndpoint && hw.sonnen_batterie_10) {
+        subSonnenEndpoint.innerText = `${hw.sonnen_batterie_10.url}${hw.sonnen_batterie_10.endpoint} (USOC: ${hw.sonnen_batterie_10.usoc_pct}%)`;
+    }
+
+    if (ledgerHaEntitiesBody) {
+        let entHtml = '';
+        entities.forEach(e => {
+            const stateVal = (e.entity_id === 'input_boolean.mysunshine_active_battery_control' && simUnlocked)
+                ? 'on'
+                : e.state;
+            const unitStr = e.unit_of_measurement || '—';
+            const clsParts = [];
+            if (e.device_class) clsParts.push(e.device_class);
+            if (e.state_class) clsParts.push(e.state_class);
+            const clsStr = clsParts.length ? clsParts.join(' / ') : 'state';
+
+            const attrPreview = Object.entries(e.attributes || {})
+                .filter(([k]) => !['friendly_name', 'icon', 'integration', 'unit_of_measurement', 'device_class', 'state_class', 'hourly_schedule_24h'].includes(k))
+                .slice(0, 4)
+                .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+                .join(' | ');
+
+            entHtml += `
+                <tr>
+                    <td><strong class="text-battery">${e.entity_id}</strong></td>
+                    <td>${e.friendly_name}</td>
+                    <td><strong class="text-savings">${stateVal}</strong></td>
+                    <td>${unitStr}</td>
+                    <td><span class="era-tag" style="background:rgba(6,182,212,0.14);color:#38bdf8;">${clsStr}</span></td>
+                    <td style="font-family:var(--font-body);font-size:0.74rem;color:var(--text-secondary);">${attrPreview}</td>
+                </tr>
+            `;
+        });
+        ledgerHaEntitiesBody.innerHTML = entHtml;
+    }
+
+    if (ledgerHaCommandsBody) {
+        let cmdHtml = '';
+        commands.forEach(c => {
+            const actuateNow = simUnlocked ? true : c.would_actuate;
+            const gateTag = actuateNow
+                ? '<span class="era-tag era-batt2">WOULD ACTUATE (ACTIVE)</span>'
+                : '<span class="era-tag" style="background:rgba(245,158,11,0.16);color:#fbbf24;">BLOCKED (SHADOW SAFE)</span>';
+
+            cmdHtml += `
+                <tr>
+                    <td><strong>${String(c.hour).padStart(2, '0')}:00</strong></td>
+                    <td><span class="text-solar">${c.shadow_action}</span></td>
+                    <td>Mode ${c.target_operating_mode}</td>
+                    <td>${c.target_power_watts} W</td>
+                    <td><code>${c.http_method} ${c.endpoint.replace('http://192.168.3.125', '')}</code></td>
+                    <td><code>${JSON.stringify(c.payload)}</code></td>
+                    <td>${gateTag}</td>
+                </tr>
+            `;
+        });
+        ledgerHaCommandsBody.innerHTML = cmdHtml;
+    }
+
+    const cfgEl = document.getElementById('ha-config-yaml-code');
+    const autoEl = document.getElementById('ha-automations-yaml-code');
+    if (cfgEl) cfgEl.textContent = haPkg.configuration_yaml_snippet || '';
+    if (autoEl) autoEl.textContent = haPkg.automations_yaml_snippet || '';
 }
 
 // Start application

@@ -2,8 +2,8 @@
 window.MYSUNSHINE_DATA = {
   "metadata": {
     "app": "MySunshine",
-    "version": "1.1.0",
-    "generated_at": "2026-11-14T22:31:34.861384",
+    "version": "1.2.0",
+    "generated_at": "2026-11-15T16:40:46.817895",
     "bidding_zone": "SE3",
     "retailer": "Tibber",
     "grid_operator": "Eskilstuna Energi & Milj\u00f6 (EEM)",
@@ -26308,6 +26308,1451 @@ window.MYSUNSHINE_DATA = {
         }
       }
     }
+  },
+  "ha_integration": {
+    "generated_at": "2026-11-15T16:40:46.817850",
+    "target_date": "2026-11-15",
+    "endpoints": {
+      "ha_url": "http://192.168.3.138:8123",
+      "sonnen_url": "http://192.168.3.125",
+      "sma_url": "http://192.168.3.61"
+    },
+    "safety_gate": {
+      "status": "LOCKED_SHADOW_MODE_ONLY",
+      "active_control_enabled": false,
+      "opt_in_switch_entity": "input_boolean.mysunshine_active_battery_control",
+      "default_operating_mode": "Mode 2 (Eigenverbrauch / Automatic Self-Consumption)"
+    },
+    "entities_count": 10,
+    "entities": [
+      {
+        "entity_id": "sensor.mysunshine_shadow_action",
+        "state": "GRID_PRECHARGE",
+        "friendly_name": "MySunshine Shadow Dispatch Action",
+        "unit_of_measurement": null,
+        "device_class": null,
+        "state_class": null,
+        "icon": "mdi:battery-charging-wireless",
+        "attributes": {
+          "friendly_name": "MySunshine Shadow Dispatch Action",
+          "icon": "mdi:battery-charging-wireless",
+          "integration": "mysunshine",
+          "target_date": "2026-11-15",
+          "focus_hour": "03:00",
+          "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
+          "efficiency_gate_passed": true,
+          "cheapest_trough_window": "03:00\u201305:00",
+          "avg_trough_spot_ore_kwh": 12.99,
+          "peak_spike_window": "15:00\u201321:00",
+          "max_peak_spot_ore_kwh": 118.28,
+          "breakeven_peak_spot_ore_kwh": 41.57,
+          "recommended_grid_precharge_kwh": 12.2,
+          "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+          "active_control_enabled": false,
+          "hourly_schedule_24h": [
+            {
+              "hour": "00:00",
+              "action": "HOLD_FOR_PEAK",
+              "spot_ore": 30.78,
+              "import_sek": 1.165,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.548,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 12.5,
+              "default_soc_pct": 9.4
+            },
+            {
+              "hour": "01:00",
+              "action": "HOLD_FOR_PEAK",
+              "spot_ore": 16.3,
+              "import_sek": 0.984,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.524,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 12.5,
+              "default_soc_pct": 6.4
+            },
+            {
+              "hour": "02:00",
+              "action": "HOLD_FOR_PEAK",
+              "spot_ore": 14.01,
+              "import_sek": 0.955,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.512,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 12.5,
+              "default_soc_pct": 3.5
+            },
+            {
+              "hour": "03:00",
+              "action": "GRID_PRECHARGE",
+              "spot_ore": 12.81,
+              "import_sek": 0.94,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.578,
+              "precharge_kwh": 6.5,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 41.0,
+              "default_soc_pct": 0.2
+            },
+            {
+              "hour": "04:00",
+              "action": "GRID_PRECHARGE",
+              "spot_ore": 13.2,
+              "import_sek": 0.945,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.626,
+              "precharge_kwh": 5.704,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 66.0,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "05:00",
+              "action": "HOLD_FOR_PEAK",
+              "spot_ore": 16.9,
+              "import_sek": 0.991,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.67,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 66.0,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "06:00",
+              "action": "HOLD_FOR_PEAK",
+              "spot_ore": 37.29,
+              "import_sek": 1.246,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.812,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 66.0,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "07:00",
+              "action": "SELF_CONSUMPTION",
+              "spot_ore": 77.81,
+              "import_sek": 1.753,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.825,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.825,
+              "shadow_soc_pct": 61.3,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "08:00",
+              "action": "SELF_CONSUMPTION",
+              "spot_ore": 77.36,
+              "import_sek": 1.747,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.866,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.866,
+              "shadow_soc_pct": 56.3,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "09:00",
+              "action": "SELF_CONSUMPTION",
+              "spot_ore": 49.78,
+              "import_sek": 1.402,
+              "pv_kwh": 0.234,
+              "load_kwh": 0.785,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.551,
+              "shadow_soc_pct": 53.2,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "10:00",
+              "action": "IDLE",
+              "spot_ore": 49.03,
+              "import_sek": 1.393,
+              "pv_kwh": 0.65,
+              "load_kwh": 0.682,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.032,
+              "shadow_soc_pct": 53.0,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "11:00",
+              "action": "SOLAR_CHARGE",
+              "spot_ore": 48.44,
+              "import_sek": 1.385,
+              "pv_kwh": 0.943,
+              "load_kwh": 0.72,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 54.0,
+              "default_soc_pct": 1.0
+            },
+            {
+              "hour": "12:00",
+              "action": "SOLAR_CHARGE",
+              "spot_ore": 54.2,
+              "import_sek": 1.458,
+              "pv_kwh": 0.909,
+              "load_kwh": 0.779,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.0,
+              "shadow_soc_pct": 54.5,
+              "default_soc_pct": 1.5
+            },
+            {
+              "hour": "13:00",
+              "action": "SELF_CONSUMPTION",
+              "spot_ore": 73.56,
+              "import_sek": 1.7,
+              "pv_kwh": 0.578,
+              "load_kwh": 0.727,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.149,
+              "shadow_soc_pct": 53.7,
+              "default_soc_pct": 0.7
+            },
+            {
+              "hour": "14:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 99.41,
+              "import_sek": 2.023,
+              "pv_kwh": 0.197,
+              "load_kwh": 0.762,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.565,
+              "shadow_soc_pct": 50.5,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "15:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 113.1,
+              "import_sek": 2.194,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.819,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.819,
+              "shadow_soc_pct": 45.8,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "16:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 115.27,
+              "import_sek": 2.221,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.925,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.925,
+              "shadow_soc_pct": 40.5,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "17:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 118.28,
+              "import_sek": 2.259,
+              "pv_kwh": 0.0,
+              "load_kwh": 1.039,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 1.039,
+              "shadow_soc_pct": 34.6,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "18:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 111.48,
+              "import_sek": 2.174,
+              "pv_kwh": 0.0,
+              "load_kwh": 1.132,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 1.132,
+              "shadow_soc_pct": 28.1,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "19:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 110.39,
+              "import_sek": 2.16,
+              "pv_kwh": 0.0,
+              "load_kwh": 1.183,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 1.183,
+              "shadow_soc_pct": 21.4,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "20:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 104.1,
+              "import_sek": 2.081,
+              "pv_kwh": 0.0,
+              "load_kwh": 1.082,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 1.082,
+              "shadow_soc_pct": 15.2,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "21:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 98.9,
+              "import_sek": 2.016,
+              "pv_kwh": 0.0,
+              "load_kwh": 1.125,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 1.125,
+              "shadow_soc_pct": 8.8,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "22:00",
+              "action": "PEAK_DISCHARGE",
+              "spot_ore": 97.02,
+              "import_sek": 1.993,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.889,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.889,
+              "shadow_soc_pct": 3.7,
+              "default_soc_pct": 0.0
+            },
+            {
+              "hour": "23:00",
+              "action": "SELF_CONSUMPTION",
+              "spot_ore": 83.01,
+              "import_sek": 1.818,
+              "pv_kwh": 0.0,
+              "load_kwh": 0.653,
+              "precharge_kwh": 0.0,
+              "discharge_kwh": 0.653,
+              "shadow_soc_pct": 0.0,
+              "default_soc_pct": 0.0
+            }
+          ]
+        },
+        "ha_rest_payload": {
+          "state": "GRID_PRECHARGE",
+          "attributes": {
+            "friendly_name": "MySunshine Shadow Dispatch Action",
+            "icon": "mdi:battery-charging-wireless",
+            "integration": "mysunshine",
+            "target_date": "2026-11-15",
+            "focus_hour": "03:00",
+            "headline_recommendation": "Pre-charge 12.2 kWh between 03:00\u201305:00 at avg 13.0 \u00f6re/kWh (efficiency gate break-even: 41.6 \u00f6re/kWh) and hold for 15:00\u201321:00 peak spike (up to 118.3 \u00f6re/kWh) to save +9.65 SEK vs. default self-consumption.",
+            "efficiency_gate_passed": true,
+            "cheapest_trough_window": "03:00\u201305:00",
+            "avg_trough_spot_ore_kwh": 12.99,
+            "peak_spike_window": "15:00\u201321:00",
+            "max_peak_spot_ore_kwh": 118.28,
+            "breakeven_peak_spot_ore_kwh": 41.57,
+            "recommended_grid_precharge_kwh": 12.2,
+            "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+            "active_control_enabled": false,
+            "hourly_schedule_24h": [
+              {
+                "hour": "00:00",
+                "action": "HOLD_FOR_PEAK",
+                "spot_ore": 30.78,
+                "import_sek": 1.165,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.548,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 12.5,
+                "default_soc_pct": 9.4
+              },
+              {
+                "hour": "01:00",
+                "action": "HOLD_FOR_PEAK",
+                "spot_ore": 16.3,
+                "import_sek": 0.984,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.524,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 12.5,
+                "default_soc_pct": 6.4
+              },
+              {
+                "hour": "02:00",
+                "action": "HOLD_FOR_PEAK",
+                "spot_ore": 14.01,
+                "import_sek": 0.955,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.512,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 12.5,
+                "default_soc_pct": 3.5
+              },
+              {
+                "hour": "03:00",
+                "action": "GRID_PRECHARGE",
+                "spot_ore": 12.81,
+                "import_sek": 0.94,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.578,
+                "precharge_kwh": 6.5,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 41.0,
+                "default_soc_pct": 0.2
+              },
+              {
+                "hour": "04:00",
+                "action": "GRID_PRECHARGE",
+                "spot_ore": 13.2,
+                "import_sek": 0.945,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.626,
+                "precharge_kwh": 5.704,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 66.0,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "05:00",
+                "action": "HOLD_FOR_PEAK",
+                "spot_ore": 16.9,
+                "import_sek": 0.991,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.67,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 66.0,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "06:00",
+                "action": "HOLD_FOR_PEAK",
+                "spot_ore": 37.29,
+                "import_sek": 1.246,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.812,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 66.0,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "07:00",
+                "action": "SELF_CONSUMPTION",
+                "spot_ore": 77.81,
+                "import_sek": 1.753,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.825,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.825,
+                "shadow_soc_pct": 61.3,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "08:00",
+                "action": "SELF_CONSUMPTION",
+                "spot_ore": 77.36,
+                "import_sek": 1.747,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.866,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.866,
+                "shadow_soc_pct": 56.3,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "09:00",
+                "action": "SELF_CONSUMPTION",
+                "spot_ore": 49.78,
+                "import_sek": 1.402,
+                "pv_kwh": 0.234,
+                "load_kwh": 0.785,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.551,
+                "shadow_soc_pct": 53.2,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "10:00",
+                "action": "IDLE",
+                "spot_ore": 49.03,
+                "import_sek": 1.393,
+                "pv_kwh": 0.65,
+                "load_kwh": 0.682,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.032,
+                "shadow_soc_pct": 53.0,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "11:00",
+                "action": "SOLAR_CHARGE",
+                "spot_ore": 48.44,
+                "import_sek": 1.385,
+                "pv_kwh": 0.943,
+                "load_kwh": 0.72,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 54.0,
+                "default_soc_pct": 1.0
+              },
+              {
+                "hour": "12:00",
+                "action": "SOLAR_CHARGE",
+                "spot_ore": 54.2,
+                "import_sek": 1.458,
+                "pv_kwh": 0.909,
+                "load_kwh": 0.779,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "shadow_soc_pct": 54.5,
+                "default_soc_pct": 1.5
+              },
+              {
+                "hour": "13:00",
+                "action": "SELF_CONSUMPTION",
+                "spot_ore": 73.56,
+                "import_sek": 1.7,
+                "pv_kwh": 0.578,
+                "load_kwh": 0.727,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.149,
+                "shadow_soc_pct": 53.7,
+                "default_soc_pct": 0.7
+              },
+              {
+                "hour": "14:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 99.41,
+                "import_sek": 2.023,
+                "pv_kwh": 0.197,
+                "load_kwh": 0.762,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.565,
+                "shadow_soc_pct": 50.5,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "15:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 113.1,
+                "import_sek": 2.194,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.819,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.819,
+                "shadow_soc_pct": 45.8,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "16:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 115.27,
+                "import_sek": 2.221,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.925,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.925,
+                "shadow_soc_pct": 40.5,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "17:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 118.28,
+                "import_sek": 2.259,
+                "pv_kwh": 0.0,
+                "load_kwh": 1.039,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 1.039,
+                "shadow_soc_pct": 34.6,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "18:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 111.48,
+                "import_sek": 2.174,
+                "pv_kwh": 0.0,
+                "load_kwh": 1.132,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 1.132,
+                "shadow_soc_pct": 28.1,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "19:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 110.39,
+                "import_sek": 2.16,
+                "pv_kwh": 0.0,
+                "load_kwh": 1.183,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 1.183,
+                "shadow_soc_pct": 21.4,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "20:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 104.1,
+                "import_sek": 2.081,
+                "pv_kwh": 0.0,
+                "load_kwh": 1.082,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 1.082,
+                "shadow_soc_pct": 15.2,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "21:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 98.9,
+                "import_sek": 2.016,
+                "pv_kwh": 0.0,
+                "load_kwh": 1.125,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 1.125,
+                "shadow_soc_pct": 8.8,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "22:00",
+                "action": "PEAK_DISCHARGE",
+                "spot_ore": 97.02,
+                "import_sek": 1.993,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.889,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.889,
+                "shadow_soc_pct": 3.7,
+                "default_soc_pct": 0.0
+              },
+              {
+                "hour": "23:00",
+                "action": "SELF_CONSUMPTION",
+                "spot_ore": 83.01,
+                "import_sek": 1.818,
+                "pv_kwh": 0.0,
+                "load_kwh": 0.653,
+                "precharge_kwh": 0.0,
+                "discharge_kwh": 0.653,
+                "shadow_soc_pct": 0.0,
+                "default_soc_pct": 0.0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_breakeven_spot_ore",
+        "state": 41.57,
+        "friendly_name": "MySunshine Arbitrage Break-Even Spot Price",
+        "unit_of_measurement": "\u00f6re/kWh",
+        "device_class": null,
+        "state_class": "measurement",
+        "icon": "mdi:scale-balance",
+        "attributes": {
+          "friendly_name": "MySunshine Arbitrage Break-Even Spot Price",
+          "icon": "mdi:scale-balance",
+          "integration": "mysunshine",
+          "unit_of_measurement": "\u00f6re/kWh",
+          "state_class": "measurement",
+          "formula": "C_import(t_peak) > C_import(t_trough) / eta_rt + 0.05 SEK/kWh",
+          "roundtrip_efficiency_pct": 76.8,
+          "loss_margin_sek_kwh": 0.05,
+          "avg_trough_spot_ore_kwh": 12.99,
+          "avg_trough_import_sek_kwh": 0.94,
+          "breakeven_peak_import_sek_kwh": 1.28,
+          "max_peak_spot_ore_kwh": 118.28,
+          "efficiency_gate_passed": true
+        },
+        "ha_rest_payload": {
+          "state": "41.57",
+          "attributes": {
+            "friendly_name": "MySunshine Arbitrage Break-Even Spot Price",
+            "icon": "mdi:scale-balance",
+            "integration": "mysunshine",
+            "unit_of_measurement": "\u00f6re/kWh",
+            "state_class": "measurement",
+            "formula": "C_import(t_peak) > C_import(t_trough) / eta_rt + 0.05 SEK/kWh",
+            "roundtrip_efficiency_pct": 76.8,
+            "loss_margin_sek_kwh": 0.05,
+            "avg_trough_spot_ore_kwh": 12.99,
+            "avg_trough_import_sek_kwh": 0.94,
+            "breakeven_peak_import_sek_kwh": 1.28,
+            "max_peak_spot_ore_kwh": 118.28,
+            "efficiency_gate_passed": true
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_expected_savings_sek",
+        "state": 9.65,
+        "friendly_name": "MySunshine Next-Day Shadow Arbitrage Gain",
+        "unit_of_measurement": "SEK",
+        "device_class": "monetary",
+        "state_class": "measurement",
+        "icon": "mdi:cash-plus",
+        "attributes": {
+          "friendly_name": "MySunshine Next-Day Shadow Arbitrage Gain",
+          "icon": "mdi:cash-plus",
+          "integration": "mysunshine",
+          "unit_of_measurement": "SEK",
+          "device_class": "monetary",
+          "state_class": "measurement",
+          "target_date": "2026-11-15",
+          "shadow_optimized_bill_sek": 17.57,
+          "default_self_consumption_bill_sek": 27.21,
+          "baseline_no_solar_bill_sek": 34.67,
+          "total_savings_vs_no_solar_sek": 17.1,
+          "weather_condition": "Mostly Cloudy",
+          "avg_cloud_cover_pct": 76.0,
+          "avg_temp_c": 2.6
+        },
+        "ha_rest_payload": {
+          "state": "9.65",
+          "attributes": {
+            "friendly_name": "MySunshine Next-Day Shadow Arbitrage Gain",
+            "icon": "mdi:cash-plus",
+            "integration": "mysunshine",
+            "unit_of_measurement": "SEK",
+            "device_class": "monetary",
+            "state_class": "measurement",
+            "target_date": "2026-11-15",
+            "shadow_optimized_bill_sek": 17.57,
+            "default_self_consumption_bill_sek": 27.21,
+            "baseline_no_solar_bill_sek": 34.67,
+            "total_savings_vs_no_solar_sek": 17.1,
+            "weather_condition": "Mostly Cloudy",
+            "avg_cloud_cover_pct": 76.0,
+            "avg_temp_c": 2.6
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_recommended_precharge_kwh",
+        "state": 12.2,
+        "friendly_name": "MySunshine Recommended Night Pre-Charge",
+        "unit_of_measurement": "kWh",
+        "device_class": "energy",
+        "state_class": "measurement",
+        "icon": "mdi:transmission-tower-import",
+        "attributes": {
+          "friendly_name": "MySunshine Recommended Night Pre-Charge",
+          "icon": "mdi:transmission-tower-import",
+          "integration": "mysunshine",
+          "unit_of_measurement": "kWh",
+          "device_class": "energy",
+          "state_class": "measurement",
+          "target_date": "2026-11-15",
+          "cheapest_trough_window": "03:00\u201305:00",
+          "avg_trough_spot_ore_kwh": 12.99,
+          "initial_soc_kwh": 2.5,
+          "usable_capacity_kwh": 20.0,
+          "max_charge_kw": 6.5
+        },
+        "ha_rest_payload": {
+          "state": "12.2",
+          "attributes": {
+            "friendly_name": "MySunshine Recommended Night Pre-Charge",
+            "icon": "mdi:transmission-tower-import",
+            "integration": "mysunshine",
+            "unit_of_measurement": "kWh",
+            "device_class": "energy",
+            "state_class": "measurement",
+            "target_date": "2026-11-15",
+            "cheapest_trough_window": "03:00\u201305:00",
+            "avg_trough_spot_ore_kwh": 12.99,
+            "initial_soc_kwh": 2.5,
+            "usable_capacity_kwh": 20.0,
+            "max_charge_kw": 6.5
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_next_day_projected_bill_sek",
+        "state": 17.57,
+        "friendly_name": "MySunshine Next-Day Projected Net Bill",
+        "unit_of_measurement": "SEK",
+        "device_class": "monetary",
+        "state_class": "measurement",
+        "icon": "mdi:receipt-text-clock",
+        "attributes": {
+          "friendly_name": "MySunshine Next-Day Projected Net Bill",
+          "icon": "mdi:receipt-text-clock",
+          "integration": "mysunshine",
+          "unit_of_measurement": "SEK",
+          "device_class": "monetary",
+          "state_class": "measurement",
+          "target_date": "2026-11-15",
+          "default_self_consumption_bill_sek": 27.21,
+          "baseline_no_solar_bill_sek": 34.67,
+          "predicted_pv_kwh": 3.51,
+          "predicted_load_kwh": 19.26
+        },
+        "ha_rest_payload": {
+          "state": "17.57",
+          "attributes": {
+            "friendly_name": "MySunshine Next-Day Projected Net Bill",
+            "icon": "mdi:receipt-text-clock",
+            "integration": "mysunshine",
+            "unit_of_measurement": "SEK",
+            "device_class": "monetary",
+            "state_class": "measurement",
+            "target_date": "2026-11-15",
+            "default_self_consumption_bill_sek": 27.21,
+            "baseline_no_solar_bill_sek": 34.67,
+            "predicted_pv_kwh": 3.51,
+            "predicted_load_kwh": 19.26
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_cumulative_savings_sek",
+        "state": 72247.07,
+        "friendly_name": "MySunshine Cumulative Realized Savings",
+        "unit_of_measurement": "SEK",
+        "device_class": "monetary",
+        "state_class": "total_increasing",
+        "icon": "mdi:piggy-bank",
+        "attributes": {
+          "friendly_name": "MySunshine Cumulative Realized Savings",
+          "icon": "mdi:piggy-bank",
+          "integration": "mysunshine",
+          "unit_of_measurement": "SEK",
+          "device_class": "monetary",
+          "state_class": "total_increasing",
+          "installation_start_date": "2021-01-01",
+          "total_days_analyzed": 2143,
+          "net_capex_sek": 315000.0,
+          "remaining_unrecovered_sek": 242752.93,
+          "total_solar_produced_kwh": 49164.1,
+          "total_battery_discharged_kwh": 5736.9,
+          "marginal_battery_contribution_sek": 5412.4,
+          "eem_invoice_audit_match": "24/24 (100%)"
+        },
+        "ha_rest_payload": {
+          "state": "72247.07",
+          "attributes": {
+            "friendly_name": "MySunshine Cumulative Realized Savings",
+            "icon": "mdi:piggy-bank",
+            "integration": "mysunshine",
+            "unit_of_measurement": "SEK",
+            "device_class": "monetary",
+            "state_class": "total_increasing",
+            "installation_start_date": "2021-01-01",
+            "total_days_analyzed": 2143,
+            "net_capex_sek": 315000.0,
+            "remaining_unrecovered_sek": 242752.93,
+            "total_solar_produced_kwh": 49164.1,
+            "total_battery_discharged_kwh": 5736.9,
+            "marginal_battery_contribution_sek": 5412.4,
+            "eem_invoice_audit_match": "24/24 (100%)"
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_capex_recouped_pct",
+        "state": 22.94,
+        "friendly_name": "MySunshine Net Capex Recouped",
+        "unit_of_measurement": "%",
+        "device_class": null,
+        "state_class": "measurement",
+        "icon": "mdi:chart-donut-variant",
+        "attributes": {
+          "friendly_name": "MySunshine Net Capex Recouped",
+          "icon": "mdi:chart-donut-variant",
+          "integration": "mysunshine",
+          "unit_of_measurement": "%",
+          "state_class": "measurement",
+          "cumulative_savings_sek": 72247.07,
+          "net_capex_sek": 315000.0,
+          "gross_capex_sek": 506250.0,
+          "solar_net_capex_sek": 165000.0,
+          "battery_net_capex_sek": 150000.0,
+          "remaining_unrecovered_sek": 242752.93
+        },
+        "ha_rest_payload": {
+          "state": "22.94",
+          "attributes": {
+            "friendly_name": "MySunshine Net Capex Recouped",
+            "icon": "mdi:chart-donut-variant",
+            "integration": "mysunshine",
+            "unit_of_measurement": "%",
+            "state_class": "measurement",
+            "cumulative_savings_sek": 72247.07,
+            "net_capex_sek": 315000.0,
+            "gross_capex_sek": 506250.0,
+            "solar_net_capex_sek": 165000.0,
+            "battery_net_capex_sek": 150000.0,
+            "remaining_unrecovered_sek": 242752.93
+          }
+        }
+      },
+      {
+        "entity_id": "sensor.mysunshine_backtest_121d_upside_sek",
+        "state": 144.39,
+        "friendly_name": "MySunshine 121-Day Shadow Backtest Upside",
+        "unit_of_measurement": "SEK",
+        "device_class": "monetary",
+        "state_class": "measurement",
+        "icon": "mdi:chart-timeline-variant-shimmer",
+        "attributes": {
+          "friendly_name": "MySunshine 121-Day Shadow Backtest Upside",
+          "icon": "mdi:chart-timeline-variant-shimmer",
+          "integration": "mysunshine",
+          "unit_of_measurement": "SEK",
+          "device_class": "monetary",
+          "state_class": "measurement",
+          "period_start": "2026-07-16",
+          "period_end": "2026-11-13",
+          "total_days": 121,
+          "total_hours": 2905,
+          "predictive_out_of_sample_upside_sek": 109.05,
+          "oracle_upside_vs_default_sc_sek": 144.39,
+          "oracle_upside_vs_raw_sonnen_ct_sek": 247.12,
+          "pv_mae_kwh_day": 4.47,
+          "load_mae_kwh_day": 3.89,
+          "bill_mae_sek_day": 4.66,
+          "grid_precharge_days_count": 20,
+          "smart_hold_days_count": 6
+        },
+        "ha_rest_payload": {
+          "state": "144.39",
+          "attributes": {
+            "friendly_name": "MySunshine 121-Day Shadow Backtest Upside",
+            "icon": "mdi:chart-timeline-variant-shimmer",
+            "integration": "mysunshine",
+            "unit_of_measurement": "SEK",
+            "device_class": "monetary",
+            "state_class": "measurement",
+            "period_start": "2026-07-16",
+            "period_end": "2026-11-13",
+            "total_days": 121,
+            "total_hours": 2905,
+            "predictive_out_of_sample_upside_sek": 109.05,
+            "oracle_upside_vs_default_sc_sek": 144.39,
+            "oracle_upside_vs_raw_sonnen_ct_sek": 247.12,
+            "pv_mae_kwh_day": 4.47,
+            "load_mae_kwh_day": 3.89,
+            "bill_mae_sek_day": 4.66,
+            "grid_precharge_days_count": 20,
+            "smart_hold_days_count": 6
+          }
+        }
+      },
+      {
+        "entity_id": "binary_sensor.mysunshine_efficiency_gate_passed",
+        "state": "on",
+        "friendly_name": "MySunshine Arbitrage Efficiency Gate Passed",
+        "unit_of_measurement": null,
+        "device_class": "power",
+        "state_class": null,
+        "icon": "mdi:gate-arrow-right",
+        "attributes": {
+          "friendly_name": "MySunshine Arbitrage Efficiency Gate Passed",
+          "icon": "mdi:gate-arrow-right",
+          "integration": "mysunshine",
+          "device_class": "power",
+          "target_date": "2026-11-15",
+          "breakeven_peak_spot_ore_kwh": 41.57,
+          "max_peak_spot_ore_kwh": 118.28,
+          "recommended_grid_precharge_kwh": 12.2
+        },
+        "ha_rest_payload": {
+          "state": "on",
+          "attributes": {
+            "friendly_name": "MySunshine Arbitrage Efficiency Gate Passed",
+            "icon": "mdi:gate-arrow-right",
+            "integration": "mysunshine",
+            "device_class": "power",
+            "target_date": "2026-11-15",
+            "breakeven_peak_spot_ore_kwh": 41.57,
+            "max_peak_spot_ore_kwh": 118.28,
+            "recommended_grid_precharge_kwh": 12.2
+          }
+        }
+      },
+      {
+        "entity_id": "input_boolean.mysunshine_active_battery_control",
+        "state": "off",
+        "friendly_name": "MySunshine Active SonnenBatterie 10 Control (Safety Gate)",
+        "unit_of_measurement": null,
+        "device_class": null,
+        "state_class": null,
+        "icon": "mdi:shield-lock-outline",
+        "attributes": {
+          "friendly_name": "MySunshine Active SonnenBatterie 10 Control (Safety Gate)",
+          "icon": "mdi:shield-lock-outline",
+          "integration": "mysunshine",
+          "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+          "env_opt_in_enabled": false,
+          "ha_switch_on": false,
+          "sonnen_endpoint": "http://192.168.3.125",
+          "default_safe_mode": "EM_OperatingMode=2 (Automatic Self-Consumption)",
+          "warning": "Keep OFF for Shadow Mode telemetry only. Enabling requires both MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true and this switch ON."
+        },
+        "ha_rest_payload": {
+          "state": "off",
+          "attributes": {
+            "friendly_name": "MySunshine Active SonnenBatterie 10 Control (Safety Gate)",
+            "icon": "mdi:shield-lock-outline",
+            "integration": "mysunshine",
+            "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+            "env_opt_in_enabled": false,
+            "ha_switch_on": false,
+            "sonnen_endpoint": "http://192.168.3.125",
+            "default_safe_mode": "EM_OperatingMode=2 (Automatic Self-Consumption)",
+            "warning": "Keep OFF for Shadow Mode telemetry only. Enabling requires both MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true and this switch ON."
+          }
+        }
+      }
+    ],
+    "sonnen_command_previews": [
+      {
+        "hour": 0,
+        "timestamp_local": "2026-11-15T00:00:00+01:00",
+        "shadow_action": "HOLD_FOR_PEAK",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Hold / Zero-Discharge Setpoint (EM_OperatingMode=1, 0 W)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/discharge/0",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_discharge_w": 0
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 1,
+        "timestamp_local": "2026-11-15T01:00:00+01:00",
+        "shadow_action": "HOLD_FOR_PEAK",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Hold / Zero-Discharge Setpoint (EM_OperatingMode=1, 0 W)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/discharge/0",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_discharge_w": 0
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 2,
+        "timestamp_local": "2026-11-15T02:00:00+01:00",
+        "shadow_action": "HOLD_FOR_PEAK",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Hold / Zero-Discharge Setpoint (EM_OperatingMode=1, 0 W)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/discharge/0",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_discharge_w": 0
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 3,
+        "timestamp_local": "2026-11-15T03:00:00+01:00",
+        "shadow_action": "GRID_PRECHARGE",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Charge Setpoint (EM_OperatingMode=1)",
+        "target_power_watts": 6500,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/charge/6500",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_charge_w": 6500
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 4,
+        "timestamp_local": "2026-11-15T04:00:00+01:00",
+        "shadow_action": "GRID_PRECHARGE",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Charge Setpoint (EM_OperatingMode=1)",
+        "target_power_watts": 5704,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/charge/5704",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_charge_w": 5704
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 5,
+        "timestamp_local": "2026-11-15T05:00:00+01:00",
+        "shadow_action": "HOLD_FOR_PEAK",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Hold / Zero-Discharge Setpoint (EM_OperatingMode=1, 0 W)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/discharge/0",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_discharge_w": 0
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 6,
+        "timestamp_local": "2026-11-15T06:00:00+01:00",
+        "shadow_action": "HOLD_FOR_PEAK",
+        "target_operating_mode": 1,
+        "target_operating_mode_label": "Manual API Hold / Zero-Discharge Setpoint (EM_OperatingMode=1, 0 W)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/setpoint/discharge/0",
+        "http_method": "POST",
+        "payload": {
+          "EM_OperatingMode": "1",
+          "setpoint_discharge_w": 0
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 7,
+        "timestamp_local": "2026-11-15T07:00:00+01:00",
+        "shadow_action": "SELF_CONSUMPTION",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 8,
+        "timestamp_local": "2026-11-15T08:00:00+01:00",
+        "shadow_action": "SELF_CONSUMPTION",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 9,
+        "timestamp_local": "2026-11-15T09:00:00+01:00",
+        "shadow_action": "SELF_CONSUMPTION",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 10,
+        "timestamp_local": "2026-11-15T10:00:00+01:00",
+        "shadow_action": "IDLE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 11,
+        "timestamp_local": "2026-11-15T11:00:00+01:00",
+        "shadow_action": "SOLAR_CHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 12,
+        "timestamp_local": "2026-11-15T12:00:00+01:00",
+        "shadow_action": "SOLAR_CHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 13,
+        "timestamp_local": "2026-11-15T13:00:00+01:00",
+        "shadow_action": "SELF_CONSUMPTION",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 14,
+        "timestamp_local": "2026-11-15T14:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 565,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 565
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 15,
+        "timestamp_local": "2026-11-15T15:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 819,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 819
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 16,
+        "timestamp_local": "2026-11-15T16:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 925,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 925
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 17,
+        "timestamp_local": "2026-11-15T17:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 1039,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 1039
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 18,
+        "timestamp_local": "2026-11-15T18:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 1132,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 1132
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 19,
+        "timestamp_local": "2026-11-15T19:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 1183,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 1183
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 20,
+        "timestamp_local": "2026-11-15T20:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 1082,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 1082
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 21,
+        "timestamp_local": "2026-11-15T21:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 1125,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 1125
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 22,
+        "timestamp_local": "2026-11-15T22:00:00+01:00",
+        "shadow_action": "PEAK_DISCHARGE",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Self-Consumption Peak Shaving (EM_OperatingMode=2)",
+        "target_power_watts": 889,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2",
+          "expected_peak_shave_w": 889
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      },
+      {
+        "hour": 23,
+        "timestamp_local": "2026-11-15T23:00:00+01:00",
+        "shadow_action": "SELF_CONSUMPTION",
+        "target_operating_mode": 2,
+        "target_operating_mode_label": "Automatic Self-Consumption (EM_OperatingMode=2)",
+        "target_power_watts": 0,
+        "endpoint": "http://192.168.3.125/api/v2/configurations",
+        "http_method": "PUT",
+        "payload": {
+          "EM_OperatingMode": "2"
+        },
+        "would_actuate": false,
+        "safety_gate_status": "LOCKED_SHADOW_MODE_ONLY",
+        "blocked_reason": "Shadow Mode Safety Gate Active (MYSUNSHINE_ACTIVE_CONTROL_ENABLED=false, input_boolean.mysunshine_active_battery_control=off): physical Sonnen API write blocked; telemetry recorded for shadow verification."
+      }
+    ],
+    "hardware_telemetry": {
+      "home_assistant": {
+        "url": "http://192.168.3.138:8123",
+        "token_configured": false,
+        "rest_api_endpoint": "http://192.168.3.138:8123/api/states"
+      },
+      "sonnen_batterie_10": {
+        "url": "http://192.168.3.125",
+        "model": "SonnenBatterie 10 performance (Dual 22 kWh / 20 kWh usable)",
+        "source": "offline_deterministic_snapshot",
+        "endpoint": "/api/v2/status",
+        "usoc_pct": 12.5,
+        "rsoc_pct": 17.0,
+        "remaining_capacity_kwh": 2.5,
+        "usable_capacity_kwh": 20.0,
+        "nominal_capacity_kwh": 22.0,
+        "pac_total_w": 0,
+        "production_w": 0,
+        "consumption_w": 680,
+        "grid_feedin_w": -680,
+        "em_operating_mode": 2,
+        "em_operating_mode_label": "Automatic Self-Consumption (Eigenverbrauch)",
+        "battery_charging": false,
+        "battery_discharging": false,
+        "system_status": "OnGrid"
+      },
+      "sma_inverter": {
+        "url": "http://192.168.3.61",
+        "model": "SMA Sunny Tripower STP8.0-3AV-40 (8.0 kW 3-phase)",
+        "status": "Ok / Night Standby (0 W)"
+      }
+    },
+    "configuration_yaml_snippet": "# MySunshine Home Assistant Green Package (configuration.yaml)\ninput_boolean:\n  mysunshine_active_battery_control:\n    name: \"MySunshine Active SonnenBatterie 10 Control (Safety Gate)\"\n    initial: false\n    icon: mdi:shield-lock-outline\n\nrest_command:\n  sonnen_set_operating_mode:\n    url: \"http://192.168.3.125/api/v2/configurations\"\n    method: PUT\n    headers:\n      Auth-Token: !secret sonnen_api_token\n      Content-Type: application/json\n    payload: '{\"EM_OperatingMode\": \"{{ mode }}\"}'\n  sonnen_charge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/charge/{{ watts }}\"\n    method: POST\n    headers:\n      Auth-Token: !secret sonnen_api_token\n  sonnen_discharge_setpoint_w:\n    url: \"http://192.168.3.125/api/v2/setpoint/discharge/{{ watts }}\"\n    method: POST\n    headers:\n      Auth-Token: !secret sonnen_api_token\n",
+    "automations_yaml_snippet": "# MySunshine Safety-Gated Arbitrage Automation Blueprint (automations.yaml)\n- id: mysunshine_shadow_or_active_dispatch\n  alias: \"MySunshine \u2014 Hourly Shadow / Safety-Gated Sonnen Dispatch\"\n  mode: single\n  trigger:\n    - platform: time_pattern\n      minutes: 0\n  condition:\n    - condition: state\n      entity_id: input_boolean.mysunshine_active_battery_control\n      state: \"on\"\n    - condition: state\n      entity_id: binary_sensor.mysunshine_efficiency_gate_passed\n      state: \"on\"\n  action:\n    - choose:\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"GRID_PRECHARGE\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_charge_setpoint_w\n              data:\n                watts: 6200\n        - conditions:\n            - condition: state\n              entity_id: sensor.mysunshine_shadow_action\n              state: \"HOLD_FOR_PEAK\"\n          sequence:\n            - service: rest_command.sonnen_set_operating_mode\n              data:\n                mode: \"1\"\n            - service: rest_command.sonnen_discharge_setpoint_w\n              data:\n                watts: 0\n      default:\n        - service: rest_command.sonnen_set_operating_mode\n          data:\n            mode: \"2\"\n",
+    "mqtt_discovery_topic_prefix": "homeassistant"
   },
   "high_res_30d": {
     "period": {

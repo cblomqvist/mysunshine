@@ -308,8 +308,14 @@ flowchart TD
 * **Verification Gate**:
   * Automated forecast pipeline and 121-day backtesting accuracy metrics report (`PV MAE = 4.47 kWh/day`, `Load MAE = 3.89 kWh/day`, `Bill MAE = 4.66 SEK/day`); 53/53 CI tests passing.
 
-### Phase 3 (Future): Home Assistant Custom Integration & Active Control
-* **Deliverables**: Home Assistant custom sensors, long-term statistics entity, and optional automated battery dispatch after predictive model verification.
+### Milestone 7 (Phase 3): Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge (Completed)
+* **Branch**: `feat/m7-ha-shadow-telemetry-bridge`
+* **Deliverables**:
+  * `7.1 Home Assistant Custom Sensor Models & Long-Term Statistics`: Built `HomeAssistantEntityPayload` and `HomeAssistantStatePackage` (`src/ha_integration/sensor_models.py`) exposing 10 custom Home Assistant entities via `/api/states/<entity_id>`, including `sensor.mysunshine_shadow_action`, `sensor.mysunshine_breakeven_spot_ore`, `sensor.mysunshine_expected_savings_sek`, `sensor.mysunshine_recommended_precharge_kwh`, `sensor.mysunshine_next_day_projected_bill_sek`, `sensor.mysunshine_cumulative_savings_sek` (`state_class: total_increasing`), `sensor.mysunshine_capex_recouped_pct`, `sensor.mysunshine_backtest_121d_upside_sek`, `binary_sensor.mysunshine_efficiency_gate_passed`, and `input_boolean.mysunshine_active_battery_control`.
+  * `7.2 Dual Hardware Safety Actuation Gate`: Built `SonnenSafetyActuationGate` ensuring physical SonnenBatterie 10 API v2 writes (`/api/v2/configurations` and `/api/v2/setpoint/charge|discharge/<watts>`) remain strictly blocked (`LOCKED_SHADOW_MODE_ONLY`) unless both `MYSUNSHINE_ACTIVE_CONTROL_ENABLED=true` and `input_boolean.mysunshine_active_battery_control=on` are explicitly enabled.
+  * `7.3 Live Telemetry Bridge & Dashboard Integration`: Built `HomeAssistantTelemetryBridge` (`src/ha_integration/telemetry_bridge.py`) normalizing SonnenBatterie 10 `/api/v2/status` telemetry (`192.168.3.125`), Home Assistant Green REST push (`192.168.3.138:8123`), and ready-to-paste `configuration.yaml` / `automations.yaml` blueprints, integrated into the web dashboard (**Home Assistant Bridge** tab).
+* **Verification Gate**:
+  * All 10 custom Home Assistant entities, 24-hour safety-gated Sonnen command previews, and dry-run REST publication verified; 57/57 CI unit and integration tests passing.
 
 ---
 
