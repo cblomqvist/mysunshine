@@ -53,7 +53,49 @@ const lblStepFwdFull = document.getElementById('lbl-step-fwd-full');
 // Multi-Day Dispatch Window State (defaults to Latest Available 24h)
 const dispatchExplorerState = {
     spanHours: 24,
-    endIndex: null // exclusive index into high_res_30d.hourly_data; null = latest end
+    centerOnTimestamp: false,
+    anchorIndex: null, // index into hourly_data representing either Start Timestamp (if centerOnTimestamp=false) or Center Timestamp (if centerOnTimestamp=true)
+    endIndex: null     // exclusive index into high_res_30d.hourly_data; null = latest end
+};
+
+// Exact Time Span & Center Controls DOM Elements
+const inputTsDate = document.getElementById('input-ts-date');
+const btnToggleCalendar = document.getElementById('btn-toggle-calendar');
+const isoCalendarPopover = document.getElementById('iso-calendar-popover');
+const isoCalMonthTitle = document.getElementById('iso-cal-month-title');
+const isoCalDaysGrid = document.getElementById('iso-cal-days-grid');
+const isoCalBoundsHint = document.getElementById('iso-cal-bounds-hint');
+const btnCalPrevMonth = document.getElementById('btn-cal-prev-month');
+const btnCalNextMonth = document.getElementById('btn-cal-next-month');
+const btnCalJumpLatest = document.getElementById('btn-cal-jump-latest');
+const btnCalOk = document.getElementById('btn-cal-ok');
+const customTimestampPickerWrapper = document.getElementById('custom-timestamp-picker-wrapper');
+
+const inputTsHour = document.getElementById('input-ts-hour');
+const btnTsHourUp = document.getElementById('btn-ts-hour-up');
+const btnTsHourDown = document.getElementById('btn-ts-hour-down');
+const btnApplyTimestampOk = document.getElementById('btn-apply-timestamp-ok');
+const lblAnchorDatetime = document.getElementById('lbl-anchor-datetime');
+const btnToggleCenterRange = document.getElementById('btn-toggle-center-range');
+const lblCenterRangeMode = document.getElementById('lbl-center-range-mode');
+const inputSpanDays = document.getElementById('input-span-days');
+const btnSpanDaysUp = document.getElementById('btn-span-days-up');
+const btnSpanDaysDown = document.getElementById('btn-span-days-down');
+const inputRangeHours = document.getElementById('input-range-hours');
+const btnRangeHoursUp = document.getElementById('btn-range-hours-up');
+const btnRangeHoursDown = document.getElementById('btn-range-hours-down');
+const inViewTimestampsText = document.getElementById('in-view-timestamps-text');
+const inViewDurationPill = document.getElementById('in-view-duration-pill');
+
+// Custom Monday-First (ISO-8601) Calendar Popover State
+const isoCalendarState = {
+    isOpen: false,
+    viewYear: 2026,
+    viewMonth: 10, // 0-indexed (10 = November)
+    pendingDateStr: null,
+    availableDatesSet: new Set(),
+    minDateStr: '2026-07-16',
+    maxDateStr: '2026-11-26'
 };
 
 // Dispatch Metric Visibility State (defaults to show all)
@@ -278,6 +320,131 @@ function setupEventListeners() {
         });
     });
 
+    // Exact Timestamp (Editable YYYY-MM-DD + Monday-First Calendar Popover + Hour + OK Button)
+    if (btnApplyTimestampOk) {
+        btnApplyTimestampOk.addEventListener('click', () => {
+            closeIsoCalendarPopover();
+            applyCustomTimestampAndRangeInputs();
+        });
+    }
+
+    if (inputTsDate) {
+        inputTsDate.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                closeIsoCalendarPopover();
+                applyCustomTimestampAndRangeInputs();
+            } else if (e.key === 'Escape') {
+                closeIsoCalendarPopover();
+            }
+        });
+    }
+
+    if (btnToggleCalendar) {
+        btnToggleCalendar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isoCalendarState.isOpen) {
+                closeIsoCalendarPopover();
+            } else {
+                openIsoCalendarPopover();
+            }
+        });
+    }
+
+    if (btnCalPrevMonth) {
+        btnCalPrevMonth.addEventListener('click', (e) => {
+            e.stopPropagation();
+            stepIsoCalendarMonth(-1);
+        });
+    }
+
+    if (btnCalNextMonth) {
+        btnCalNextMonth.addEventListener('click', (e) => {
+            e.stopPropagation();
+            stepIsoCalendarMonth(1);
+        });
+    }
+
+    if (btnCalJumpLatest) {
+        btnCalJumpLatest.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isoCalendarState.maxDateStr) {
+                isoCalendarState.pendingDateStr = isoCalendarState.maxDateStr;
+                if (inputTsDate) inputTsDate.value = isoCalendarState.maxDateStr;
+                const parts = isoCalendarState.maxDateStr.split('-');
+                isoCalendarState.viewYear = parseInt(parts[0], 10);
+                isoCalendarState.viewMonth = parseInt(parts[1], 10) - 1;
+                renderIsoCalendarGrid();
+            }
+        });
+    }
+
+    if (btnCalOk) {
+        btnCalOk.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isoCalendarState.pendingDateStr && inputTsDate) {
+                inputTsDate.value = isoCalendarState.pendingDateStr;
+            }
+            closeIsoCalendarPopover();
+            applyCustomTimestampAndRangeInputs();
+        });
+    }
+
+    // Close calendar popover when clicking outside
+    document.addEventListener('click', (e) => {
+        if (isoCalendarState.isOpen && customTimestampPickerWrapper && !customTimestampPickerWrapper.contains(e.target)) {
+            closeIsoCalendarPopover();
+        }
+    });
+
+    if (btnTsHourUp) {
+        btnTsHourUp.addEventListener('click', () => {
+            stepTimestampHour(1);
+        });
+    }
+    if (btnTsHourDown) {
+        btnTsHourDown.addEventListener('click', () => {
+            stepTimestampHour(-1);
+        });
+    }
+    if (inputTsHour) {
+        inputTsHour.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyCustomTimestampAndRangeInputs();
+        });
+    }
+
+    if (btnToggleCenterRange) {
+        btnToggleCenterRange.addEventListener('click', () => {
+            toggleCenterOnTimestampMode();
+        });
+    }
+
+    if (btnSpanDaysUp) {
+        btnSpanDaysUp.addEventListener('click', () => adjustExactDuration(24));
+    }
+    if (btnSpanDaysDown) {
+        btnSpanDaysDown.addEventListener('click', () => adjustExactDuration(-24));
+    }
+    if (inputSpanDays) {
+        inputSpanDays.addEventListener('change', () => applyManualDurationInputs());
+        inputSpanDays.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyCustomTimestampAndRangeInputs();
+        });
+    }
+
+    if (btnRangeHoursUp) {
+        btnRangeHoursUp.addEventListener('click', () => adjustExactDuration(1));
+    }
+    if (btnRangeHoursDown) {
+        btnRangeHoursDown.addEventListener('click', () => adjustExactDuration(-1));
+    }
+
+    if (inputRangeHours) {
+        inputRangeHours.addEventListener('change', () => applyManualDurationInputs());
+        inputRangeHours.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyCustomTimestampAndRangeInputs();
+        });
+    }
+
     // Dispatch Metric Visibility Toggle Buttons (Default: All Active)
     document.querySelectorAll('[data-dispatch-metric]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -392,11 +559,301 @@ function setupEventListeners() {
     }
 }
 
-function formatSpanDurationLabel(hours) {
-    if (hours >= 48 && hours % 24 === 0) {
-        return `${hours / 24}d`;
+function formatSpanDurationLabel(totalHours) {
+    const d = Math.floor(totalHours / 24);
+    const h = totalHours % 24;
+    if (d > 0 && h === 0) {
+        return `${d}d`;
     }
-    return `${hours}h`;
+    if (d > 0) {
+        return `${d}d ${h}h`;
+    }
+    return `${h}h`;
+}
+
+function formatSpanDaysAndHoursPill(totalHours) {
+    const d = Math.floor(totalHours / 24);
+    const h = totalHours % 24;
+    return `${d}d ${h}h`;
+}
+
+function getEffectiveSpanHourlySlots(totalRecordsCount) {
+    const h = Math.max(1, parseInt(dispatchExplorerState.spanHours, 10) || 24);
+    return Math.min(totalRecordsCount, h);
+}
+
+function formatIndexAsDatetimeLocal(rec, hourOverride = null) {
+    if (!rec) return '';
+    const hr = hourOverride !== null ? hourOverride : rec.hour;
+    return `${rec.date}T${String(hr).padStart(2, '0')}:00`;
+}
+
+function formatDisplayTimestamp(rec, addMinutesOffset = 0) {
+    if (!rec) return '';
+    const baseMs = new Date(`${rec.date}T${String(rec.hour).padStart(2, '0')}:00:00Z`).getTime();
+    const targetDt = new Date(baseMs + addMinutesOffset * 60 * 1000);
+    const yyyy = targetDt.getUTCFullYear();
+    const mm = String(targetDt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(targetDt.getUTCDate()).padStart(2, '0');
+    const hh = String(targetDt.getUTCHours()).padStart(2, '0');
+    const min = String(targetDt.getUTCMinutes()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+}
+
+function recomputeWindowFromAnchor() {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+    const total = hourlyData.length;
+    const slots = getEffectiveSpanHourlySlots(total);
+
+    if (dispatchExplorerState.anchorIndex === null || dispatchExplorerState.anchorIndex === undefined) {
+        dispatchExplorerState.endIndex = total;
+        const startIdx = Math.max(0, total - slots);
+        dispatchExplorerState.anchorIndex = dispatchExplorerState.centerOnTimestamp
+            ? Math.round(startIdx + slots / 2)
+            : startIdx;
+        return;
+    }
+
+    const anchor = Math.max(0, Math.min(total - 1, dispatchExplorerState.anchorIndex));
+    if (dispatchExplorerState.centerOnTimestamp) {
+        // Half before anchor, half after anchor
+        const halfBefore = Math.floor(slots / 2);
+        const startIdx = Math.max(0, Math.min(total - slots, anchor - halfBefore));
+        dispatchExplorerState.endIndex = Math.min(total, startIdx + slots);
+    } else {
+        // Anchor is the exact Start Timestamp
+        const startIdx = Math.max(0, Math.min(total - slots, anchor));
+        dispatchExplorerState.endIndex = Math.min(total, startIdx + slots);
+    }
+}
+
+function toggleCenterOnTimestampMode() {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+    const total = hourlyData.length;
+    const slots = getEffectiveSpanHourlySlots(total);
+    const currentEnd = dispatchExplorerState.endIndex ?? total;
+    const currentStart = Math.max(0, currentEnd - slots);
+
+    dispatchExplorerState.centerOnTimestamp = !dispatchExplorerState.centerOnTimestamp;
+
+    // When toggling Center ON, keep the current anchor timestamp (what's in the datetime box) and center the window around it!
+    // When toggling Center OFF, treat the current anchor timestamp as the Start Timestamp!
+    if (dispatchExplorerState.anchorIndex === null) {
+        dispatchExplorerState.anchorIndex = currentStart;
+    }
+    recomputeWindowFromAnchor();
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+const MONTH_NAMES_FULL = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function openIsoCalendarPopover() {
+    if (!isoCalendarPopover) return;
+    const currentVal = (inputTsDate ? inputTsDate.value.trim() : '') || isoCalendarState.maxDateStr;
+    isoCalendarState.pendingDateStr = currentVal;
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(currentVal);
+    if (match) {
+        isoCalendarState.viewYear = parseInt(match[1], 10);
+        isoCalendarState.viewMonth = parseInt(match[2], 10) - 1;
+    }
+
+    isoCalendarState.isOpen = true;
+    isoCalendarPopover.classList.add('is-open');
+    isoCalendarPopover.setAttribute('aria-hidden', 'false');
+    if (btnToggleCalendar) btnToggleCalendar.classList.add('active');
+    renderIsoCalendarGrid();
+}
+
+function closeIsoCalendarPopover() {
+    if (!isoCalendarPopover) return;
+    isoCalendarState.isOpen = false;
+    isoCalendarPopover.classList.remove('is-open');
+    isoCalendarPopover.setAttribute('aria-hidden', 'true');
+    if (btnToggleCalendar) btnToggleCalendar.classList.remove('active');
+}
+
+function stepIsoCalendarMonth(deltaMonths) {
+    let m = isoCalendarState.viewMonth + deltaMonths;
+    let y = isoCalendarState.viewYear;
+    while (m < 0) {
+        m += 12;
+        y -= 1;
+    }
+    while (m > 11) {
+        m -= 12;
+        y += 1;
+    }
+    isoCalendarState.viewYear = y;
+    isoCalendarState.viewMonth = m;
+    renderIsoCalendarGrid();
+}
+
+function renderIsoCalendarGrid() {
+    if (!isoCalDaysGrid) return;
+    const y = isoCalendarState.viewYear;
+    const m = isoCalendarState.viewMonth;
+
+    if (isoCalMonthTitle) {
+        isoCalMonthTitle.innerText = `${MONTH_NAMES_FULL[m]} ${y}`;
+    }
+
+    // Determine min/max month bounds
+    const minYm = isoCalendarState.minDateStr ? isoCalendarState.minDateStr.substring(0, 7) : '2026-07';
+    const maxYm = isoCalendarState.maxDateStr ? isoCalendarState.maxDateStr.substring(0, 7) : '2026-11';
+    const curYm = `${y}-${String(m + 1).padStart(2, '0')}`;
+
+    if (btnCalPrevMonth) btnCalPrevMonth.disabled = (curYm <= minYm);
+    if (btnCalNextMonth) btnCalNextMonth.disabled = (curYm >= maxYm);
+
+    // ISO-8601 Monday-first weekday calculation:
+    // JS getUTCDay(): 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    // Convert to Monday-first: 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
+    const firstDayOfMonthUtc = new Date(Date.UTC(y, m, 1)).getUTCDay();
+    const mondayFirstOffset = (firstDayOfMonthUtc + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+
+    let html = '';
+    for (let e = 0; e < mondayFirstOffset; e++) {
+        html += '<span class="iso-cal-day is-empty"></span>';
+    }
+
+    for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+        const dStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+        const hasData = isoCalendarState.availableDatesSet.has(dStr);
+        const isSelected = (dStr === isoCalendarState.pendingDateStr);
+        const isLatest = (dStr === isoCalendarState.maxDateStr);
+
+        const classes = ['iso-cal-day'];
+        if (!hasData) classes.push('is-unavailable');
+        if (isSelected) classes.push('is-selected');
+        if (isLatest) classes.push('is-latest');
+
+        const titleStr = hasData
+            ? `${dStr}${isLatest ? ' (Latest Available High-Res Data)' : ''} — Click to select`
+            : `${dStr} — No high-resolution data available`;
+
+        html += `<button type="button" class="${classes.join(' ')}" data-cal-date="${dStr}" ${hasData ? '' : 'disabled'} title="${titleStr}">${dayNum}</button>`;
+    }
+
+    isoCalDaysGrid.innerHTML = html;
+
+    isoCalDaysGrid.querySelectorAll('button[data-cal-date]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const picked = btn.getAttribute('data-cal-date');
+            if (picked) {
+                isoCalendarState.pendingDateStr = picked;
+                if (inputTsDate) inputTsDate.value = picked;
+                renderIsoCalendarGrid();
+            }
+        });
+        btn.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            const picked = btn.getAttribute('data-cal-date');
+            if (picked) {
+                isoCalendarState.pendingDateStr = picked;
+                if (inputTsDate) inputTsDate.value = picked;
+                closeIsoCalendarPopover();
+                applyCustomTimestampAndRangeInputs();
+            }
+        });
+    });
+}
+
+function applyCustomTimestampAndRangeInputs() {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+
+    let rawDatePart = (inputTsDate ? inputTsDate.value.trim() : '') || hourlyData[hourlyData.length - 1].date;
+    // Clamp typed date to valid dataset bounds if outside range
+    if (rawDatePart < isoCalendarState.minDateStr) {
+        rawDatePart = isoCalendarState.minDateStr;
+    } else if (rawDatePart > isoCalendarState.maxDateStr) {
+        rawDatePart = isoCalendarState.maxDateStr;
+    }
+    const datePart = rawDatePart;
+    const hourPart = Math.max(0, Math.min(23, parseInt(inputTsHour ? inputTsHour.value : 0, 10) || 0));
+
+    // Also sync any edited span days + hours when OK is clicked
+    const rawD = Math.max(0, parseInt(inputSpanDays ? inputSpanDays.value : 1, 10) || 0);
+    const rawH = Math.max(0, parseInt(inputRangeHours ? inputRangeHours.value : 0, 10) || 0);
+    const combinedHours = Math.max(1, (rawD * 24) + rawH);
+    dispatchExplorerState.spanHours = Math.min(hourlyData.length, combinedHours);
+
+    // Find matching index in hourlyData
+    let targetIdx = -1;
+    for (let i = 0; i < hourlyData.length; i++) {
+        if (hourlyData[i].date === datePart && hourlyData[i].hour === hourPart) {
+            targetIdx = i;
+            break;
+        }
+        if (hourlyData[i].date === datePart && targetIdx === -1) {
+            targetIdx = i;
+        }
+    }
+
+    if (targetIdx === -1) {
+        // Find nearest available date if user typed a date in a gap
+        let bestDist = Infinity;
+        for (let i = 0; i < hourlyData.length; i++) {
+            const dist = Math.abs(new Date(hourlyData[i].date).getTime() - new Date(datePart).getTime());
+            if (dist < bestDist) {
+                bestDist = dist;
+                targetIdx = i;
+            }
+        }
+    }
+
+    if (targetIdx === -1) targetIdx = hourlyData.length - 1;
+
+    dispatchExplorerState.anchorIndex = targetIdx;
+    recomputeWindowFromAnchor();
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+function stepTimestampHour(deltaHr) {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+    const total = hourlyData.length;
+    const currentAnchor = dispatchExplorerState.anchorIndex ?? Math.max(0, total - 24);
+    dispatchExplorerState.anchorIndex = Math.max(0, Math.min(total - 1, currentAnchor + deltaHr));
+    recomputeWindowFromAnchor();
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+function adjustExactDuration(deltaHours) {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+
+    const nextHours = Math.max(1, Math.min(hourlyData.length, (dispatchExplorerState.spanHours || 24) + deltaHours));
+    dispatchExplorerState.spanHours = nextHours;
+
+    recomputeWindowFromAnchor();
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+function applyManualDurationInputs() {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+
+    const rawD = Math.max(0, parseInt(inputSpanDays ? inputSpanDays.value : 0, 10) || 0);
+    const rawH = Math.max(0, parseInt(inputRangeHours ? inputRangeHours.value : 0, 10) || 0);
+    const combinedHours = Math.max(1, (rawD * 24) + rawH);
+    dispatchExplorerState.spanHours = Math.min(hourlyData.length, combinedHours);
+
+    recomputeWindowFromAnchor();
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
 }
 
 function syncDispatchMetricButtonsUI() {
@@ -625,8 +1082,14 @@ function applyPanelVisibilityState() {
 function jumpToLatest24h() {
     const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
     if (!hourlyData.length) return;
+    const total = hourlyData.length;
     dispatchExplorerState.spanHours = 24;
-    dispatchExplorerState.endIndex = hourlyData.length;
+    dispatchExplorerState.spanMinutes = 0;
+    dispatchExplorerState.endIndex = total;
+    const startIdx = Math.max(0, total - 24);
+    dispatchExplorerState.anchorIndex = dispatchExplorerState.centerOnTimestamp
+        ? Math.round(startIdx + 12)
+        : startIdx;
     updateHourlyDispatchChart();
     updatePresetButtonsState();
 }
@@ -635,23 +1098,21 @@ function jumpToDateInDispatchExplorer(dateStr) {
     const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
     if (!hourlyData.length || !dateStr) return;
 
-    // Find the last hour index belonging to dateStr
-    let lastMatchIdx = -1;
     let firstMatchIdx = -1;
     for (let i = 0; i < hourlyData.length; i++) {
         if (hourlyData[i].date === dateStr) {
-            if (firstMatchIdx === -1) firstMatchIdx = i;
-            lastMatchIdx = i;
+            firstMatchIdx = i;
+            break;
         }
     }
 
     if (firstMatchIdx !== -1) {
-        if (dispatchExplorerState.spanHours <= 24) {
-            dispatchExplorerState.endIndex = lastMatchIdx + 1;
-        } else {
-            // Anchor window starting at 00:00 of selected date (clamped to dataset bounds)
-            dispatchExplorerState.endIndex = Math.min(hourlyData.length, firstMatchIdx + dispatchExplorerState.spanHours);
-        }
+        const slots = getEffectiveSpanHourlySlots(hourlyData.length);
+        // Set start of day as start of window (or center of day if centerOnTimestamp is enabled)
+        dispatchExplorerState.anchorIndex = dispatchExplorerState.centerOnTimestamp
+            ? Math.min(hourlyData.length - 1, firstMatchIdx + Math.floor(slots / 2))
+            : firstMatchIdx;
+        recomputeWindowFromAnchor();
         updateHourlyDispatchChart();
         updatePresetButtonsState();
     }
@@ -661,13 +1122,18 @@ function setDispatchSpanHours(newSpanHours) {
     const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
     if (!hourlyData.length) return;
     const total = hourlyData.length;
-    const clampedSpan = Math.min(total, Math.max(12, newSpanHours));
+    const clampedSpan = Math.min(total, Math.max(1, newSpanHours));
     dispatchExplorerState.spanHours = clampedSpan;
+    dispatchExplorerState.spanMinutes = 0;
 
-    if (dispatchExplorerState.endIndex === null) {
+    if (dispatchExplorerState.anchorIndex !== null) {
+        recomputeWindowFromAnchor();
+    } else {
         dispatchExplorerState.endIndex = total;
-    } else if (dispatchExplorerState.endIndex < clampedSpan) {
-        dispatchExplorerState.endIndex = Math.min(total, clampedSpan);
+        const startIdx = Math.max(0, total - clampedSpan);
+        dispatchExplorerState.anchorIndex = dispatchExplorerState.centerOnTimestamp
+            ? Math.round(startIdx + clampedSpan / 2)
+            : startIdx;
     }
 
     updateHourlyDispatchChart();
@@ -678,12 +1144,16 @@ function stepDispatchWindow(rangeMultiplier) {
     const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
     if (!hourlyData.length) return;
     const total = hourlyData.length;
-    const span = Math.min(total, dispatchExplorerState.spanHours || 24);
+    const slots = getEffectiveSpanHourlySlots(total);
     const currentEnd = dispatchExplorerState.endIndex ?? total;
 
-    const deltaHours = Math.max(1, Math.round(span * Math.abs(rangeMultiplier))) * (rangeMultiplier < 0 ? -1 : 1);
-    const nextEnd = Math.max(span, Math.min(total, currentEnd + deltaHours));
+    const deltaHours = Math.max(1, Math.round(slots * Math.abs(rangeMultiplier))) * (rangeMultiplier < 0 ? -1 : 1);
+    const nextEnd = Math.max(slots, Math.min(total, currentEnd + deltaHours));
     dispatchExplorerState.endIndex = nextEnd;
+    const nextStart = Math.max(0, nextEnd - slots);
+    dispatchExplorerState.anchorIndex = dispatchExplorerState.centerOnTimestamp
+        ? Math.min(total - 1, nextStart + Math.floor(slots / 2))
+        : nextStart;
 
     updateHourlyDispatchChart();
     updatePresetButtonsState();
@@ -692,7 +1162,7 @@ function stepDispatchWindow(rangeMultiplier) {
 function updatePresetButtonsState() {
     const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
     const total = hourlyData.length;
-    const span = dispatchExplorerState.spanHours || 24;
+    const span = getEffectiveSpanHourlySlots(total);
     const endIdx = dispatchExplorerState.endIndex ?? total;
     const startIdx = Math.max(0, endIdx - span);
     const isLatest24h = (span === 24 && endIdx === total);
@@ -711,16 +1181,73 @@ function updatePresetButtonsState() {
     btnPresetVolatility.classList.toggle('active', isSingleDayAligned && feats?.peak_volatility === anchorDate);
     btnPresetCloudy.classList.toggle('active', isSingleDayAligned && feats?.cloudy_day === anchorDate);
 
-    // Sync span buttons
+    // Sync span preset buttons
     document.querySelectorAll('.btn-dispatch-span').forEach(btn => {
         const bHours = parseInt(btn.getAttribute('data-span-hours'), 10);
-        btn.classList.toggle('active', bHours === span);
+        btn.classList.toggle('active', bHours === dispatchExplorerState.spanHours);
     });
 
-    // Update full-range and half-range button labels and disabled states
-    const fullStr = formatSpanDurationLabel(span);
-    const halfHours = Math.max(1, Math.round(span / 2));
-    const halfStr = formatSpanDurationLabel(halfHours);
+    // Sync exact span days (d) and hours (h) inputs (e.g. 24h -> 1d 0h, 23h -> 0d 23h, 25h -> 1d 1h)
+    const spanDaysPart = Math.floor(dispatchExplorerState.spanHours / 24);
+    const spanHoursPart = dispatchExplorerState.spanHours % 24;
+    if (inputSpanDays && document.activeElement !== inputSpanDays) {
+        inputSpanDays.value = spanDaysPart;
+    }
+    if (inputRangeHours && document.activeElement !== inputRangeHours) {
+        inputRangeHours.value = spanHoursPart;
+    }
+
+    // Sync Center Span on Timestamp button & label
+    const isCentered = Boolean(dispatchExplorerState.centerOnTimestamp);
+    if (btnToggleCenterRange) {
+        btnToggleCenterRange.classList.toggle('active', isCentered);
+        btnToggleCenterRange.setAttribute('aria-pressed', String(isCentered));
+    }
+    if (lblCenterRangeMode) {
+        lblCenterRangeMode.innerText = isCentered ? 'Center Span on Timestamp: On (±Half)' : 'Center Span on Timestamp: Off';
+    }
+    if (lblAnchorDatetime) {
+        lblAnchorDatetime.innerHTML = isCentered
+            ? '<i class="fa-solid fa-crosshairs"></i> Center Timestamp:'
+            : '<i class="fa-regular fa-calendar-check"></i> Start Timestamp:';
+    }
+
+    // Sync editable YYYY-MM-DD date input + HH:00 input
+    if (hourlyData.length) {
+        const displayAnchorIdx = isCentered
+            ? Math.min(total - 1, startIdx + Math.floor(span / 2))
+            : startIdx;
+        const anchorRec = hourlyData[displayAnchorIdx];
+        if (anchorRec) {
+            if (inputTsDate && document.activeElement !== inputTsDate) {
+                inputTsDate.value = anchorRec.date;
+            }
+            if (inputTsHour && document.activeElement !== inputTsHour) {
+                inputTsHour.value = String(anchorRec.hour).padStart(2, '0');
+            }
+        }
+    }
+
+    // Update prominent SPAN IN VIEW Start -> End banner
+    if (hourlyData.length) {
+        const firstRec = hourlyData[startIdx];
+        const lastRec = hourlyData[Math.min(total - 1, endIdx - 1)];
+        const startFormatted = formatDisplayTimestamp(firstRec, 0);
+        const endFormatted = `${lastRec.date} ${String(lastRec.hour + 1).padStart(2, '0')}:00`;
+
+        if (inViewTimestampsText) {
+            inViewTimestampsText.innerHTML = `${startFormatted} &rarr; ${endFormatted}`;
+        }
+        if (inViewDurationPill) {
+            const dhStr = formatSpanDaysAndHoursPill(dispatchExplorerState.spanHours);
+            inViewDurationPill.innerText = isCentered ? `${dhStr} (Centered)` : dhStr;
+        }
+    }
+
+    // Update full-span and half-span button labels and disabled states
+    const fullStr = formatSpanDurationLabel(dispatchExplorerState.spanHours);
+    const halfH = Math.max(1, Math.round(dispatchExplorerState.spanHours / 2));
+    const halfStr = formatSpanDurationLabel(halfH);
 
     if (lblStepBackFull) lblStepBackFull.innerText = `-${fullStr}`;
     if (lblStepBackHalf) lblStepBackHalf.innerText = `-${halfStr}`;
@@ -742,7 +1269,16 @@ function populateDispatchDays() {
     dispatchDaySelect.innerHTML = '';
     
     // Show days in chronological order, marking the latest available day
-    const latestDayDate = days[days.length - 1]?.date;
+    const firstDayDate = days[0]?.date || '2026-07-16';
+    const latestDayDate = days[days.length - 1]?.date || '2026-11-26';
+    isoCalendarState.minDateStr = firstDayDate;
+    isoCalendarState.maxDateStr = latestDayDate;
+    isoCalendarState.availableDatesSet = new Set(days.map(d => d.date));
+
+    if (isoCalBoundsHint) {
+        isoCalBoundsHint.innerHTML = `Data: ${firstDayDate} &rarr; ${latestDayDate}`;
+    }
+
     days.forEach(day => {
         const opt = document.createElement('option');
         opt.value = day.date;
@@ -753,7 +1289,9 @@ function populateDispatchDays() {
 
     // Default to Latest Available 24h Data
     dispatchExplorerState.spanHours = 24;
+    dispatchExplorerState.spanMinutes = 0;
     dispatchExplorerState.endIndex = hourlyData.length;
+    dispatchExplorerState.anchorIndex = Math.max(0, hourlyData.length - 24);
     if (latestDayDate) {
         dispatchDaySelect.value = latestDayDate;
     }
@@ -1581,7 +2119,7 @@ function updateHourlyDispatchChart() {
     const ctx = canvas.getContext('2d');
 
     const total = allHourly.length;
-    const span = Math.min(total, Math.max(12, dispatchExplorerState.spanHours || 24));
+    const span = getEffectiveSpanHourlySlots(total);
     if (dispatchExplorerState.endIndex === null || dispatchExplorerState.endIndex > total) {
         dispatchExplorerState.endIndex = total;
     }

@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261128j">
+    <link rel="stylesheet" href="style.css?v=20261128p">
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -373,7 +373,7 @@
                         <div class="collapsible-panel-bar">
                             <div class="collapsible-bar-title">
                                 <i class="fa-solid fa-bolt"></i>
-                                <span>High-Resolution Hourly Dispatch &amp; Spot Price Explorer (Multi-Day Timespan &amp; Range Stepping)</span>
+                                <span>High-Resolution Hourly Dispatch &amp; Spot Price Explorer (Multi-Day Timespan &amp; Span Stepping)</span>
                             </div>
                             <button type="button" class="btn-panel-collapse" data-collapse-panel="dispatch" id="btn-collapse-dispatch" aria-expanded="true">
                                 <i class="fa-solid fa-minus"></i> <span>Minimize</span>
@@ -391,36 +391,144 @@
                                         <p id="dispatch-chart-subtitle">Showing latest available 24h telemetry</p>
                                     </div>
 
-                                    <!-- Interactive Timespan, Latest 24h, Full-Range & Half-Range Stepping Controls -->
+                                    <!-- Interactive Timespan, Latest 24h, Full-Span & Half-Span Stepping Controls -->
                                     <div class="dispatch-explorer-controls">
-                                        <button type="button" class="btn-dispatch-latest active" id="btn-dispatch-latest" title="Jump to Latest Available 24 Hours (Default View)">
+                                        <button type="button" class="btn-dispatch-latest active" id="btn-dispatch-latest" title="Jump to Latest Available 24-Hour Span (Default View)">
                                             <i class="fa-solid fa-bolt-lightning"></i> Latest 24h
                                         </button>
 
-                                        <div class="dispatch-step-group" role="group" aria-label="Step Back or Forward by Full or Half Timespan">
-                                            <button type="button" class="btn-dispatch-step btn-step-full" id="btn-step-back-full" title="Step Back 1 Full Range">
+                                        <div class="dispatch-step-group" role="group" aria-label="Step Back or Forward by Full or Half Span">
+                                            <button type="button" class="btn-dispatch-step btn-step-full" id="btn-step-back-full" title="Step Back 1 Full Span">
                                                 <i class="fa-solid fa-angles-left"></i> <span id="lbl-step-back-full">-24h</span>
                                             </button>
-                                            <button type="button" class="btn-dispatch-step btn-step-half" id="btn-step-back-half" title="Step Back Half Range">
+                                            <button type="button" class="btn-dispatch-step btn-step-half" id="btn-step-back-half" title="Step Back Half Span">
                                                 <i class="fa-solid fa-angle-left"></i> <span id="lbl-step-back-half">-12h</span>
                                             </button>
-                                            <button type="button" class="btn-dispatch-step btn-step-half" id="btn-step-fwd-half" title="Step Forward Half Range">
+                                            <button type="button" class="btn-dispatch-step btn-step-half" id="btn-step-fwd-half" title="Step Forward Half Span">
                                                 <span id="lbl-step-fwd-half">+12h</span> <i class="fa-solid fa-angle-right"></i>
                                             </button>
-                                            <button type="button" class="btn-dispatch-step btn-step-full" id="btn-step-fwd-full" title="Step Forward 1 Full Range">
+                                            <button type="button" class="btn-dispatch-step btn-step-full" id="btn-step-fwd-full" title="Step Forward 1 Full Span">
                                                 <span id="lbl-step-fwd-full">+24h</span> <i class="fa-solid fa-angles-right"></i>
                                             </button>
                                         </div>
 
-                                        <div class="dispatch-span-group" role="group" aria-label="Select Timespan Duration">
-                                            <span class="span-group-label">Span:</span>
-                                            <button type="button" class="btn-dispatch-span active" data-span-hours="24">24h</button>
-                                            <button type="button" class="btn-dispatch-span" data-span-hours="48">48h</button>
-                                            <button type="button" class="btn-dispatch-span" data-span-hours="72">3D</button>
-                                            <button type="button" class="btn-dispatch-span" data-span-hours="168">7D</button>
-                                            <button type="button" class="btn-dispatch-span" data-span-hours="336">14D</button>
-                                            <button type="button" class="btn-dispatch-span" data-span-hours="720">30D</button>
+                                        <div class="dispatch-span-group" role="group" aria-label="Select Span Preset">
+                                            <span class="span-group-label">Span Presets:</span>
+                                            <button type="button" class="btn-dispatch-span active" data-span-hours="24" title="24-Hour Span (1 Day)">24h</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="48" title="48-Hour Span (2 Days)">48h</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="72" title="72-Hour Span (3 Days)">3D</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="168" title="168-Hour Span (7 Days)">7D</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="336" title="336-Hour Span (14 Days)">14D</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="720" title="720-Hour Span (30 Days)">30D</button>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Exact Time Span & Center-on-Timestamp Control Bar -->
+                                <div class="dispatch-exact-range-bar" role="group" aria-label="Exact Timestamp and Custom Hour Span Controls">
+                                    <!-- Anchor Timestamp Input (Editable YYYY-MM-DD + Monday-First Calendar Popover + Hour Stepper + OK Button) -->
+                                    <div class="exact-range-field">
+                                        <label for="input-ts-date" id="lbl-anchor-datetime" class="exact-field-label">
+                                            <i class="fa-regular fa-calendar-check"></i> Start Timestamp:
+                                        </label>
+                                        <div class="custom-timestamp-picker" id="custom-timestamp-picker-wrapper">
+                                            <div class="date-input-popover-anchor">
+                                                <input type="text" id="input-ts-date" class="exact-date-text-input" placeholder="YYYY-MM-DD" maxlength="10" aria-label="Timestamp Date (YYYY-MM-DD)" title="Type YYYY-MM-DD or click the calendar button">
+                                                <button type="button" class="btn-calendar-trigger" id="btn-toggle-calendar" aria-label="Open Calendar (Monday–Sunday)" title="Open Monday–Sunday Calendar Picker">
+                                                    <i class="fa-regular fa-calendar-days"></i>
+                                                </button>
+
+                                                <!-- Custom Monday-First (ISO-8601) Calendar Popover -->
+                                                <div class="iso-calendar-popover" id="iso-calendar-popover" aria-hidden="true">
+                                                    <div class="iso-cal-header">
+                                                        <button type="button" class="btn-cal-nav" id="btn-cal-prev-month" title="Previous Month">
+                                                            <i class="fa-solid fa-chevron-left"></i>
+                                                        </button>
+                                                        <span class="iso-cal-month-title" id="iso-cal-month-title">November 2026</span>
+                                                        <button type="button" class="btn-cal-nav" id="btn-cal-next-month" title="Next Month">
+                                                            <i class="fa-solid fa-chevron-right"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div class="iso-cal-weekdays">
+                                                        <span>Mon</span>
+                                                        <span>Tue</span>
+                                                        <span>Wed</span>
+                                                        <span>Thu</span>
+                                                        <span>Fri</span>
+                                                        <span class="cal-weekend">Sat</span>
+                                                        <span class="cal-weekend">Sun</span>
+                                                    </div>
+                                                    <div class="iso-cal-days-grid" id="iso-cal-days-grid">
+                                                        <!-- Populated dynamically by JS -->
+                                                    </div>
+                                                    <div class="iso-cal-footer">
+                                                        <span class="iso-cal-bounds-hint" id="iso-cal-bounds-hint">Data: 2026-07-16 &rarr; 2026-11-26</span>
+                                                        <div class="iso-cal-actions">
+                                                            <button type="button" class="btn-cal-latest" id="btn-cal-jump-latest" title="Select Latest Available Date">Latest</button>
+                                                            <button type="button" class="btn-timestamp-ok" id="btn-cal-ok" title="Confirm Selected Date &amp; Close">
+                                                                <i class="fa-solid fa-check"></i> OK
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="stepper-box" title="Timestamp Hour (00:00–23:00)">
+                                                <button type="button" class="btn-stepper" id="btn-ts-hour-down" aria-label="Previous Hour" title="Step Timestamp Back 1 Hour">
+                                                    <i class="fa-solid fa-chevron-down"></i>
+                                                </button>
+                                                <input type="number" id="input-ts-hour" class="stepper-num-input stepper-mins-input" min="0" max="23" step="1" value="00" aria-label="Timestamp Hour (00–23)">
+                                                <span class="stepper-unit">:00</span>
+                                                <button type="button" class="btn-stepper" id="btn-ts-hour-up" aria-label="Next Hour" title="Step Timestamp Forward 1 Hour">
+                                                    <i class="fa-solid fa-chevron-up"></i>
+                                                </button>
+                                            </div>
+                                            <button type="button" class="btn-timestamp-ok" id="btn-apply-timestamp-ok" title="Apply Selected Timestamp and Span">
+                                                <i class="fa-solid fa-check"></i> OK
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Center Span on Timestamp Toggle -->
+                                    <button type="button" class="btn-center-range-toggle" id="btn-toggle-center-range" aria-pressed="false" title="When ON, centers the time span on the timestamp (showing half the span before and half after the timestamp)">
+                                        <i class="fa-solid fa-arrows-left-right-to-line"></i>
+                                        <span id="lbl-center-range-mode">Center Span on Timestamp: Off</span>
+                                    </button>
+
+                                    <!-- Days & Hours Span Stepper Controls (1d 0h <-> 0d 23h <-> 1d 1h) -->
+                                    <div class="exact-duration-group">
+                                        <label for="input-span-days" class="exact-field-label"><i class="fa-regular fa-hourglass-half"></i> Span:</label>
+
+                                        <!-- Days Stepper -->
+                                        <div class="stepper-box" title="Span Days (Use Up/Down buttons or type exact days)">
+                                            <button type="button" class="btn-stepper" id="btn-span-days-down" aria-label="Decrease Span Days" title="Decrease Span by 1 Day (24h)">
+                                                <i class="fa-solid fa-chevron-down"></i>
+                                            </button>
+                                            <input type="number" id="input-span-days" class="stepper-num-input stepper-mins-input" min="0" max="135" step="1" value="1" aria-label="Span Days">
+                                            <span class="stepper-unit">d</span>
+                                            <button type="button" class="btn-stepper" id="btn-span-days-up" aria-label="Increase Span Days" title="Increase Span by 1 Day (24h)">
+                                                <i class="fa-solid fa-chevron-up"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Hours Stepper (0–23h with automatic day rollover) -->
+                                        <div class="stepper-box" title="Span Hours (0–23h, automatically rolls over into Days)">
+                                            <button type="button" class="btn-stepper" id="btn-range-hours-down" aria-label="Decrease Span Hours" title="Decrease Span by 1 Hour">
+                                                <i class="fa-solid fa-chevron-down"></i>
+                                            </button>
+                                            <input type="number" id="input-range-hours" class="stepper-num-input stepper-mins-input" min="0" max="23" step="1" value="0" aria-label="Span Hours (0–23)">
+                                            <span class="stepper-unit">h</span>
+                                            <button type="button" class="btn-stepper" id="btn-range-hours-up" aria-label="Increase Span Hours" title="Increase Span by 1 Hour">
+                                                <i class="fa-solid fa-chevron-up"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Clear Prominent Start -> End In-View Span Readout Banner -->
+                                    <div class="in-view-range-banner" id="in-view-range-banner" title="Exact Start and End Timestamp of the Span Currently in View">
+                                        <span class="in-view-tag"><i class="fa-solid fa-eye"></i> SPAN IN VIEW:</span>
+                                        <span class="in-view-timestamps" id="in-view-timestamps-text">2026-11-26 00:00 &rarr; 2026-11-26 24:00</span>
+                                        <span class="in-view-duration-pill" id="in-view-duration-pill">1d 0h</span>
                                     </div>
                                 </div>
 
@@ -875,8 +983,8 @@
     </div>
 
     <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
-    <script src="data/dashboard_data.js?v=20261128j"></script>
+    <script src="data/dashboard_data.js?v=20261128p"></script>
     <!-- Application Logic & Charts -->
-    <script src="app.js?v=20261128j"></script>
+    <script src="app.js?v=20261128p"></script>
 </body>
 </html>
