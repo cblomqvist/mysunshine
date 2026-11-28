@@ -56,6 +56,21 @@ const dispatchExplorerState = {
     endIndex: null // exclusive index into high_res_30d.hourly_data; null = latest end
 };
 
+// Dispatch Metric Visibility State (defaults to show all)
+const dispatchMetricVisibility = {
+    pv: true,
+    load: true,
+    battery: true,
+    soc: true,
+    spot: true,
+    gridPrice: true,
+    myPrice: true
+};
+
+const btnMetricsAll = document.getElementById('btn-metrics-all');
+const btnMetricsPrices = document.getElementById('btn-metrics-prices');
+const btnMetricsPower = document.getElementById('btn-metrics-power');
+
 // Collapsible Panel & Sidebar Controls
 const appMainGrid = document.getElementById('app-main-grid');
 const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
@@ -246,6 +261,58 @@ function setupEventListeners() {
         });
     });
 
+    // Dispatch Metric Visibility Toggle Buttons (Default: All Active)
+    document.querySelectorAll('[data-dispatch-metric]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const metricKey = btn.getAttribute('data-dispatch-metric');
+            if (metricKey in dispatchMetricVisibility) {
+                dispatchMetricVisibility[metricKey] = !dispatchMetricVisibility[metricKey];
+                syncDispatchMetricButtonsUI();
+                updateHourlyDispatchChart();
+            }
+        });
+    });
+
+    if (btnMetricsAll) {
+        btnMetricsAll.addEventListener('click', () => {
+            Object.keys(dispatchMetricVisibility).forEach(k => {
+                dispatchMetricVisibility[k] = true;
+            });
+            syncDispatchMetricButtonsUI();
+            updateHourlyDispatchChart();
+        });
+    }
+
+    if (btnMetricsPrices) {
+        btnMetricsPrices.addEventListener('click', () => {
+            dispatchMetricVisibility.pv = false;
+            dispatchMetricVisibility.load = false;
+            dispatchMetricVisibility.battery = false;
+            dispatchMetricVisibility.soc = false;
+            dispatchMetricVisibility.spot = true;
+            dispatchMetricVisibility.gridPrice = true;
+            dispatchMetricVisibility.myPrice = true;
+            syncDispatchMetricButtonsUI();
+            updateHourlyDispatchChart();
+        });
+    }
+
+    if (btnMetricsPower) {
+        btnMetricsPower.addEventListener('click', () => {
+            dispatchMetricVisibility.pv = true;
+            dispatchMetricVisibility.load = true;
+            dispatchMetricVisibility.battery = true;
+            dispatchMetricVisibility.soc = true;
+            dispatchMetricVisibility.spot = false;
+            dispatchMetricVisibility.gridPrice = false;
+            dispatchMetricVisibility.myPrice = false;
+            syncDispatchMetricButtonsUI();
+            updateHourlyDispatchChart();
+        });
+    }
+
+    syncDispatchMetricButtonsUI();
+
     // Collapsible Panels & Sidebar Controls
     setupCollapsiblePanels();
 
@@ -280,6 +347,17 @@ function formatSpanDurationLabel(hours) {
         return `${hours / 24}d`;
     }
     return `${hours}h`;
+}
+
+function syncDispatchMetricButtonsUI() {
+    document.querySelectorAll('[data-dispatch-metric]').forEach(btn => {
+        const key = btn.getAttribute('data-dispatch-metric');
+        if (key in dispatchMetricVisibility) {
+            const isVis = Boolean(dispatchMetricVisibility[key]);
+            btn.classList.toggle('active', isVis);
+            btn.setAttribute('aria-pressed', String(isVis));
+        }
+    });
 }
 
 function setupCollapsiblePanels() {
@@ -1400,12 +1478,61 @@ function updateHourlyDispatchChart() {
         if (hasOpt) dispatchDaySelect.value = syncDate;
     }
 
+    // Compute current Swedish Tariff parameters from UI sliders
+    const energiskattOre = parseFloat(energiskattInput ? energiskattInput.value : 42.8) || 42.8;
+    const eemTransferOre = parseFloat(eemTransferInput ? eemTransferInput.value : 17.6) || 17.6;
+    const tibberMarkupOre = 2.0;      // 2.0 öre/kWh Tibber markup & elcertifikat
+    const eemGridBenefitOre = 8.0;    // 8.0 öre/kWh EEM nätnytta on export
+    const taxRedEnabled = skattereduktionToggle ? skattereduktionToggle.checked : true;
+
+    // Calculate hourly price & cost series for every hour in the active window:
+    // 1. Grid Buy Price (All-In öre/kWh): what 1 kWh costs to buy from the grid incl. Energiskatt, EEM transfer, Tibber markup & 25% Moms
+    // 2. My Effective Price (öre/kWh consumed): what your household electricity actually cost you per consumed kWh after Solar & Battery (and export revenue)
+    // 3. Hourly Grid Baseline Bill (SEK) vs My Actual Hourly Bill (SEK)
+    const hourlyPriceDetails = windowRecords.map(h => {
+        const spotOre = h.spot_price_ore ?? 0;
+        const loadKwh = h.load_power_kw ?? h.consumed_kw ?? 0;
+        const importKwh = h.grid_import_kw ?? 0;
+        const exportKwh = h.grid_export_kw ?? 0;
+        const isPre2026 = (h.date || '') < '2026-01-01';
+        const skattereduktionOre = (taxRedEnabled && isPre2026) ? 60.0 : 0.0;
+
+        const gridBuyPriceOre = (spotOre + tibberMarkupOre + energiskattOre + eemTransferOre) * (1.0 + MOMS_RATE);
+        const exportPriceOre = spotOre + eemGridBenefitOre + skattereduktionOre;
+
+        const baselineGridCostSek = (loadKwh * gridBuyPriceOre) / 100.0;
+        const actualNetCostSek = ((importKwh * gridBuyPriceOre) - (exportKwh * exportPriceOre)) / 100.0;
+        const hourlySavingsSek = baselineGridCostSek - actualNetCostSek;
+
+        // Effective calculated price per consumed kWh (öre/kWh)
+        const myEffectivePriceOre = loadKwh > 0.001
+            ? ((actualNetCostSek * 100.0) / loadKwh)
+            : 0.0;
+        const priceDiffOre = gridBuyPriceOre - myEffectivePriceOre;
+
+        return {
+            spotOre: Number(spotOre.toFixed(2)),
+            gridBuyPriceOre: Number(gridBuyPriceOre.toFixed(2)),
+            myEffectivePriceOre: Number(myEffectivePriceOre.toFixed(2)),
+            priceDiffOre: Number(priceDiffOre.toFixed(2)),
+            baselineGridCostSek: Number(baselineGridCostSek.toFixed(2)),
+            actualNetCostSek: Number(actualNetCostSek.toFixed(2)),
+            hourlySavingsSek: Number(hourlySavingsSek.toFixed(2)),
+            loadKwh,
+            importKwh,
+            exportKwh
+        };
+    });
+
     // Compute window summary metrics
     const totPvKwh = windowRecords.reduce((acc, h) => acc + (h.pv_power_kw ?? h.produced_kw ?? 0), 0);
     const totLoadKwh = windowRecords.reduce((acc, h) => acc + (h.load_power_kw ?? h.consumed_kw ?? 0), 0);
     const avgSpotOre = windowRecords.reduce((acc, h) => acc + (h.spot_price_ore ?? 0), 0) / windowRecords.length;
-    const minSpotOre = Math.min(...windowRecords.map(h => h.spot_price_ore ?? 0));
-    const maxSpotOre = Math.max(...windowRecords.map(h => h.spot_price_ore ?? 0));
+    const totGridBaselineSek = hourlyPriceDetails.reduce((acc, d) => acc + d.baselineGridCostSek, 0);
+    const totActualCostSek = hourlyPriceDetails.reduce((acc, d) => acc + d.actualNetCostSek, 0);
+    const totWindowSavingsSek = totGridBaselineSek - totActualCostSek;
+    const avgGridBuyOre = totLoadKwh > 0 ? ((totGridBaselineSek * 100.0) / totLoadKwh) : 0;
+    const avgMyEffectiveOre = totLoadKwh > 0 ? ((totActualCostSek * 100.0) / totLoadKwh) : 0;
 
     const daysList = dashboardData.high_res_30d.days_list || [];
     const firstDayInfo = daysList.find(d => d.date === firstRec.date);
@@ -1418,7 +1545,7 @@ function updateHourlyDispatchChart() {
     // Update Heading & Badge
     if (dispatchChartHeading) {
         const spanTitle = span === 24 ? '24h' : (span % 24 === 0 ? `${span / 24}-Day (${span}h)` : `${span}h`);
-        dispatchChartHeading.innerText = `${spanTitle} High-Resolution Dispatch & Spot Price Overlay`;
+        dispatchChartHeading.innerText = `${spanTitle} High-Resolution Dispatch & Price Comparison`;
     }
     if (dispatchWindowBadge) {
         if (isLatestWindow && span === 24) {
@@ -1436,9 +1563,9 @@ function updateHourlyDispatchChart() {
     if (dispatchChartSubtitle) {
         const rangeText = (firstRec.date === lastRec.date)
             ? `${firstDateLabel} (${firstHourStr}–${lastHourStr})`
-            : `${firstDateLabel} ${firstHourStr} → ${lastDateLabel} ${lastHourStr} (${windowRecords.length} hours)`;
+            : `${firstDateLabel} ${firstHourStr} → ${lastDateLabel} ${lastHourStr} (${windowRecords.length}h)`;
         dispatchChartSubtitle.innerText =
-            `Window: ${rangeText} | PV: ${totPvKwh.toFixed(1)} kWh | Load: ${totLoadKwh.toFixed(1)} kWh | Spot Avg: ${avgSpotOre.toFixed(1)} öre [${minSpotOre.toFixed(1)}–${maxSpotOre.toFixed(1)} öre]`;
+            `${rangeText} | PV: ${totPvKwh.toFixed(1)} kWh | Load: ${totLoadKwh.toFixed(1)} kWh | Spot Avg: ${avgSpotOre.toFixed(1)} öre | Grid Price Avg: ${avgGridBuyOre.toFixed(1)} öre vs My Price Avg: ${avgMyEffectiveOre.toFixed(1)} öre (Saved ${totWindowSavingsSek >= 0 ? '+' : ''}${totWindowSavingsSek.toFixed(2)} SEK)`;
     }
 
     updatePresetButtonsState();
@@ -1460,10 +1587,16 @@ function updateHourlyDispatchChart() {
     const loadPower = windowRecords.map(h => h.load_power_kw ?? h.consumed_kw ?? 0);
     const battPower = windowRecords.map(h => h.battery_power_kw ?? ((h.battery_discharged_kw || 0) - (h.battery_charged_kw || 0)));
     const socData = windowRecords.map(h => h.soc_pct ?? h.battery_soc_pct ?? 0);
-    const priceData = windowRecords.map(h => h.spot_price_ore);
+    const priceData = hourlyPriceDetails.map(d => d.spotOre);
+    const gridBuyPriceData = hourlyPriceDetails.map(d => d.gridBuyPriceOre);
+    const myEffectivePriceData = hourlyPriceDetails.map(d => d.myEffectivePriceOre);
 
     const pointRadiusVal = span <= 48 ? 2 : 0;
     const borderW = span <= 72 ? 2 : 1.5;
+
+    const showPowerAxis = dispatchMetricVisibility.pv || dispatchMetricVisibility.load || dispatchMetricVisibility.battery;
+    const showSocAxis = dispatchMetricVisibility.soc;
+    const showPriceAxis = dispatchMetricVisibility.spot || dispatchMetricVisibility.gridPrice || dispatchMetricVisibility.myPrice;
 
     chartHourlyDispatchInstance = new Chart(ctx, {
         type: 'line',
@@ -1471,8 +1604,10 @@ function updateHourlyDispatchChart() {
             labels: labels,
             datasets: [
                 {
+                    metricKey: 'pv',
                     label: 'Solar PV (kW)',
                     data: pvPower,
+                    hidden: !dispatchMetricVisibility.pv,
                     borderColor: '#f59e0b',
                     backgroundColor: 'rgba(245, 158, 11, 0.16)',
                     borderWidth: borderW,
@@ -1483,8 +1618,10 @@ function updateHourlyDispatchChart() {
                     yAxisID: 'yPower'
                 },
                 {
+                    metricKey: 'load',
                     label: 'Household Load (kW)',
                     data: loadPower,
+                    hidden: !dispatchMetricVisibility.load,
                     borderColor: '#ef4444',
                     borderWidth: borderW,
                     borderDash: [4, 4],
@@ -1495,8 +1632,10 @@ function updateHourlyDispatchChart() {
                     yAxisID: 'yPower'
                 },
                 {
+                    metricKey: 'battery',
                     label: 'Battery Dispatch (+Dis / -Chg kW)',
                     data: battPower,
+                    hidden: !dispatchMetricVisibility.battery,
                     borderColor: '#8b5cf6',
                     borderWidth: borderW,
                     pointRadius: 0,
@@ -1506,8 +1645,10 @@ function updateHourlyDispatchChart() {
                     yAxisID: 'yPower'
                 },
                 {
+                    metricKey: 'soc',
                     label: 'Battery SoC (%)',
                     data: socData,
+                    hidden: !dispatchMetricVisibility.soc,
                     borderColor: '#10b981',
                     borderWidth: borderW,
                     pointRadius: 0,
@@ -1517,13 +1658,43 @@ function updateHourlyDispatchChart() {
                     yAxisID: 'ySoc'
                 },
                 {
+                    metricKey: 'spot',
                     label: 'Spot Price (öre/kWh)',
                     data: priceData,
+                    hidden: !dispatchMetricVisibility.spot,
                     borderColor: '#06b6d4',
                     borderWidth: 1.5,
                     borderDash: [2, 2],
                     pointRadius: 0,
                     pointHoverRadius: 4,
+                    fill: false,
+                    tension: 0.2,
+                    yAxisID: 'yPrice'
+                },
+                {
+                    metricKey: 'gridPrice',
+                    label: 'Grid Buy Price (All-In öre/kWh)',
+                    data: gridBuyPriceData,
+                    hidden: !dispatchMetricVisibility.gridPrice,
+                    borderColor: '#fb7185',
+                    borderWidth: borderW,
+                    borderDash: [6, 3],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    fill: false,
+                    tension: 0.2,
+                    yAxisID: 'yPrice'
+                },
+                {
+                    metricKey: 'myPrice',
+                    label: 'My Effective Price (öre/kWh)',
+                    data: myEffectivePriceData,
+                    hidden: !dispatchMetricVisibility.myPrice,
+                    borderColor: '#a3e635',
+                    backgroundColor: 'rgba(163, 230, 53, 0.1)',
+                    borderWidth: borderW + 0.4,
+                    pointRadius: pointRadiusVal,
+                    pointHoverRadius: 5,
                     fill: false,
                     tension: 0.2,
                     yAxisID: 'yPrice'
@@ -1543,15 +1714,12 @@ function updateHourlyDispatchChart() {
                     records: windowRecords
                 },
                 legend: {
-                    position: 'top',
-                    labels: {
-                        color: '#94a3b8',
-                        font: { family: 'Plus Jakarta Sans', size: 11 },
-                        boxWidth: 12
-                    }
+                    display: false
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                    borderColor: 'rgba(255, 255, 255, 0.14)',
+                    borderWidth: 1,
                     padding: 12,
                     callbacks: {
                         title: function(items) {
@@ -1561,9 +1729,30 @@ function updateHourlyDispatchChart() {
                             return `${rec.date} — ${String(rec.hour).padStart(2, '0')}:00`;
                         },
                         label: function(context) {
-                            const unit = context.dataset.label.includes('Spot') ? 'öre/kWh' : 
+                            const unit = context.dataset.label.includes('öre') ? 'öre/kWh' : 
                                          context.dataset.label.includes('SoC') ? '%' : 'kW';
                             return ` ${context.dataset.label}: ${context.parsed.y.toFixed(2)} ${unit}`;
+                        },
+                        afterBody: function(items) {
+                            if (!items.length) return [];
+                            const idx = items[0].dataIndex;
+                            const d = hourlyPriceDetails[idx];
+                            if (!d) return [];
+
+                            const diffOreSign = d.priceDiffOre >= 0 ? '-' : '+';
+                            const diffOreAbs = Math.abs(d.priceDiffOre).toFixed(2);
+                            const diffWord = d.priceDiffOre >= 0 ? 'cheaper than grid' : 'above grid (charging/losses)';
+
+                            const savSign = d.hourlySavingsSek >= 0 ? '+' : '';
+                            const vsSpotDiff = (d.myEffectivePriceOre - d.spotOre);
+                            const vsSpotSign = vsSpotDiff >= 0 ? '+' : '';
+
+                            return [
+                                '────────────────────────────────────────',
+                                ` Price Diff (My Price vs Grid Buy): ${diffOreSign}${diffOreAbs} öre/kWh (${diffWord})`,
+                                ` Price Diff (My Price vs Raw Spot): ${vsSpotSign}${vsSpotDiff.toFixed(2)} öre/kWh`,
+                                ` Hourly Cost: ${d.actualNetCostSek.toFixed(2)} SEK vs ${d.baselineGridCostSek.toFixed(2)} SEK Grid (${savSign}${d.hourlySavingsSek.toFixed(2)} SEK saved)`
+                            ];
                         }
                     }
                 }
@@ -1571,7 +1760,7 @@ function updateHourlyDispatchChart() {
             scales: {
                 yPower: {
                     type: 'linear',
-                    display: true,
+                    display: showPowerAxis,
                     position: 'left',
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
                     ticks: { color: '#94a3b8' },
@@ -1584,7 +1773,7 @@ function updateHourlyDispatchChart() {
                 },
                 ySoc: {
                     type: 'linear',
-                    display: true,
+                    display: showSocAxis,
                     position: 'right',
                     min: 0,
                     max: 100,
@@ -1599,14 +1788,14 @@ function updateHourlyDispatchChart() {
                 },
                 yPrice: {
                     type: 'linear',
-                    display: true,
+                    display: showPriceAxis,
                     position: 'right',
-                    grid: { drawOnChartArea: false },
-                    ticks: { color: '#06b6d4', callback: (v) => `${v} ö` },
+                    grid: { drawOnChartArea: !showPowerAxis },
+                    ticks: { color: '#a3e635', callback: (v) => `${v} ö` },
                     title: {
                         display: true,
-                        text: 'Spot Price (öre)',
-                        color: '#06b6d4',
+                        text: 'Price (öre/kWh)',
+                        color: '#a3e635',
                         font: { size: 10 }
                     }
                 },

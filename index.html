@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261128">
+    <link rel="stylesheet" href="style.css?v=20261128b">
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -420,6 +420,38 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Metric Visibility Toggles Bar (Default: Show All) -->
+                                <div class="dispatch-metrics-filter-bar" role="group" aria-label="Toggle Dispatch Chart Metrics">
+                                    <span class="metrics-filter-label"><i class="fa-solid fa-eye"></i> Metrics:</span>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="pv" style="--metric-color: #f59e0b;" title="Toggle Solar PV Generation (kW)">
+                                        <span class="metric-dot"></span> Solar PV
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="load" style="--metric-color: #ef4444;" title="Toggle Household Load (kW)">
+                                        <span class="metric-dot"></span> Household Load
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="battery" style="--metric-color: #8b5cf6;" title="Toggle Battery Dispatch Power (+Dis / -Chg kW)">
+                                        <span class="metric-dot"></span> Battery Power
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="soc" style="--metric-color: #10b981;" title="Toggle Battery State of Charge (%)">
+                                        <span class="metric-dot"></span> Battery SoC %
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="spot" style="--metric-color: #06b6d4;" title="Toggle Raw SE3 Spot Price (öre/kWh)">
+                                        <span class="metric-dot"></span> Spot Price
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="gridPrice" style="--metric-color: #fb7185;" title="Toggle Full Grid Buy Price incl. Energiskatt, EEM Transfer, Tibber Markup &amp; 25% Moms (öre/kWh)">
+                                        <span class="metric-dot"></span> Grid Buy Price (All-In)
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="myPrice" style="--metric-color: #a3e635;" title="Toggle My Calculated Electricity Price per Consumed kWh after Solar &amp; Battery (öre/kWh)">
+                                        <span class="metric-dot"></span> My Effective Price
+                                    </button>
+                                    <div class="metrics-quick-actions">
+                                        <button type="button" class="btn-metric-preset" id="btn-metrics-all" title="Show All Metrics">All</button>
+                                        <button type="button" class="btn-metric-preset" id="btn-metrics-prices" title="Show Only Price Comparison Curves">Prices Only</button>
+                                        <button type="button" class="btn-metric-preset" id="btn-metrics-power" title="Show Only Power &amp; SoC Curves">Power &amp; SoC</button>
+                                    </div>
+                                </div>
+
                                 <div class="chart-canvas-container dispatch-canvas-container">
                                     <canvas id="chart-hourly-dispatch"></canvas>
                                 </div>
@@ -822,8 +854,8 @@
     </div>
 
     <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
-    <script src="data/dashboard_data.js?v=20261128"></script>
+    <script src="data/dashboard_data.js?v=20261128b"></script>
     <!-- Application Logic & Charts -->
-    <script src="app.js?v=20261128"></script>
+    <script src="app.js?v=20261128b"></script>
 </body>
 </html>
