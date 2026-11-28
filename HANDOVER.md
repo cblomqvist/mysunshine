@@ -12,60 +12,57 @@
 
 ## 1. Current Status & Active Milestone
 
-* **Active Phase**: Milestone 6 (Phase 2): Next-Day Forecasting & Shadow Recommendation Engine (**Completed — Ready for Commit, Push & PR to `main`**)
-* **Current Branch**: `feat/m6-next-day-forecast`
-* **Pre-Push Validation State**: **100% Green** (53/53 unit and integration tests passing, flake8 syntax & style passing).
+* **Active Phase**: Milestone 7 (Phase 3.1): Home Assistant Custom Sensor Integration & Read-Only Shadow Telemetry Bridge (**Completed — Read-Only Shadow Telemetry, No Live Sonnen Writes, No Live Sonnen Hardware Verification**)
+* **Current Branch**: `feat/m7-ha-shadow-telemetry-bridge`
+* **Pre-Push Validation State**: **100% Green** (`64 passed, 1 hardware test skipped` across `65 collected tests`, PyYAML syntax validation passing with zero write-capable Sonnen `rest_command` definitions, 0 flake8 errors/warnings in `src/ha_integration/` and `tests/test_ha_integration.py`).
 
 ---
 
-## 2. Completed Work Summary (Milestones 5.5 & 6)
+## 2. Completed Work Summary (Milestones 5.5, 6 & 7)
 
-### A. Milestone 6: Next-Day Forecasting & Shadow Recommendation Engine (Steps 1, 2 & 3)
-1. **Day-Ahead Price, Weather/Irradiance & Solar/Load Forecaster (Deliverables 6.1 & 6.2)**:
-   * Built [`src/forecast_engine/forecaster.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/forecast_engine/forecaster.py) (`DayAheadPriceForecaster`, `WeatherIrradianceProvider`, `SolarLoadForecaster`):
-     * Normalizes 15-minute (96 quarters/day) and 60-minute SE3 day-ahead spot prices into Swedish local time (`CET/CEST` via deterministic EU DST conversion) and preserves intra-hour min/max quarterly price spreads.
-     * Models Eskilstuna (`59.37°N, 16.51°E`) clear-sky daily PV potential, seasonal daylight window weights, and cloud-cover solar transmittance ($\tau_{\text{cloud}} = 1 - 0.78 \cdot (\text{cloud}/100)^{1.3}$), supporting Open-Meteo REST queries with deterministic offline weather/irradiance models.
-     * Predicts next-day hourly PV generation and household consumption combining day-ahead irradiance (`85%` weight) with trailing 7-day empirical array trend (`15%` weight), heating degree day (`HDD < 15°C`) sensitivity, and trimmed trailing 7-day load profiles.
+### A. Milestone 7 (Phase 3.1): Home Assistant Custom Sensor Integration & Read-Only Shadow Telemetry Bridge
+1. **Home Assistant Custom Sensor Models & Long-Term Statistics (`src/ha_integration/sensor_models.py`)**:
+   * Built `HomeAssistantEntityPayload` and `HomeAssistantStatePackage` generating canonical Home Assistant REST API payloads (`POST /api/states/<entity_id>`) with `device_class`, `state_class` (`total_increasing` and `measurement`), and rich attributes.
+   * Exposed **12 custom Home Assistant entities**:
+     1. `sensor.mysunshine_shadow_action` (`GRID_PRECHARGE`, includes dynamic `target_power_watts`, `target_operating_mode`, `idempotency_key`, and 24-hour schedule `hourly_schedule_24h`)
+     2. `sensor.mysunshine_target_power_watts` (dynamic hourly watt setpoint, eliminating hard-coded wattage)
+     3. `sensor.mysunshine_breakeven_spot_ore` (`41.6 öre/kWh`, $\eta_{\text{rt}} = 76.8\%$ efficiency gate threshold)
+     4. `sensor.mysunshine_expected_savings_sek` (`+9.65 SEK` shadow gain vs Default Self-Consumption)
+     5. `sensor.mysunshine_recommended_precharge_kwh` (`12.43 kWh` during `03:00–05:00` night trough)
+     6. `sensor.mysunshine_next_day_projected_bill_sek` (`17.67 SEK` vs `27.32 SEK` Default SC / `37.16 SEK` No Solar)
+     7. `sensor.mysunshine_cumulative_savings_sek` (`72,247.07 SEK`, `state_class: total_increasing` for Home Assistant Long-Term Statistics)
+     8. `sensor.mysunshine_capex_recouped_pct` (`22.94%` of `315,000 SEK` Net Capex recouped)
+     9. `sensor.mysunshine_backtest_121d_upside_sek` (`+144.39 SEK` Oracle / `+109.05 SEK` Out-of-Sample Predictive / `+247.12 SEK` vs Raw Sonnen CT)
+     10. `binary_sensor.mysunshine_efficiency_gate_passed` (`on`)
+     11. `binary_sensor.mysunshine_env_active_control_opt_in` (`off` — Gate 1 authoritative Python environment opt-in mirror)
+     12. `input_boolean.mysunshine_active_battery_control` (`off` — Gate 2 Home Assistant operator UI switch)
 
-2. **Dynamic Grid Pre-Charging & Arbitrage Advisor in Shadow Mode (Deliverable 6.3)**:
-   * Built [`src/forecast_engine/shadow_advisor.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/forecast_engine/shadow_advisor.py) (`BatteryPhysicsConfig`, `ShadowModeAdvisor`, `DayAheadShadowPlan`, `ShadowAdvisorDayResult`):
-     * Models the SonnenBatterie 10 (`20.0 kWh` usable capacity, `6.5 kW` max charge, `6.0 kW` max discharge, $\eta_{\text{rt}} = 76.8\%$ round-trip efficiency).
-     * Enforces the PRD round-trip efficiency & tariff gate:
-       $$C_{\text{import}}(t_{\text{peak}}) > \frac{C_{\text{import}}(t_{\text{trough}})}{\eta_{\text{roundtrip}}} + 0.05\text{ SEK/kWh}$$
-     * Schedules night-trough grid pre-charging (`00:00–06:00`) only for profitable peak load uncovered by initial SoC + expected daytime solar surplus, and applies **Smart Peak-Preservation Hold** (`HOLD_FOR_PEAK`) to prevent premature battery discharge during cheap/moderate hours.
-     * For tomorrow (**Sunday, Nov 15, 2026**, published SE3 15-min prices in `data/prices/se3_prices_2026.json`):
-       * Night trough (`03:00–05:00`) averages **`13.0 öre/kWh`** $\rightarrow$ efficiency-gate break-even peak spot is **`41.6 öre/kWh`**.
-       * Afternoon/evening peak (`15:00–21:00`) reaches **`118.3 öre/kWh`**.
-       * Shadow Advisor recommends: *"Pre-charge 12.4 kWh between 03:00–05:00 at avg 13.0 öre/kWh (efficiency gate break-even: 41.6 öre/kWh) and hold for 15:00–21:00 peak spike (up to 118.3 öre/kWh) to save +9.65 SEK vs. default self-consumption"* (reducing tomorrow's net bill from `27.32 SEK` under Default Self-Consumption / `37.16 SEK` No-Solar to **`17.67 SEK`**).
+2. **Read-Only Shadow Telemetry Lock & Hardened Safety Executor Architecture (`SonnenSafetyActuationGate`, `HomeAssistantTelemetryBridge`)**:
+   * **Read-Only Shadow Telemetry Scope (`M7_RELEASE_SHADOW_TELEMETRY_ONLY = True`)**: Milestone 7 performs **read-only shadow telemetry, no live Sonnen writes, and no live Sonnen hardware verification**.
+   * **Zero Write-Capable Home Assistant `rest_command` Definitions**: Removed all write-capable `rest_command` entries from `configuration.yaml` and `automations.yaml`. Home Assistant is strictly an observer and Gate 2 UI controller.
+   * **Canonical Command Registry & Centralized HA Gate Read-Back**: Validates candidate commands against an internal canonical command registry (no published executor tokens), requires fresh read-back synchronization of Gate 1 and Gate 2 from Home Assistant before any future live write, and enforces durable non-temp atomic disk persistence (`data/runtime/ha_executor_state.json`), SoC/power bounds, and bounded-retry verified fail-safe restoration to `EM_OperatingMode=2`.
+   * **Strict UI Separation**: The dashboard's dry-run preview selector never alters the real gate status (`LOCKED_SHADOW_MODE_ONLY`) or entity states.
 
-3. **121-Day Prediction vs. Actual Backtesting & Dashboard UI Integration (Deliverable 6.4)**:
-   * Built [`src/forecast_engine/backtester.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/forecast_engine/backtester.py) (`ShadowBacktester`, `BacktestSummaryReport`, `BacktestDayRecord`) and evaluated across all **121 consecutive days (`2,905` hours, `2026-07-16` through `2026-11-13`)**:
-     * **Day-Ahead Forecast Accuracy**: `PV MAE = 4.47 kWh/day` (`RMSE = 5.88 kWh`), `Load MAE = 3.89 kWh/day` (`RMSE = 6.37 kWh`), and `Daily Bill MAE = 4.66 SEK/day`.
-     * **Strategy Trigger Distribution**: `20 days` triggered Night-Trough Grid Pre-Charging (`144.9 kWh` total pre-charged), `6 days` triggered Smart Peak-Preservation Hold, and `95 days` kept Standard Self-Consumption.
-     * **Cumulative 121-Day Financial Backtest (incl. fixed fees)**:
-       * Baseline 1 (No Solar, No Battery): `3,922.65 SEK`
-       * Actual Realized Sonnen System (CT Logs): `390.80 SEK`
-       * Simulated Default Self-Consumption (Same Physics): `288.08 SEK` (`102.72 SEK` sub-hourly 3-phase/ramp trickle residual)
-       * **Out-of-Sample Predictive Shadow Advisor**: **`179.03 SEK`** (**`+109.05 SEK`** saved vs Default Self-Consumption, **`+211.77 SEK`** vs Raw Realized Sonnen)
-       * **Oracle Shadow Advisor (Exact Weather Foresight)**: **`143.68 SEK`** (**`+144.39 SEK`** pure dispatch arbitrage savings vs Default Self-Consumption, **`+247.12 SEK`** vs Raw Realized Sonnen)
-       * Top single-day arbitrage gains occurred during the November cold/cloudy price spikes when Sonnen sat at `0%` SoC: `2026-11-10` (`523.3 öre/kWh` peak, **`+32.14 SEK`** saved), `2026-11-11` (`437.6 öre/kWh` peak, **`+25.07 SEK`** saved), `2026-10-12` (`222.5 öre/kWh` peak, **`+22.45 SEK`** saved), and `2026-11-09` (`485.7 öre/kWh` peak, **`+14.42 SEK`** saved).
-   * Integrated `next_day_forecast` into [`src/financial_engine/generate_dashboard_data.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/src/financial_engine/generate_dashboard_data.py), re-baked [`data/dashboard_data.json`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/dashboard_data.json) and [`data/dashboard_data.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/data/dashboard_data.js), added the **Next-Day Forecast & Shadow Advisor** tab in [`index.html`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/index.html), [`style.css`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/style.css), and [`app.js`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/app.js), and added unit/integration tests in [`tests/test_forecast_engine.py`](file:///c:/Users/chris/.gemini/antigravity-ide/scratch/mysunshine/tests/test_forecast_engine.py).
-
-### B. Milestone 5.5 Summary (Previously Completed)
-* Complete Day-1 (`2021–2026`, `2,143` days) historical ledger realizing **`72,247.07 SEK`** cumulative savings (**`22.94%`** of `315,000 SEK` Net Capex recouped), **24/24 (100%)** exact integer SEK post-`Leverantörsbyte` EEM invoice matches, and **`-0.81%`** (`-3.16 SEK`) 121-day diurnal battery dispatch net cost variance.
+### B. Milestones 5.5 & 6 Summary (Previously Completed & Merged to `main`)
+* **Milestone 5.5**: Full Day-1 (`2021–2026`, `2,143` days) historical ledger realizing **`72,247.07 SEK`** cumulative savings (**`22.94%`** of `315,000 SEK` Net Capex recouped) and **24/24 (100%)** exact integer SEK post-`Leverantörsbyte` EEM invoice matches.
+* **Milestone 6**: Day-Ahead Forecaster, Shadow Mode Advisor ($\eta_{\text{rt}} = 76.8\%$ efficiency gate), and 121-day (`2,905`-hour) rolling backtest (`PV MAE = 4.47 kWh/day`, `Load MAE = 3.89 kWh/day`, `Bill MAE = 4.66 SEK/day`, `+109.05 SEK` out-of-sample predictive savings, `+144.39 SEK` oracle dispatch savings).
 
 ---
 
 ## 3. Next Prioritized Steps & Copy-Paste Session Prompt
 
 ### Next Prioritized Steps
-1. **Commit, Push & Open PR for Milestone 6 (`feat/m6-next-day-forecast` $\rightarrow$ `main`)** to deploy the updated dashboard with the **Utility Billing Audit** and **Next-Day Forecast & Shadow Advisor** tabs to GitHub Pages.
-2. **Phase 3 (Future Milestone 7): Home Assistant Custom Integration & Live Telemetry Bridge**:
-   * Build `src/ha_integration/` to expose MySunshine's ROI metrics, daily shadow dispatch schedule, and efficiency-gate break-even price threshold as Home Assistant sensors (`sensor.mysunshine_shadow_action`, `sensor.mysunshine_breakeven_spot_ore`, `sensor.mysunshine_expected_savings_sek`) via Home Assistant REST/MQTT or custom component, while keeping hardware actuation gated behind an explicit opt-in switch.
+1. **Commit, Push & Merge PR #9 for Milestone 7 (`feat/m7-ha-shadow-telemetry-bridge` $\rightarrow$ `main`)**:
+   * Deploys the 100% read-only **Home Assistant Bridge** tab (`M7_RELEASE_SHADOW_TELEMETRY_ONLY = True`), 12 custom sensor schemas, Long-Term Statistics ROI entities, and observer YAML blueprints to GitHub Pages.
+2. **Phase 3.2 (Milestone 7.5): Live Hardware Authentication & 7-Day Read-Only Telemetry Burn-In (`feat/m7.5-sonnen-live-read-probe`)**:
+   * Provision real `SONNEN_API_TOKEN` from `http://192.168.3.125` and `HA_TOKEN` from `http://192.168.3.138:8123`, run `TestLiveSonnenHardwareStaging` (`MYSUNSHINE_RUN_LIVE_HARDWARE_TESTS=true`), verify `/api/v2/status` schema and firmware watchdog behavior, and run a 7-day read-only Phase A telemetry burn-in.
+3. **Phase 3.3 (Milestone 8): Supervised Single-Window Night Pre-Charge & Fail-Safe Staging (`feat/m8-supervised-precharge-staging`)**:
+   * Build `run_ha_shadow_sync.py` with watchdog heartbeat refreshes and execute supervised Phase B (`GRID_PRECHARGE` & `< 15 s` Mode 2 restore) and Phase C (fault-injection latch drill) on the physical SonnenBatterie 10.
+4. **Phase 3.4 (Milestone 9): Unattended Scheduled Dispatch Daemon & Optional Direct Peak-Discharge Evaluation (`feat/m9-unattended-dispatch-daemon`)**.
 
 ### Prompt for Next Session
 ```text
-@HANDOVER.md @prd.md Review HANDOVER.md and prd.md. Verify git status on feat/m6-next-day-forecast, assist with merging Milestone 6 to main if needed, and proceed with Phase 3 (Milestone 7: Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge).
+@HANDOVER.md @prd.md Review HANDOVER.md and prd.md. Proceed with Milestone 7.5: Live Hardware Authentication, Sonnen /api/v2/status Schema Probe & 7-Day Read-Only Telemetry Burn-In Runner.
 ```
 
 ---

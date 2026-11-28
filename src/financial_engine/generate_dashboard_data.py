@@ -17,6 +17,7 @@ from .multi_year import MultiYearEngine
 from .tariff import SwedishTariff, TariffConfig
 from .tariff_audit import UtilityTariffAuditor
 from ..forecast_engine import ShadowBacktester
+from ..ha_integration import HomeAssistantTelemetryBridge
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -154,10 +155,19 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
         target_date="2026-11-15",
     )
 
+    # 5. Home Assistant Custom Sensor Integration & Live Shadow Telemetry Bridge (Milestone 7)
+    logging.info("Building Milestone 7 Home Assistant Custom Sensor & Shadow Telemetry Package...")
+    ha_bridge = HomeAssistantTelemetryBridge()
+    ha_state_pkg = ha_bridge.build_state_package(
+        multi_year_summary=multi_year_results["multi_year_summary"],
+        next_day_forecast_pkg=next_day_forecast_pkg,
+        utility_audit_report=tariff_audit_report,
+    ).to_dict()
+
     dataset: Dict[str, Any] = {
         "metadata": {
             "app": "MySunshine",
-            "version": "1.1.0",
+            "version": "1.2.0",
             "generated_at": datetime.now().isoformat(),
             "bidding_zone": "SE3",
             "retailer": "Tibber",
@@ -178,6 +188,7 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
         "year_2025": report_2025_dict,
         "utility_tariff_audit": tariff_audit_report,
         "next_day_forecast": next_day_forecast_pkg,
+        "ha_integration": ha_state_pkg,
         "high_res_30d": {
             **report_30d_dict,
             "days_list": days_summary,
