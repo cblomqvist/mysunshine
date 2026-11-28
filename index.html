@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261128">
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -25,6 +25,10 @@
         <!-- Header -->
         <header class="app-header">
             <div class="logo-container">
+                <button type="button" class="btn-sidebar-toggle" id="btn-toggle-sidebar" title="Show/Hide Left Control Sidebar" aria-expanded="true">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                    <span id="sidebar-toggle-label">Controls</span>
+                </button>
                 <div class="logo-icon">
                     <i class="fa-solid fa-sun"></i>
                 </div>
@@ -37,26 +41,52 @@
                     <p class="tagline">Solar PV & Home Battery Financial ROI & High-Resolution Dispatch Analyzer</p>
                 </div>
             </div>
-            <div class="header-specs">
-                <div class="spec-pill">
-                    <i class="fa-solid fa-solar-panel"></i>
-                    <span>Solar PV (Jan 2021, SMA 8.0 kW)</span>
+            <div class="header-right-cluster">
+                <div class="view-toggles-bar" aria-label="Workspace Panel Visibility Controls">
+                    <span class="view-toggles-label"><i class="fa-solid fa-table-columns"></i> Panels:</span>
+                    <button type="button" class="btn-panel-pill active" data-panel-target="kpis" id="pill-toggle-kpis" title="Toggle KPI Summary Strip">
+                        <i class="fa-solid fa-gauge-high"></i> KPIs
+                    </button>
+                    <button type="button" class="btn-panel-pill active" data-panel-target="topCharts" id="pill-toggle-topCharts" title="Toggle 50/50 Financial Charts Row">
+                        <i class="fa-solid fa-chart-pie"></i> ROI Charts
+                    </button>
+                    <button type="button" class="btn-panel-pill active" data-panel-target="dispatch" id="pill-toggle-dispatch" title="Toggle High-Resolution Dispatch Explorer">
+                        <i class="fa-solid fa-bolt"></i> Dispatch
+                    </button>
+                    <button type="button" class="btn-panel-pill active" data-panel-target="ledger" id="pill-toggle-ledger" title="Toggle Bottom Financial Ledger & Tabs">
+                        <i class="fa-solid fa-table-list"></i> Ledgers
+                    </button>
+                    <button type="button" class="btn-focus-dispatch" id="btn-focus-dispatch" title="Focus Mode: Minimize other panels to maximize the High-Res Dispatch Explorer">
+                        <i class="fa-solid fa-expand"></i> Focus Dispatch
+                    </button>
                 </div>
-                <div class="spec-pill">
-                    <i class="fa-solid fa-battery-full"></i>
-                    <span>Sonnen 22 kWh (Sep 2023 + Sep 2024, ~150k SEK)</span>
-                </div>
-                <div class="spec-pill">
-                    <i class="fa-solid fa-store"></i>
-                    <span>Tibber + EEM</span>
+                <div class="header-specs">
+                    <div class="spec-pill">
+                        <i class="fa-solid fa-solar-panel"></i>
+                        <span>Solar PV (Jan 2021, SMA 8.0 kW)</span>
+                    </div>
+                    <div class="spec-pill">
+                        <i class="fa-solid fa-battery-full"></i>
+                        <span>Sonnen 22 kWh (Sep 2023 + Sep 2024, ~150k SEK)</span>
+                    </div>
+                    <div class="spec-pill">
+                        <i class="fa-solid fa-store"></i>
+                        <span>Tibber + EEM</span>
+                    </div>
                 </div>
             </div>
         </header>
 
         <!-- Main Workspace -->
-        <main class="app-main">
+        <main class="app-main" id="app-main-grid">
             <!-- Sidebar Panel: Dynamic Controls -->
-            <aside class="sidebar-panel">
+            <aside class="sidebar-panel" id="sidebar-panel">
+                <div class="sidebar-top-actions">
+                    <span class="sidebar-top-title"><i class="fa-solid fa-sliders"></i> Simulation Parameters</span>
+                    <button type="button" class="btn-collapse-inline" id="btn-hide-sidebar-inner" title="Minimize Controls Sidebar">
+                        <i class="fa-solid fa-angles-left"></i> Hide
+                    </button>
+                </div>
                 <!-- Investment & Capex Controls -->
                 <div class="panel-section">
                     <h2 class="section-title"><i class="fa-solid fa-wallet"></i> Investment & Capex</h2>
@@ -164,16 +194,17 @@
 
                 <!-- High-Resolution Dispatch Day Selector -->
                 <div class="panel-section">
-                    <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> 24h Dispatch Day</h2>
+                    <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> High-Res Dispatch Window</h2>
                     <div class="input-group">
-                        <label for="dispatch-day-select" class="visually-hidden">Select Dispatch Day</label>
+                        <label for="dispatch-day-select" class="visually-hidden">Select Dispatch Anchor Day</label>
                         <select id="dispatch-day-select" class="custom-select">
                             <!-- Populated dynamically -->
                         </select>
                     </div>
 
-                    <div class="preset-buttons">
-                        <button type="button" class="btn-preset active" id="btn-preset-peak-solar"><i class="fa-solid fa-sun"></i> Peak Solar</button>
+                    <div class="preset-buttons preset-buttons-4">
+                        <button type="button" class="btn-preset btn-preset-latest active" id="btn-preset-latest"><i class="fa-solid fa-clock"></i> Latest 24h</button>
+                        <button type="button" class="btn-preset" id="btn-preset-peak-solar"><i class="fa-solid fa-sun"></i> Peak Solar</button>
                         <button type="button" class="btn-preset" id="btn-preset-volatility"><i class="fa-solid fa-arrow-trend-up"></i> Price Volatility</button>
                         <button type="button" class="btn-preset" id="btn-preset-cloudy"><i class="fa-solid fa-cloud"></i> Cloudy Day</button>
                     </div>
@@ -198,131 +229,217 @@
 
             <!-- Results Viewport -->
             <section class="results-viewport">
-                <!-- 4.1 KPI Dashboard Cards & Progress Ring -->
-                <div class="kpi-grid">
-                    <!-- Total Savings -->
-                    <div class="kpi-card highlight-card" id="kpi-savings">
-                        <div class="kpi-header">
-                            <h3>Total Realized Savings</h3>
-                            <i class="fa-solid fa-piggy-bank kpi-icon"></i>
+                <!-- 4.1 KPI Dashboard Cards & Progress Ring (Collapsible Panel) -->
+                <div class="collapsible-panel" id="section-panel-kpis">
+                    <div class="collapsible-panel-bar">
+                        <div class="collapsible-bar-title">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Key Financial &amp; Environmental Performance Indicators</span>
                         </div>
-                        <div class="kpi-value" id="val-total-savings">9,805 SEK</div>
-                        <p class="kpi-sub" id="sub-savings-baseline">vs. 11,940 SEK No-Solar baseline (2025)</p>
+                        <button type="button" class="btn-panel-collapse" data-collapse-panel="kpis" id="btn-collapse-kpis" aria-expanded="true">
+                            <i class="fa-solid fa-minus"></i> <span>Minimize</span>
+                        </button>
                     </div>
-
-                    <!-- Capex Recouped Radial Ring -->
-                    <div class="kpi-card ring-card" id="kpi-capex-ring">
-                        <div class="ring-content">
-                            <div class="kpi-header">
-                                <h3>Capex Recouped</h3>
-                                <i class="fa-solid fa-chart-pie kpi-icon"></i>
+                    <div class="collapsible-panel-body" id="panel-body-kpis">
+                        <div class="kpi-grid">
+                            <!-- Total Savings -->
+                            <div class="kpi-card highlight-card" id="kpi-savings">
+                                <div class="kpi-header">
+                                    <h3>Total Realized Savings</h3>
+                                    <i class="fa-solid fa-piggy-bank kpi-icon"></i>
+                                </div>
+                                <div class="kpi-value" id="val-total-savings">9,805 SEK</div>
+                                <p class="kpi-sub" id="sub-savings-baseline">vs. 11,940 SEK No-Solar baseline (2025)</p>
                             </div>
-                            <div class="kpi-value" id="val-recouped-pct">8.7%</div>
-                            <p class="kpi-sub" id="val-recouped-sek">9,805 / 112,400 SEK</p>
-                        </div>
-                        <div class="ring-svg-wrapper">
-                            <svg class="progress-ring" width="80" height="80" viewBox="0 0 80 80">
-                                <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="7" fill="transparent" r="32" cx="40" cy="40"/>
-                                <circle id="progress-ring-circle" class="progress-ring-fill" stroke="url(#ringGradient)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="183.5" stroke-linecap="round" fill="transparent" r="32" cx="40" cy="40"/>
-                                <defs>
-                                    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#10b981" />
-                                        <stop offset="100%" stop-color="#06b6d4" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-                    </div>
 
-                    <!-- Payback Estimate -->
-                    <div class="kpi-card" id="kpi-payback">
-                        <div class="kpi-header">
-                            <h3>Payback Period</h3>
-                            <i class="fa-solid fa-calendar-check kpi-icon"></i>
-                        </div>
-                        <div class="kpi-value">
-                            <span id="val-payback">9.4</span> <span class="unit">Years</span>
-                        </div>
-                        <p class="kpi-sub" id="sub-payback-detail">Inflation-adjusted break-even</p>
-                    </div>
+                            <!-- Capex Recouped Radial Ring -->
+                            <div class="kpi-card ring-card" id="kpi-capex-ring">
+                                <div class="ring-content">
+                                    <div class="kpi-header">
+                                        <h3>Capex Recouped</h3>
+                                        <i class="fa-solid fa-chart-pie kpi-icon"></i>
+                                    </div>
+                                    <div class="kpi-value" id="val-recouped-pct">8.7%</div>
+                                    <p class="kpi-sub" id="val-recouped-sek">9,805 / 112,400 SEK</p>
+                                </div>
+                                <div class="ring-svg-wrapper">
+                                    <svg class="progress-ring" width="80" height="80" viewBox="0 0 80 80">
+                                        <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="7" fill="transparent" r="32" cx="40" cy="40"/>
+                                        <circle id="progress-ring-circle" class="progress-ring-fill" stroke="url(#ringGradient)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="183.5" stroke-linecap="round" fill="transparent" r="32" cx="40" cy="40"/>
+                                        <defs>
+                                            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stop-color="#10b981" />
+                                                <stop offset="100%" stop-color="#06b6d4" />
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                </div>
+                            </div>
 
-                    <!-- Marginal Battery Value -->
-                    <div class="kpi-card" id="kpi-battery-val">
-                        <div class="kpi-header">
-                            <h3>Battery Marginal Value</h3>
-                            <i class="fa-solid fa-battery-three-quarters kpi-icon"></i>
-                        </div>
-                        <div class="kpi-value" id="val-battery-marginal">-292 SEK</div>
-                        <p class="kpi-sub" id="sub-battery-detail">Sonnen 10 delta vs Solar Only</p>
-                    </div>
+                            <!-- Payback Estimate -->
+                            <div class="kpi-card" id="kpi-payback">
+                                <div class="kpi-header">
+                                    <h3>Payback Period</h3>
+                                    <i class="fa-solid fa-calendar-check kpi-icon"></i>
+                                </div>
+                                <div class="kpi-value">
+                                    <span id="val-payback">9.4</span> <span class="unit">Years</span>
+                                </div>
+                                <p class="kpi-sub" id="sub-payback-detail">Inflation-adjusted break-even</p>
+                            </div>
 
-                    <!-- Avoided CO2 -->
-                    <div class="kpi-card" id="kpi-co2">
-                        <div class="kpi-header">
-                            <h3>Annual Avoided CO₂</h3>
-                            <i class="fa-solid fa-leaf kpi-icon"></i>
+                            <!-- Marginal Battery Value -->
+                            <div class="kpi-card" id="kpi-battery-val">
+                                <div class="kpi-header">
+                                    <h3>Battery Marginal Value</h3>
+                                    <i class="fa-solid fa-battery-three-quarters kpi-icon"></i>
+                                </div>
+                                <div class="kpi-value" id="val-battery-marginal">-292 SEK</div>
+                                <p class="kpi-sub" id="sub-battery-detail">Sonnen 10 delta vs Solar Only</p>
+                            </div>
+
+                            <!-- Avoided CO2 -->
+                            <div class="kpi-card" id="kpi-co2">
+                                <div class="kpi-header">
+                                    <h3>Annual Avoided CO₂</h3>
+                                    <i class="fa-solid fa-leaf kpi-icon"></i>
+                                </div>
+                                <div class="kpi-value">
+                                    <span id="val-co2">3.28</span> <span class="unit">Tons</span>
+                                </div>
+                                <p class="kpi-sub">Clean energy generated in SE3</p>
+                            </div>
                         </div>
-                        <div class="kpi-value">
-                            <span id="val-co2">3.28</span> <span class="unit">Tons</span>
-                        </div>
-                        <p class="kpi-sub">Clean energy generated in SE3</p>
                     </div>
                 </div>
 
-                <!-- Interactive Charts Section -->
+                <!-- Interactive Charts Section (Option 3: 50/50 Top Financial Row + Full-Width Multi-Day Dispatch Row) -->
                 <div class="charts-section">
-                    <!-- Chart 1: Cumulative Payback S-Curve -->
-                    <div class="chart-wrapper main-chart">
-                        <div class="chart-header">
-                            <div class="chart-title">
-                                <h3><i class="fa-solid fa-chart-line"></i> Cumulative Cash Flow & Payback S-Curve (25 Years)</h3>
-                                <p>Historical year 1 performance transitioning into 25-year projected returns with PV degradation and tariff inflation</p>
+                    <!-- Top Row (50/50 Split): Payback S-Curve & 3-Way Baselines -->
+                    <div class="collapsible-panel" id="section-panel-topCharts">
+                        <div class="collapsible-panel-bar">
+                            <div class="collapsible-bar-title">
+                                <i class="fa-solid fa-chart-line"></i>
+                                <span>Long-Term Financial ROI &amp; 3-Way Baseline Comparisons (50/50 Widescreen Split)</span>
                             </div>
-                            <div class="chart-badges">
-                                <span class="badge badge-breakeven" id="breakeven-badge"><i class="fa-solid fa-flag-checkered"></i> Break-Even: Year 9.4</span>
-                            </div>
+                            <button type="button" class="btn-panel-collapse" data-collapse-panel="topCharts" id="btn-collapse-topCharts" aria-expanded="true">
+                                <i class="fa-solid fa-minus"></i> <span>Minimize</span>
+                            </button>
                         </div>
-                        <div class="chart-canvas-container">
-                            <canvas id="chart-payback-scurve"></canvas>
+                        <div class="collapsible-panel-body" id="panel-body-topCharts">
+                            <div class="charts-grid-top-5050">
+                                <!-- Chart 1: Cumulative Payback S-Curve -->
+                                <div class="chart-wrapper">
+                                    <div class="chart-header">
+                                        <div class="chart-title">
+                                            <h3><i class="fa-solid fa-chart-line"></i> Cumulative Cash Flow &amp; Payback S-Curve (25 Years)</h3>
+                                            <p>Historical performance transitioning into 25-year projected returns with PV degradation and tariff inflation</p>
+                                        </div>
+                                        <div class="chart-badges">
+                                            <span class="badge badge-breakeven" id="breakeven-badge"><i class="fa-solid fa-flag-checkered"></i> Break-Even: Year 9.4</span>
+                                        </div>
+                                    </div>
+                                    <div class="chart-canvas-container">
+                                        <canvas id="chart-payback-scurve"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Chart 2: 3-Way Baseline Bar Chart -->
+                                <div class="chart-wrapper">
+                                    <div class="chart-header">
+                                        <div class="chart-title">
+                                            <h3><i class="fa-solid fa-chart-column"></i> <span id="baseline-chart-title-text">3-Way Baseline Yearly Comparison</span></h3>
+                                            <p id="baseline-chart-subtitle-text">Annual Totals (2023–2026): No Solar (Grey) vs. Solar Only (Amber) vs. Actual System (Teal)</p>
+                                        </div>
+                                        <div class="chart-badges" id="skattereduktion-badge-container">
+                                            <span class="badge badge-accent" id="skattereduktion-chart-badge" title="Hatched bars depict the portion contributed by the 60 öre/kWh Skattereduktion subsidy (valid 2021–2025; ended 2026-01-01).">
+                                                <i class="fa-solid fa-receipt"></i> <span id="skattereduktion-badge-text">Skattereduktion (60 öre/kWh): 2021–2025</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="chart-canvas-container">
+                                        <canvas id="chart-monthly-baselines"></canvas>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Secondary Charts Grid -->
-                    <div class="charts-grid-secondary">
-                        <!-- Chart 2: 3-Way Baseline Bar Chart -->
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <div class="chart-title">
-                                    <h3><i class="fa-solid fa-chart-column"></i> <span id="baseline-chart-title-text">3-Way Baseline Yearly Comparison</span></h3>
-                                    <p id="baseline-chart-subtitle-text">Annual Totals (2023–2026): No Solar (Grey) vs. Solar Only (Amber) vs. Actual System (Teal)</p>
-                                </div>
-                                <div class="chart-badges" id="skattereduktion-badge-container">
-                                    <span class="badge badge-accent" id="skattereduktion-chart-badge" title="Hatched bars depict the portion contributed by the 60 öre/kWh Skattereduktion subsidy (valid 2021–2025; ended 2026-01-01).">
-                                        <i class="fa-solid fa-receipt"></i> <span id="skattereduktion-badge-text">Skattereduktion (60 öre/kWh): 2021–2025</span>
-                                    </span>
-                                </div>
+                    <!-- Bottom Row (100% Full Width): Multi-Day High-Resolution Hourly Dispatch & Spot Price Explorer -->
+                    <div class="collapsible-panel" id="section-panel-dispatch">
+                        <div class="collapsible-panel-bar">
+                            <div class="collapsible-bar-title">
+                                <i class="fa-solid fa-bolt"></i>
+                                <span>High-Resolution Hourly Dispatch &amp; Spot Price Explorer (Multi-Day Timespan &amp; Range Stepping)</span>
                             </div>
-                            <div class="chart-canvas-container">
-                                <canvas id="chart-monthly-baselines"></canvas>
-                            </div>
+                            <button type="button" class="btn-panel-collapse" data-collapse-panel="dispatch" id="btn-collapse-dispatch" aria-expanded="true">
+                                <i class="fa-solid fa-minus"></i> <span>Minimize</span>
+                            </button>
                         </div>
+                        <div class="collapsible-panel-body" id="panel-body-dispatch">
+                            <div class="chart-wrapper dispatch-full-chart">
+                                <div class="chart-header dispatch-toolbar-header">
+                                    <div class="chart-title">
+                                        <h3>
+                                            <i class="fa-solid fa-bolt"></i>
+                                            <span id="dispatch-chart-heading">High-Resolution Hourly Dispatch &amp; Spot Price Overlay</span>
+                                            <span class="badge badge-success" id="dispatch-window-badge">Latest 24h</span>
+                                        </h3>
+                                        <p id="dispatch-chart-subtitle">Showing latest available 24h telemetry</p>
+                                    </div>
 
-                        <!-- Chart 3: Hourly Dispatch & Price Overlay -->
-                        <div class="chart-wrapper">
-                            <div class="chart-header">
-                                <div class="chart-title">
-                                    <h3><i class="fa-solid fa-bolt"></i> 24h Hourly Dispatch & Spot Price Overlay</h3>
-                                    <p id="dispatch-chart-subtitle">Showing: Aug 02, 2026 (Peak Solar Day)</p>
+                                    <!-- Interactive Timespan, Latest 24h, Full-Range & Half-Range Stepping Controls -->
+                                    <div class="dispatch-explorer-controls">
+                                        <button type="button" class="btn-dispatch-latest active" id="btn-dispatch-latest" title="Jump to Latest Available 24 Hours (Default View)">
+                                            <i class="fa-solid fa-bolt-lightning"></i> Latest 24h
+                                        </button>
+
+                                        <div class="dispatch-step-group" role="group" aria-label="Step Back or Forward by Full or Half Timespan">
+                                            <button type="button" class="btn-dispatch-step btn-step-full" id="btn-step-back-full" title="Step Back 1 Full Range">
+                                                <i class="fa-solid fa-angles-left"></i> <span id="lbl-step-back-full">-24h</span>
+                                            </button>
+                                            <button type="button" class="btn-dispatch-step btn-step-half" id="btn-step-back-half" title="Step Back Half Range">
+                                                <i class="fa-solid fa-angle-left"></i> <span id="lbl-step-back-half">-12h</span>
+                                            </button>
+                                            <button type="button" class="btn-dispatch-step btn-step-half" id="btn-step-fwd-half" title="Step Forward Half Range">
+                                                <span id="lbl-step-fwd-half">+12h</span> <i class="fa-solid fa-angle-right"></i>
+                                            </button>
+                                            <button type="button" class="btn-dispatch-step btn-step-full" id="btn-step-fwd-full" title="Step Forward 1 Full Range">
+                                                <span id="lbl-step-fwd-full">+24h</span> <i class="fa-solid fa-angles-right"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="dispatch-span-group" role="group" aria-label="Select Timespan Duration">
+                                            <span class="span-group-label">Span:</span>
+                                            <button type="button" class="btn-dispatch-span active" data-span-hours="24">24h</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="48">48h</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="72">3D</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="168">7D</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="336">14D</button>
+                                            <button type="button" class="btn-dispatch-span" data-span-hours="720">30D</button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="chart-canvas-container">
-                                <canvas id="chart-hourly-dispatch"></canvas>
+                                <div class="chart-canvas-container dispatch-canvas-container">
+                                    <canvas id="chart-hourly-dispatch"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Financial Ledger & Tables Section -->
+                <!-- Financial Ledger & Tables Section (Collapsible Panel) -->
+                <div class="collapsible-panel" id="section-panel-ledger">
+                    <div class="collapsible-panel-bar">
+                        <div class="collapsible-bar-title">
+                            <i class="fa-solid fa-table-list"></i>
+                            <span>Financial Ledgers, High-Res Audits, Next-Day Shadow Advisor &amp; Home Assistant Bridge</span>
+                        </div>
+                        <button type="button" class="btn-panel-collapse" data-collapse-panel="ledger" id="btn-collapse-ledger" aria-expanded="true">
+                            <i class="fa-solid fa-minus"></i> <span>Minimize</span>
+                        </button>
+                    </div>
+                    <div class="collapsible-panel-body" id="panel-body-ledger">
                 <div class="table-card">
                     <div class="table-tab-header">
                         <div class="tab-buttons">
@@ -688,6 +805,8 @@
                         </div>
                     </div>
                 </div>
+                    </div>
+                </div>
             </section>
         </main>
 
@@ -703,8 +822,8 @@
     </div>
 
     <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
-    <script src="data/dashboard_data.js"></script>
+    <script src="data/dashboard_data.js?v=20261128"></script>
     <!-- Application Logic & Charts -->
-    <script src="app.js"></script>
+    <script src="app.js?v=20261128"></script>
 </body>
 </html>

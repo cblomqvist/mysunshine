@@ -31,10 +31,45 @@ const tibberFeeVal = document.getElementById('tibber-fee-val');
 const historyYearSelect = document.getElementById('history-year-select');
 const monthlyTabTitle = document.getElementById('monthly-tab-title');
 const dispatchDaySelect = document.getElementById('dispatch-day-select');
+const btnPresetLatest = document.getElementById('btn-preset-latest');
 const btnPresetPeakSolar = document.getElementById('btn-preset-peak-solar');
 const btnPresetVolatility = document.getElementById('btn-preset-volatility');
 const btnPresetCloudy = document.getElementById('btn-preset-cloudy');
 const dispatchChartSubtitle = document.getElementById('dispatch-chart-subtitle');
+const dispatchChartHeading = document.getElementById('dispatch-chart-heading');
+const dispatchWindowBadge = document.getElementById('dispatch-window-badge');
+
+// Multi-Day Dispatch Explorer & Stepping Controls
+const btnDispatchLatest = document.getElementById('btn-dispatch-latest');
+const btnStepBackFull = document.getElementById('btn-step-back-full');
+const btnStepBackHalf = document.getElementById('btn-step-back-half');
+const btnStepFwdHalf = document.getElementById('btn-step-fwd-half');
+const btnStepFwdFull = document.getElementById('btn-step-fwd-full');
+const lblStepBackFull = document.getElementById('lbl-step-back-full');
+const lblStepBackHalf = document.getElementById('lbl-step-back-half');
+const lblStepFwdHalf = document.getElementById('lbl-step-fwd-half');
+const lblStepFwdFull = document.getElementById('lbl-step-fwd-full');
+
+// Multi-Day Dispatch Window State (defaults to Latest Available 24h)
+const dispatchExplorerState = {
+    spanHours: 24,
+    endIndex: null // exclusive index into high_res_30d.hourly_data; null = latest end
+};
+
+// Collapsible Panel & Sidebar Controls
+const appMainGrid = document.getElementById('app-main-grid');
+const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+const btnHideSidebarInner = document.getElementById('btn-hide-sidebar-inner');
+const sidebarToggleLabel = document.getElementById('sidebar-toggle-label');
+const btnFocusDispatch = document.getElementById('btn-focus-dispatch');
+
+const panelVisibilityState = {
+    sidebar: true,
+    kpis: true,
+    topCharts: true,
+    dispatch: true,
+    ledger: true
+};
 
 // KPI Displays
 const valTotalSavings = document.getElementById('val-total-savings');
@@ -149,35 +184,70 @@ function setupEventListeners() {
         historyYearSelect.addEventListener('change', updateSimulation);
     }
 
-    // Dispatch Day Selectors
+        // Dispatch Day Selectors & Multi-Day Range Explorer
     dispatchDaySelect.addEventListener('change', () => {
-        updateHourlyDispatchChart();
-        updatePresetButtonsState();
+        jumpToDateInDispatchExplorer(dispatchDaySelect.value);
     });
+
+    if (btnPresetLatest) {
+        btnPresetLatest.addEventListener('click', () => {
+            jumpToLatest24h();
+        });
+    }
+
+    if (btnDispatchLatest) {
+        btnDispatchLatest.addEventListener('click', () => {
+            jumpToLatest24h();
+        });
+    }
 
     btnPresetPeakSolar.addEventListener('click', () => {
         if (dashboardData && dashboardData.metadata && dashboardData.metadata.featured_days) {
-            dispatchDaySelect.value = dashboardData.metadata.featured_days.peak_solar;
-            updateHourlyDispatchChart();
-            updatePresetButtonsState();
+            dispatchExplorerState.spanHours = 24;
+            jumpToDateInDispatchExplorer(dashboardData.metadata.featured_days.peak_solar);
         }
     });
 
     btnPresetVolatility.addEventListener('click', () => {
         if (dashboardData && dashboardData.metadata && dashboardData.metadata.featured_days) {
-            dispatchDaySelect.value = dashboardData.metadata.featured_days.peak_volatility;
-            updateHourlyDispatchChart();
-            updatePresetButtonsState();
+            dispatchExplorerState.spanHours = 24;
+            jumpToDateInDispatchExplorer(dashboardData.metadata.featured_days.peak_volatility);
         }
     });
 
     btnPresetCloudy.addEventListener('click', () => {
         if (dashboardData && dashboardData.metadata && dashboardData.metadata.featured_days) {
-            dispatchDaySelect.value = dashboardData.metadata.featured_days.cloudy_day;
-            updateHourlyDispatchChart();
-            updatePresetButtonsState();
+            dispatchExplorerState.spanHours = 24;
+            jumpToDateInDispatchExplorer(dashboardData.metadata.featured_days.cloudy_day);
         }
     });
+
+    // Step Back / Forward (Full Range & Half Range)
+    if (btnStepBackFull) {
+        btnStepBackFull.addEventListener('click', () => stepDispatchWindow(-1.0));
+    }
+    if (btnStepBackHalf) {
+        btnStepBackHalf.addEventListener('click', () => stepDispatchWindow(-0.5));
+    }
+    if (btnStepFwdHalf) {
+        btnStepFwdHalf.addEventListener('click', () => stepDispatchWindow(0.5));
+    }
+    if (btnStepFwdFull) {
+        btnStepFwdFull.addEventListener('click', () => stepDispatchWindow(1.0));
+    }
+
+    // Timespan Duration Buttons (24h, 48h, 72h, 7D, 14D, 30D)
+    document.querySelectorAll('.btn-dispatch-span').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const hours = parseInt(btn.getAttribute('data-span-hours'), 10);
+            if (!isNaN(hours) && hours > 0) {
+                setDispatchSpanHours(hours);
+            }
+        });
+    });
+
+    // Collapsible Panels & Sidebar Controls
+    setupCollapsiblePanels();
 
     // Tab Navigation
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -205,30 +275,288 @@ function setupEventListeners() {
     }
 }
 
-function updatePresetButtonsState() {
-    const selectedDate = dispatchDaySelect.value;
-    const feats = dashboardData?.metadata?.featured_days;
-    btnPresetPeakSolar.classList.toggle('active', feats?.peak_solar === selectedDate);
-    btnPresetVolatility.classList.toggle('active', feats?.peak_volatility === selectedDate);
-    btnPresetCloudy.classList.toggle('active', feats?.cloudy_day === selectedDate);
+function formatSpanDurationLabel(hours) {
+    if (hours >= 48 && hours % 24 === 0) {
+        return `${hours / 24}d`;
+    }
+    return `${hours}h`;
 }
 
-// Populate Dispatch Day Dropdown
+function setupCollapsiblePanels() {
+    try {
+        const saved = localStorage.getItem('mysunshine_panel_state_v1');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            Object.keys(panelVisibilityState).forEach(k => {
+                if (typeof parsed[k] === 'boolean') {
+                    panelVisibilityState[k] = parsed[k];
+                }
+            });
+        }
+    } catch (e) {
+        // Ignore storage errors in sandboxed/private contexts
+    }
+
+    if (btnToggleSidebar) {
+        btnToggleSidebar.addEventListener('click', () => {
+            panelVisibilityState.sidebar = !panelVisibilityState.sidebar;
+            applyPanelVisibilityState();
+        });
+    }
+
+    if (btnHideSidebarInner) {
+        btnHideSidebarInner.addEventListener('click', () => {
+            panelVisibilityState.sidebar = false;
+            applyPanelVisibilityState();
+        });
+    }
+
+    document.querySelectorAll('[data-collapse-panel]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.getAttribute('data-collapse-panel');
+            if (key in panelVisibilityState) {
+                panelVisibilityState[key] = !panelVisibilityState[key];
+                applyPanelVisibilityState();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-panel-target]').forEach(pill => {
+        pill.addEventListener('click', () => {
+            const key = pill.getAttribute('data-panel-target');
+            if (key in panelVisibilityState) {
+                panelVisibilityState[key] = !panelVisibilityState[key];
+                applyPanelVisibilityState();
+            }
+        });
+    });
+
+    if (btnFocusDispatch) {
+        btnFocusDispatch.addEventListener('click', () => {
+            const isFocusActive = !panelVisibilityState.sidebar &&
+                !panelVisibilityState.kpis &&
+                !panelVisibilityState.topCharts &&
+                !panelVisibilityState.ledger &&
+                panelVisibilityState.dispatch;
+
+            if (isFocusActive) {
+                panelVisibilityState.sidebar = true;
+                panelVisibilityState.kpis = true;
+                panelVisibilityState.topCharts = true;
+                panelVisibilityState.dispatch = true;
+                panelVisibilityState.ledger = true;
+            } else {
+                panelVisibilityState.sidebar = false;
+                panelVisibilityState.kpis = false;
+                panelVisibilityState.topCharts = false;
+                panelVisibilityState.dispatch = true;
+                panelVisibilityState.ledger = false;
+            }
+            applyPanelVisibilityState();
+        });
+    }
+
+    applyPanelVisibilityState();
+}
+
+function applyPanelVisibilityState() {
+    try {
+        localStorage.setItem('mysunshine_panel_state_v1', JSON.stringify(panelVisibilityState));
+    } catch (e) {
+        // Ignore storage errors
+    }
+
+    // 1. Sidebar state
+    if (appMainGrid) {
+        appMainGrid.classList.toggle('sidebar-collapsed', !panelVisibilityState.sidebar);
+    }
+    if (btnToggleSidebar) {
+        btnToggleSidebar.classList.toggle('collapsed', !panelVisibilityState.sidebar);
+        btnToggleSidebar.setAttribute('aria-expanded', String(panelVisibilityState.sidebar));
+    }
+    if (sidebarToggleLabel) {
+        sidebarToggleLabel.innerText = panelVisibilityState.sidebar ? 'Controls' : 'Show Controls';
+    }
+
+    // 2. Collapsible Section Panels
+    ['kpis', 'topCharts', 'dispatch', 'ledger'].forEach(key => {
+        const isVisible = panelVisibilityState[key];
+        const panelEl = document.getElementById(`section-panel-${key}`);
+        const btnEl = document.getElementById(`btn-collapse-${key}`);
+        const pillEl = document.getElementById(`pill-toggle-${key}`);
+
+        if (panelEl) {
+            panelEl.classList.toggle('is-collapsed', !isVisible);
+        }
+        if (btnEl) {
+            btnEl.setAttribute('aria-expanded', String(isVisible));
+            btnEl.innerHTML = isVisible
+                ? '<i class="fa-solid fa-minus"></i> <span>Minimize</span>'
+                : '<i class="fa-solid fa-plus"></i> <span>Expand</span>';
+        }
+        if (pillEl) {
+            pillEl.classList.toggle('active', isVisible);
+        }
+    });
+
+    // 3. Focus Dispatch button highlight
+    if (btnFocusDispatch) {
+        const isFocusActive = !panelVisibilityState.sidebar &&
+            !panelVisibilityState.kpis &&
+            !panelVisibilityState.topCharts &&
+            !panelVisibilityState.ledger &&
+            panelVisibilityState.dispatch;
+        btnFocusDispatch.classList.toggle('active', isFocusActive);
+        btnFocusDispatch.innerHTML = isFocusActive
+            ? '<i class="fa-solid fa-compress"></i> Restore All Panels'
+            : '<i class="fa-solid fa-expand"></i> Focus Dispatch';
+    }
+
+    // Resize active Chart.js instances after layout transition
+    setTimeout(() => {
+        if (chartPaybackInstance) chartPaybackInstance.resize();
+        if (chartMonthlyBaselinesInstance) chartMonthlyBaselinesInstance.resize();
+        if (chartHourlyDispatchInstance) chartHourlyDispatchInstance.resize();
+        if (chartShadowForecastInstance) chartShadowForecastInstance.resize();
+    }, 60);
+}
+
+function jumpToLatest24h() {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+    dispatchExplorerState.spanHours = 24;
+    dispatchExplorerState.endIndex = hourlyData.length;
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+function jumpToDateInDispatchExplorer(dateStr) {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length || !dateStr) return;
+
+    // Find the last hour index belonging to dateStr
+    let lastMatchIdx = -1;
+    let firstMatchIdx = -1;
+    for (let i = 0; i < hourlyData.length; i++) {
+        if (hourlyData[i].date === dateStr) {
+            if (firstMatchIdx === -1) firstMatchIdx = i;
+            lastMatchIdx = i;
+        }
+    }
+
+    if (firstMatchIdx !== -1) {
+        if (dispatchExplorerState.spanHours <= 24) {
+            dispatchExplorerState.endIndex = lastMatchIdx + 1;
+        } else {
+            // Anchor window starting at 00:00 of selected date (clamped to dataset bounds)
+            dispatchExplorerState.endIndex = Math.min(hourlyData.length, firstMatchIdx + dispatchExplorerState.spanHours);
+        }
+        updateHourlyDispatchChart();
+        updatePresetButtonsState();
+    }
+}
+
+function setDispatchSpanHours(newSpanHours) {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+    const total = hourlyData.length;
+    const clampedSpan = Math.min(total, Math.max(12, newSpanHours));
+    dispatchExplorerState.spanHours = clampedSpan;
+
+    if (dispatchExplorerState.endIndex === null) {
+        dispatchExplorerState.endIndex = total;
+    } else if (dispatchExplorerState.endIndex < clampedSpan) {
+        dispatchExplorerState.endIndex = Math.min(total, clampedSpan);
+    }
+
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+function stepDispatchWindow(rangeMultiplier) {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    if (!hourlyData.length) return;
+    const total = hourlyData.length;
+    const span = Math.min(total, dispatchExplorerState.spanHours || 24);
+    const currentEnd = dispatchExplorerState.endIndex ?? total;
+
+    const deltaHours = Math.max(1, Math.round(span * Math.abs(rangeMultiplier))) * (rangeMultiplier < 0 ? -1 : 1);
+    const nextEnd = Math.max(span, Math.min(total, currentEnd + deltaHours));
+    dispatchExplorerState.endIndex = nextEnd;
+
+    updateHourlyDispatchChart();
+    updatePresetButtonsState();
+}
+
+function updatePresetButtonsState() {
+    const hourlyData = dashboardData?.high_res_30d?.hourly_data || [];
+    const total = hourlyData.length;
+    const span = dispatchExplorerState.spanHours || 24;
+    const endIdx = dispatchExplorerState.endIndex ?? total;
+    const startIdx = Math.max(0, endIdx - span);
+    const isLatest24h = (span === 24 && endIdx === total);
+
+    const anchorDate = hourlyData[startIdx]?.date || dispatchDaySelect.value;
+    const isSingleDayAligned = (span === 24 && hourlyData[startIdx]?.hour === 0);
+
+    const feats = dashboardData?.metadata?.featured_days;
+    if (btnPresetLatest) {
+        btnPresetLatest.classList.toggle('active', isLatest24h);
+    }
+    if (btnDispatchLatest) {
+        btnDispatchLatest.classList.toggle('active', isLatest24h);
+    }
+    btnPresetPeakSolar.classList.toggle('active', isSingleDayAligned && feats?.peak_solar === anchorDate);
+    btnPresetVolatility.classList.toggle('active', isSingleDayAligned && feats?.peak_volatility === anchorDate);
+    btnPresetCloudy.classList.toggle('active', isSingleDayAligned && feats?.cloudy_day === anchorDate);
+
+    // Sync span buttons
+    document.querySelectorAll('.btn-dispatch-span').forEach(btn => {
+        const bHours = parseInt(btn.getAttribute('data-span-hours'), 10);
+        btn.classList.toggle('active', bHours === span);
+    });
+
+    // Update full-range and half-range button labels and disabled states
+    const fullStr = formatSpanDurationLabel(span);
+    const halfHours = Math.max(1, Math.round(span / 2));
+    const halfStr = formatSpanDurationLabel(halfHours);
+
+    if (lblStepBackFull) lblStepBackFull.innerText = `-${fullStr}`;
+    if (lblStepBackHalf) lblStepBackHalf.innerText = `-${halfStr}`;
+    if (lblStepFwdHalf) lblStepFwdHalf.innerText = `+${halfStr}`;
+    if (lblStepFwdFull) lblStepFwdFull.innerText = `+${fullStr}`;
+
+    if (btnStepBackFull) btnStepBackFull.disabled = (startIdx <= 0);
+    if (btnStepBackHalf) btnStepBackHalf.disabled = (startIdx <= 0);
+    if (btnStepFwdHalf) btnStepFwdHalf.disabled = (endIdx >= total);
+    if (btnStepFwdFull) btnStepFwdFull.disabled = (endIdx >= total);
+}
+
+// Populate Dispatch Day Dropdown (Defaults to Latest Available 24h Window)
 function populateDispatchDays() {
     if (!dashboardData || !dashboardData.high_res_30d || !dashboardData.high_res_30d.days_list) return;
     
     const days = dashboardData.high_res_30d.days_list;
+    const hourlyData = dashboardData.high_res_30d.hourly_data || [];
     dispatchDaySelect.innerHTML = '';
     
+    // Show days in chronological order, marking the latest available day
+    const latestDayDate = days[days.length - 1]?.date;
     days.forEach(day => {
         const opt = document.createElement('option');
         opt.value = day.date;
-        opt.innerText = `${day.display_name} (${day.total_produced_kwh} kWh PV, ${day.avg_spot_price_ore} öre avg)`;
+        const latestTag = (day.date === latestDayDate) ? ' ★ Latest' : '';
+        opt.innerText = `${day.display_name}${latestTag} (${day.total_produced_kwh} kWh PV, ${day.avg_spot_price_ore} öre avg)`;
         dispatchDaySelect.appendChild(opt);
     });
 
-    const defaultDay = dashboardData.metadata?.featured_days?.peak_solar || days[0].date;
-    dispatchDaySelect.value = defaultDay;
+    // Default to Latest Available 24h Data
+    dispatchExplorerState.spanHours = 24;
+    dispatchExplorerState.endIndex = hourlyData.length;
+    if (latestDayDate) {
+        dispatchDaySelect.value = latestDayDate;
+    }
+    updatePresetButtonsState();
 }
 
 // Helper: Recalculate financial costs for a list of monthly ledgers given current tariff settings
@@ -1010,31 +1338,132 @@ function renderAnnualComparisonChart(annualSummaries) {
     });
 }
 
-// Chart 3 - 24h Hourly Dispatch & Price Overlay
+// Plugin to draw midnight day separators on multi-day dispatch views
+const dispatchDaySeparatorPlugin = {
+    id: 'dispatchDaySeparatorPlugin',
+    beforeDatasetsDraw(chart) {
+        const records = chart.config.options.plugins?.dispatchDaySeparatorPlugin?.records || [];
+        if (records.length <= 24) return;
+
+        const { ctx, chartArea, scales } = chart;
+        const xScale = scales.x;
+        if (!chartArea || !xScale) return;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+
+        records.forEach((rec, idx) => {
+            if (idx > 0 && rec.hour === 0) {
+                const x = xScale.getPixelForValue(idx);
+                if (x >= chartArea.left && x <= chartArea.right) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, chartArea.top);
+                    ctx.lineTo(x, chartArea.bottom);
+                    ctx.stroke();
+                }
+            }
+        });
+        ctx.restore();
+    }
+};
+
+// Chart 3 - Multi-Day High-Resolution Hourly Dispatch & Price Overlay
 function updateHourlyDispatchChart() {
     const canvas = document.getElementById('chart-hourly-dispatch');
-    if (!canvas || !dashboardData?.high_res_30d?.hourly_data) return;
+    const allHourly = dashboardData?.high_res_30d?.hourly_data;
+    if (!canvas || !allHourly || !allHourly.length) return;
     const ctx = canvas.getContext('2d');
 
-    const selectedDate = dispatchDaySelect.value;
-    const dayRecords = dashboardData.high_res_30d.hourly_data.filter(h => h.date === selectedDate);
-    if (!dayRecords.length) return;
+    const total = allHourly.length;
+    const span = Math.min(total, Math.max(12, dispatchExplorerState.spanHours || 24));
+    if (dispatchExplorerState.endIndex === null || dispatchExplorerState.endIndex > total) {
+        dispatchExplorerState.endIndex = total;
+    }
+    const endIdx = Math.max(span, dispatchExplorerState.endIndex);
+    const startIdx = Math.max(0, endIdx - span);
+    dispatchExplorerState.endIndex = endIdx;
+
+    const windowRecords = allHourly.slice(startIdx, endIdx);
+    if (!windowRecords.length) return;
+
+    const firstRec = windowRecords[0];
+    const lastRec = windowRecords[windowRecords.length - 1];
+    const isLatestWindow = (endIdx === total);
+    const spanDays = span / 24;
+
+    // Keep sidebar dropdown synced to the window's ending date (or starting date if single day)
+    const syncDate = (span <= 24) ? firstRec.date : lastRec.date;
+    if (dispatchDaySelect && dispatchDaySelect.value !== syncDate) {
+        const hasOpt = Array.from(dispatchDaySelect.options).some(o => o.value === syncDate);
+        if (hasOpt) dispatchDaySelect.value = syncDate;
+    }
+
+    // Compute window summary metrics
+    const totPvKwh = windowRecords.reduce((acc, h) => acc + (h.pv_power_kw ?? h.produced_kw ?? 0), 0);
+    const totLoadKwh = windowRecords.reduce((acc, h) => acc + (h.load_power_kw ?? h.consumed_kw ?? 0), 0);
+    const avgSpotOre = windowRecords.reduce((acc, h) => acc + (h.spot_price_ore ?? 0), 0) / windowRecords.length;
+    const minSpotOre = Math.min(...windowRecords.map(h => h.spot_price_ore ?? 0));
+    const maxSpotOre = Math.max(...windowRecords.map(h => h.spot_price_ore ?? 0));
+
+    const daysList = dashboardData.high_res_30d.days_list || [];
+    const firstDayInfo = daysList.find(d => d.date === firstRec.date);
+    const lastDayInfo = daysList.find(d => d.date === lastRec.date);
+    const firstDateLabel = firstDayInfo ? firstDayInfo.display_name : firstRec.date;
+    const lastDateLabel = lastDayInfo ? lastDayInfo.display_name : lastRec.date;
+    const firstHourStr = `${String(firstRec.hour).padStart(2, '0')}:00`;
+    const lastHourStr = `${String(lastRec.hour).padStart(2, '0')}:00`;
+
+    // Update Heading & Badge
+    if (dispatchChartHeading) {
+        const spanTitle = span === 24 ? '24h' : (span % 24 === 0 ? `${span / 24}-Day (${span}h)` : `${span}h`);
+        dispatchChartHeading.innerText = `${spanTitle} High-Resolution Dispatch & Spot Price Overlay`;
+    }
+    if (dispatchWindowBadge) {
+        if (isLatestWindow && span === 24) {
+            dispatchWindowBadge.className = 'badge badge-success';
+            dispatchWindowBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Latest 24h (Default)';
+        } else if (isLatestWindow) {
+            dispatchWindowBadge.className = 'badge badge-success';
+            dispatchWindowBadge.innerHTML = `<i class="fa-solid fa-clock"></i> Latest ${formatSpanDurationLabel(span)}`;
+        } else {
+            dispatchWindowBadge.className = 'badge badge-accent';
+            dispatchWindowBadge.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${firstRec.date === lastRec.date ? firstDateLabel : `${firstDateLabel} → ${lastDateLabel}`}`;
+        }
+    }
 
     if (dispatchChartSubtitle) {
-        const dayInfo = dashboardData.high_res_30d.days_list.find(d => d.date === selectedDate);
-        dispatchChartSubtitle.innerText = `Showing: ${dayInfo ? dayInfo.display_name : selectedDate} (PV: ${dayInfo?.total_produced_kwh || 0} kWh, Avg Spot: ${dayInfo?.avg_spot_price_ore || 0} öre)`;
+        const rangeText = (firstRec.date === lastRec.date)
+            ? `${firstDateLabel} (${firstHourStr}–${lastHourStr})`
+            : `${firstDateLabel} ${firstHourStr} → ${lastDateLabel} ${lastHourStr} (${windowRecords.length} hours)`;
+        dispatchChartSubtitle.innerText =
+            `Window: ${rangeText} | PV: ${totPvKwh.toFixed(1)} kWh | Load: ${totLoadKwh.toFixed(1)} kWh | Spot Avg: ${avgSpotOre.toFixed(1)} öre [${minSpotOre.toFixed(1)}–${maxSpotOre.toFixed(1)} öre]`;
     }
+
+    updatePresetButtonsState();
 
     if (chartHourlyDispatchInstance) {
         chartHourlyDispatchInstance.destroy();
     }
 
-    const labels = dayRecords.map(h => `${String(h.hour).padStart(2, '0')}:00`);
-    const pvPower = dayRecords.map(h => h.pv_power_kw ?? h.produced_kw ?? 0);
-    const loadPower = dayRecords.map(h => h.load_power_kw ?? h.consumed_kw ?? 0);
-    const battPower = dayRecords.map(h => h.battery_power_kw ?? ((h.battery_discharged_kw || 0) - (h.battery_charged_kw || 0)));
-    const socData = dayRecords.map(h => h.soc_pct ?? h.battery_soc_pct ?? 0);
-    const priceData = dayRecords.map(h => h.spot_price_ore);
+    const labels = windowRecords.map(h => {
+        const hrStr = `${String(h.hour).padStart(2, '0')}:00`;
+        if (span <= 24 && firstRec.date === lastRec.date) {
+            return hrStr;
+        }
+        const shortMonthDay = h.date.substring(5); // MM-DD
+        return `${shortMonthDay} ${hrStr}`;
+    });
+
+    const pvPower = windowRecords.map(h => h.pv_power_kw ?? h.produced_kw ?? 0);
+    const loadPower = windowRecords.map(h => h.load_power_kw ?? h.consumed_kw ?? 0);
+    const battPower = windowRecords.map(h => h.battery_power_kw ?? ((h.battery_discharged_kw || 0) - (h.battery_charged_kw || 0)));
+    const socData = windowRecords.map(h => h.soc_pct ?? h.battery_soc_pct ?? 0);
+    const priceData = windowRecords.map(h => h.spot_price_ore);
+
+    const pointRadiusVal = span <= 48 ? 2 : 0;
+    const borderW = span <= 72 ? 2 : 1.5;
 
     chartHourlyDispatchInstance = new Chart(ctx, {
         type: 'line',
@@ -1045,27 +1474,33 @@ function updateHourlyDispatchChart() {
                     label: 'Solar PV (kW)',
                     data: pvPower,
                     borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                    borderWidth: 2,
+                    backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                    borderWidth: borderW,
+                    pointRadius: pointRadiusVal,
+                    pointHoverRadius: 4,
                     fill: true,
-                    tension: 0.3,
+                    tension: 0.25,
                     yAxisID: 'yPower'
                 },
                 {
                     label: 'Household Load (kW)',
                     data: loadPower,
                     borderColor: '#ef4444',
-                    borderWidth: 2,
+                    borderWidth: borderW,
                     borderDash: [4, 4],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
                     fill: false,
                     tension: 0.2,
                     yAxisID: 'yPower'
                 },
                 {
-                    label: 'Battery Dispatch (kW)',
+                    label: 'Battery Dispatch (+Dis / -Chg kW)',
                     data: battPower,
                     borderColor: '#8b5cf6',
-                    borderWidth: 2,
+                    borderWidth: borderW,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
                     fill: false,
                     tension: 0.2,
                     yAxisID: 'yPower'
@@ -1074,7 +1509,9 @@ function updateHourlyDispatchChart() {
                     label: 'Battery SoC (%)',
                     data: socData,
                     borderColor: '#10b981',
-                    borderWidth: 2,
+                    borderWidth: borderW,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
                     fill: false,
                     tension: 0.2,
                     yAxisID: 'ySoc'
@@ -1085,12 +1522,15 @@ function updateHourlyDispatchChart() {
                     borderColor: '#06b6d4',
                     borderWidth: 1.5,
                     borderDash: [2, 2],
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
                     fill: false,
                     tension: 0.2,
                     yAxisID: 'yPrice'
                 }
             ]
         },
+        plugins: [dispatchDaySeparatorPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -1099,18 +1539,27 @@ function updateHourlyDispatchChart() {
                 mode: 'index'
             },
             plugins: {
+                dispatchDaySeparatorPlugin: {
+                    records: windowRecords
+                },
                 legend: {
                     position: 'top',
                     labels: {
                         color: '#94a3b8',
-                        font: { family: 'Plus Jakarta Sans', size: 10 },
-                        boxWidth: 10
+                        font: { family: 'Plus Jakarta Sans', size: 11 },
+                        boxWidth: 12
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.94)',
                     padding: 12,
                     callbacks: {
+                        title: function(items) {
+                            if (!items.length) return '';
+                            const rec = windowRecords[items[0].dataIndex];
+                            if (!rec) return items[0].label;
+                            return `${rec.date} — ${String(rec.hour).padStart(2, '0')}:00`;
+                        },
                         label: function(context) {
                             const unit = context.dataset.label.includes('Spot') ? 'öre/kWh' : 
                                          context.dataset.label.includes('SoC') ? '%' : 'kW';
@@ -1163,7 +1612,12 @@ function updateHourlyDispatchChart() {
                 },
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#94a3b8' }
+                    ticks: {
+                        color: '#94a3b8',
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: spanDays <= 1 ? 24 : (spanDays <= 3 ? 12 : 14)
+                    }
                 }
             }
         }
