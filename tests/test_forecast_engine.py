@@ -183,10 +183,10 @@ def test_121_day_shadow_backtest_and_package():
     assert "cold_overcast_spike" in pkg["scenarios"]
 
     bt = pkg["backtest_121d"]
-    assert bt["period"]["total_days"] == 121
-    assert bt["period"]["total_hours"] == 2905
+    assert bt["period"]["total_days"] == 134
+    assert bt["period"]["total_hours"] == 3217
     assert bt["strategy_trigger_summary"]["grid_precharge_days_count"] >= 15
     assert bt["financial_totals_sek"]["predictive_upside_vs_default_sek"] > 50.0
     assert bt["financial_totals_sek"]["oracle_upside_vs_default_sek"] > 100.0
     assert bt["financial_totals_sek"]["oracle_upside_vs_actual_sonnen_sek"] > 200.0
-    assert len(bt["daily_records"]) == 121
+    assert len(bt["daily_records"]) == 134

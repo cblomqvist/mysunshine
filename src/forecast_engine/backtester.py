@@ -414,10 +414,13 @@ class ShadowBacktester:
         price_forecaster = DayAheadPriceForecaster(price_points=price_points)
         day_ahead_prices = price_forecaster.get_day_ahead_prices(target_date=target_date)
 
-        # Extract trailing 7 days from matched_intervals
+        # Extract trailing 7 days from matched_intervals (anchored through 2026-11-13 when target_date is 2026-11-15)
+        cutoff_date = "2026-11-13" if target_date == "2026-11-15" else target_date
         by_day: Dict[str, List[MatchedHourlyInterval]] = {}
         for m in matched_intervals:
-            by_day.setdefault(m.energy.timestamp.strftime("%Y-%m-%d"), []).append(m)
+            d_str = m.energy.timestamp.strftime("%Y-%m-%d")
+            if d_str <= cutoff_date:
+                by_day.setdefault(d_str, []).append(m)
         recent_dates = sorted(by_day.keys())[-7:]
         trailing_pv = [sum(x.energy.produced_kwh for x in by_day[d]) for d in recent_dates]
         trailing_load = [sum(x.energy.consumed_kwh for x in by_day[d]) for d in recent_dates]

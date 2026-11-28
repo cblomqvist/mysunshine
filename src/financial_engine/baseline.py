@@ -46,34 +46,34 @@ _RAW_BATTERY_EXPORT_WEIGHTS = [
 _BATT_EXP_SUM = sum(_RAW_BATTERY_EXPORT_WEIGHTS)
 DEFAULT_DIURNAL_BATTERY_EXPORT_WEIGHTS = [w / _BATT_EXP_SUM for w in _RAW_BATTERY_EXPORT_WEIGHTS]
 
-# Empirical battery-era overall diurnal grid import weights (2,905 hours, 2026-07-16 to 2026-11-13)
+# Empirical battery-era overall diurnal grid import weights (3,217 hours, 2026-07-16 to 2026-11-26)
 _RAW_BATTERY_IMPORT_WEIGHTS = [
-    0.0416, 0.0400, 0.0416, 0.0471, 0.0479, 0.0451,  # 00:00 - 05:00
-    0.0518, 0.0481, 0.0399, 0.0309, 0.0226, 0.0205,  # 06:00 - 11:00
-    0.0242, 0.0186, 0.0224, 0.0290, 0.0365, 0.0425,  # 12:00 - 17:00
-    0.0580, 0.0538, 0.0584, 0.0681, 0.0625, 0.0490   # 18:00 - 23:00
+    0.0377, 0.0370, 0.0388, 0.0441, 0.0450, 0.0430,  # 00:00 - 05:00
+    0.0502, 0.0456, 0.0496, 0.0432, 0.0279, 0.0185,  # 06:00 - 11:00
+    0.0246, 0.0198, 0.0241, 0.0297, 0.0346, 0.0416,  # 12:00 - 17:00
+    0.0574, 0.0553, 0.0605, 0.0680, 0.0591, 0.0447   # 18:00 - 23:00
 ]
 _BATT_IMP_SUM = sum(_RAW_BATTERY_IMPORT_WEIGHTS)
 DEFAULT_DIURNAL_BATTERY_IMPORT_WEIGHTS = [w / _BATT_IMP_SUM for w in _RAW_BATTERY_IMPORT_WEIGHTS]
 
-# Empirical grid import weights on active battery-cycling days (battery_discharged >= 25% of load, 101 days)
+# Empirical grid import weights on active battery-cycling days (battery_discharged >= 25% of load, 103 days)
 _RAW_BATTERY_ACTIVE_IMPORT_WEIGHTS = [
-    0.0491, 0.0481, 0.0491, 0.0598, 0.0622, 0.0617,  # 00:00 - 05:00
-    0.0650, 0.0495, 0.0409, 0.0337, 0.0257, 0.0218,  # 06:00 - 11:00
-    0.0214, 0.0134, 0.0124, 0.0149, 0.0206, 0.0246,  # 12:00 - 17:00
-    0.0541, 0.0301, 0.0432, 0.0633, 0.0690, 0.0665   # 18:00 - 23:00
+    0.0512, 0.0502, 0.0507, 0.0608, 0.0647, 0.0632,  # 00:00 - 05:00
+    0.0660, 0.0495, 0.0418, 0.0325, 0.0250, 0.0211,  # 06:00 - 11:00
+    0.0210, 0.0133, 0.0124, 0.0146, 0.0200, 0.0237,  # 12:00 - 17:00
+    0.0519, 0.0290, 0.0413, 0.0616, 0.0693, 0.0652   # 18:00 - 23:00
 ]
 _BATT_ACT_IMP_SUM = sum(_RAW_BATTERY_ACTIVE_IMPORT_WEIGHTS)
 DEFAULT_DIURNAL_BATTERY_ACTIVE_IMPORT_WEIGHTS = [
     w / _BATT_ACT_IMP_SUM for w in _RAW_BATTERY_ACTIVE_IMPORT_WEIGHTS
 ]
 
-# Empirical grid import weights on low-solar / winter days (battery_discharged < 25% of load, 20 days)
+# Empirical grid import weights on low-solar / winter days (battery_discharged < 25% of load, 31 days)
 _RAW_BATTERY_LOW_SOLAR_IMPORT_WEIGHTS = [
-    0.0371, 0.0350, 0.0371, 0.0393, 0.0391, 0.0349,  # 00:00 - 05:00
-    0.0436, 0.0473, 0.0393, 0.0292, 0.0207, 0.0197,  # 06:00 - 11:00
-    0.0259, 0.0218, 0.0285, 0.0376, 0.0462, 0.0535,  # 12:00 - 17:00
-    0.0603, 0.0683, 0.0677, 0.0711, 0.0585, 0.0384   # 18:00 - 23:00
+    0.0320, 0.0315, 0.0338, 0.0371, 0.0369, 0.0346,  # 00:00 - 05:00
+    0.0436, 0.0440, 0.0529, 0.0476, 0.0291, 0.0175,  # 06:00 - 11:00
+    0.0261, 0.0225, 0.0290, 0.0360, 0.0406, 0.0490,  # 12:00 - 17:00
+    0.0597, 0.0662, 0.0684, 0.0706, 0.0548, 0.0361   # 18:00 - 23:00
 ]
 _BATT_LOW_IMP_SUM = sum(_RAW_BATTERY_LOW_SOLAR_IMPORT_WEIGHTS)
 DEFAULT_DIURNAL_BATTERY_LOW_SOLAR_IMPORT_WEIGHTS = [
@@ -90,6 +90,18 @@ _RAW_NIGHT_GRID_CHARGE_WEIGHTS = [
 _NIGHT_CHG_SUM = sum(_RAW_NIGHT_GRID_CHARGE_WEIGHTS)
 DEFAULT_DIURNAL_NIGHT_GRID_CHARGE_WEIGHTS = [
     w / _NIGHT_CHG_SUM for w in _RAW_NIGHT_GRID_CHARGE_WEIGHTS
+]
+
+# Empirical grid-to-battery maintenance / backup charge profile (08:00 - 11:00)
+_RAW_MAINTENANCE_GRID_CHARGE_WEIGHTS = [
+    0.0020, 0.0100, 0.0019, 0.0020, 0.0018, 0.0019,  # 00:00 - 05:00
+    0.0018, 0.0021, 0.2817, 0.4216, 0.2252, 0.0094,  # 06:00 - 11:00 (Morning maintenance charge)
+    0.0004, 0.0015, 0.0036, 0.0038, 0.0040, 0.0041,  # 12:00 - 17:00
+    0.0037, 0.0038, 0.0035, 0.0035, 0.0035, 0.0035   # 18:00 - 23:00
+]
+_MAINT_CHG_SUM = sum(_RAW_MAINTENANCE_GRID_CHARGE_WEIGHTS)
+DEFAULT_DIURNAL_MAINTENANCE_GRID_CHARGE_WEIGHTS = [
+    w / _MAINT_CHG_SUM for w in _RAW_MAINTENANCE_GRID_CHARGE_WEIGHTS
 ]
 
 # Empirical battery charge & discharge diurnal weights (2,905 hours, 2026-07-16 to 2026-11-13)
@@ -246,7 +258,13 @@ class BaselineEngine:
             else DEFAULT_DIURNAL_BATTERY_LOW_SOLAR_IMPORT_WEIGHTS
         )
 
-        raw_night_w = [DEFAULT_DIURNAL_NIGHT_GRID_CHARGE_WEIGHTS[h % 24] for h in range(hours_count)]
+        grid_chg_weights = (
+            DEFAULT_DIURNAL_NIGHT_GRID_CHARGE_WEIGHTS
+            if battery_discharged_kwh >= 0.5
+            else DEFAULT_DIURNAL_MAINTENANCE_GRID_CHARGE_WEIGHTS
+        )
+
+        raw_night_w = [grid_chg_weights[h % 24] for h in range(hours_count)]
         raw_res_w = [res_imp_weights[h % 24] for h in range(hours_count)]
         raw_exp_w = [DEFAULT_DIURNAL_BATTERY_EXPORT_WEIGHTS[h % 24] for h in range(hours_count)]
 

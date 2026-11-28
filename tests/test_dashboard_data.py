@@ -46,8 +46,8 @@ def test_generate_dashboard_dataset_structure():
     ndf = dataset["next_day_forecast"]
     assert ndf["target_date"] == "2026-11-15"
     assert "baseline_forecast" in ndf["scenarios"]
-    assert "backtest_121d" in ndf
-    assert ndf["backtest_121d"]["period"]["total_days"] == 121
+    assert "backtest_121d" in dataset["next_day_forecast"]
+    assert ndf["backtest_121d"]["period"]["total_days"] == 134
     assert ndf["backtest_121d"]["financial_totals_sek"]["oracle_upside_vs_default_sek"] > 100.0
 
     # Hourly interval check

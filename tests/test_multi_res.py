@@ -326,9 +326,9 @@ class TestHighResAnalyzer:
             assert pytest.approx(sum(exp_h), 1e-6) == 4.0
 
     def test_calibrate_diurnal_profiles_and_121d_variance(self, sample_tariff):
-        """Verify empirical diurnal calibration on 2,905-hour dataset and <1% Actual Net Cost variance."""
+        """Verify empirical diurnal calibration on 3,217-hour dataset and <1% Actual Net Cost variance."""
         records = SonnenHourlyIngestor.parse_directory("data")
-        assert len(records) == 2905
+        assert len(records) == 3217
         profiles = SonnenHourlyIngestor.calibrate_diurnal_profiles(records)
         for key in (
             "load_weights",

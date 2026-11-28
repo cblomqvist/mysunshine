@@ -108,9 +108,9 @@ def test_historical_year_2026_ytd():
     assert report.financial_totals["total_savings_sek"] > 0
 
     matched_by_date = calc.load_matched_hourly_by_date()
-    assert len(matched_by_date) == 121
+    assert len(matched_by_date) == 134
     assert "2026-07-16" in matched_by_date
-    assert "2026-11-13" in matched_by_date
+    assert "2026-11-26" in matched_by_date
     assert len(matched_by_date["2026-10-25"]) == 25  # 25-hour DST fallback day
 
 
