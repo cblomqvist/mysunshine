@@ -66,20 +66,57 @@ def generate_dashboard_dataset() -> Dict[str, Any]:
     report_30d = analyzer_30d.analyze_matched_intervals(matched_intervals)
     report_30d_dict = report_30d.to_dict()
 
-    # Compute battery SoC progression for the 30 days (assuming initial ~50% / 10 kWh SoC)
-    # SonnenBatterie 10: 20 kWh usable capacity
+    # Compute battery User SoC (USOC, 0-100% usable capacity, excluding hardware deep-discharge reserve)
+    # SonnenBatterie 10: 22 kWh nominal -> 20.0 kWh usable capacity (0% USOC in Sonnen app = ~7% RSOC reserve).
+    # Why raw (charge - discharge) integration drifted to ~26.8% on Nov 26:
+    #   1. Sonnen's CSV reports AC-side `battery_charged_energy` (into inverter) and `battery_discharged_energy` (out of inverter).
+    #      Because roundtrip efficiency is ~76.8% (one-way ~87.6% each way) and the BMS draws ~40-45W standby/keep-alive
+    #      plus periodic ~195 Wh protective reserve top-ups when sitting at 0% USOC, summing raw (charge - discharge)
+    #      without efficiency weighting accumulates ~23% phantom energy over a charge/discharge cycle.
+    #   2. When the home has significant unmet load (grid_purchase > 0.25 kWh) and the battery stops discharging
+    #      (discharge == 0 while in standard Self-Consumption mode), the battery has hit its 0% USOC floor.
     battery_capacity_kwh = 20.0
-    current_soc_kwh = 10.0  # Initial SoC start estimate
+    tot_chg_all = sum(i.energy.battery_charged_kwh for i in matched_intervals)
+    tot_dis_all = sum(i.energy.battery_discharged_kwh for i in matched_intervals)
+    empirical_eta = (tot_dis_all / tot_chg_all) if tot_chg_all > 0 else 0.7685
+    # Split roundtrip efficiency into charge efficiency and discharge efficiency (sqrt(eta) ~ 87.66%)
+    one_way_eff = empirical_eta ** 0.5
+    current_soc_kwh = 0.0  # Start from 0% USOC and calibrate with physical empty/full boundary anchors
 
     hourly_records_list: List[Dict[str, Any]] = []
     days_dict: Dict[str, List[Dict[str, Any]]] = {}
 
     for interval in matched_intervals:
         en = interval.energy
-        # Update SoC based on battery charge and discharge
         charge = en.battery_charged_kwh
         discharge = en.battery_discharged_kwh
-        current_soc_kwh = max(0.0, min(battery_capacity_kwh, current_soc_kwh + charge - discharge))
+        grid_imp = en.grid_purchase_kwh
+        load = en.consumed_kwh
+
+        # Check if this hour is just a protective BMS reserve trickle / maintenance pulse while sitting at 0% USOC:
+        # e.g., in winter when battery was already at 0% USOC, solar is 0, and BMS pulls ~195 Wh from grid to keep reserve above min voltage.
+        is_bms_reserve_maintenance = (
+            current_soc_kwh <= 0.05
+            and en.produced_kwh < 0.02
+            and charge <= 0.22
+            and discharge == 0.0
+            and grid_imp >= load
+        )
+
+        if is_bms_reserve_maintenance:
+            # Protective BMS reserve top-up goes into the hidden 7% hardware reserve, not usable USOC
+            current_soc_kwh = 0.0
+        else:
+            # Apply one-way conversion efficiency to AC charge going in and AC discharge coming out
+            net_usable_delta_kwh = (charge * one_way_eff) - (discharge / one_way_eff)
+            current_soc_kwh = max(0.0, min(battery_capacity_kwh, current_soc_kwh + net_usable_delta_kwh))
+
+            # Physical 0% USOC floor anchor: if the battery stops discharging completely while the home
+            # is forced to import > 0.30 kWh from the grid and no standby top-up at 100% is occurring,
+            # usable SoC is exhausted (0% USOC).
+            if discharge == 0.0 and charge < 0.03 and grid_imp > 0.30 and current_soc_kwh < 18.0:
+                current_soc_kwh = 0.0
+
         soc_pct = (current_soc_kwh / battery_capacity_kwh) * 100.0
 
         ts_iso = en.timestamp.isoformat()

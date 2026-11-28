@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261128b">
+    <link rel="stylesheet" href="style.css?v=20261128j">
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -58,6 +58,9 @@
                     </button>
                     <button type="button" class="btn-focus-dispatch" id="btn-focus-dispatch" title="Focus Mode: Minimize other panels to maximize the High-Res Dispatch Explorer">
                         <i class="fa-solid fa-expand"></i> Focus Dispatch
+                    </button>
+                    <button type="button" class="btn-anim-toggle active" id="btn-toggle-animations" title="Toggle Global Chart &amp; UI Animations (Disable to inspect subtle graph differences immediately)" aria-pressed="true">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> <span id="lbl-toggle-animations">Animations: On</span>
                     </button>
                 </div>
                 <div class="header-specs">
@@ -436,19 +439,37 @@
                                     <button type="button" class="btn-metric-toggle active" data-dispatch-metric="soc" style="--metric-color: #10b981;" title="Toggle Battery State of Charge (%)">
                                         <span class="metric-dot"></span> Battery SoC %
                                     </button>
-                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="spot" style="--metric-color: #06b6d4;" title="Toggle Raw SE3 Spot Price (öre/kWh)">
-                                        <span class="metric-dot"></span> Spot Price
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="spot" style="--metric-color: #06b6d4;" title="Toggle Spot / Grid Buy Price Curve (Nord Pool Spot + currently toggled Taxes, Transfer Fees &amp; VAT)">
+                                        <span class="metric-dot"></span> Spot / Grid Price
                                     </button>
-                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="gridPrice" style="--metric-color: #fb7185;" title="Toggle Full Grid Buy Price incl. Energiskatt, EEM Transfer, Tibber Markup &amp; 25% Moms (öre/kWh)">
-                                        <span class="metric-dot"></span> Grid Buy Price (All-In)
-                                    </button>
-                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="myPrice" style="--metric-color: #a3e635;" title="Toggle My Calculated Electricity Price per Consumed kWh after Solar &amp; Battery (öre/kWh)">
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="myPrice" style="--metric-color: #a3e635;" title="Toggle My Effective Price per consumed kWh (only pays Spot / Grid Price on the fraction of load actually bought from the grid)">
                                         <span class="metric-dot"></span> My Effective Price
                                     </button>
                                     <div class="metrics-quick-actions">
                                         <button type="button" class="btn-metric-preset" id="btn-metrics-all" title="Show All Metrics">All</button>
                                         <button type="button" class="btn-metric-preset" id="btn-metrics-prices" title="Show Only Price Comparison Curves">Prices Only</button>
                                         <button type="button" class="btn-metric-preset" id="btn-metrics-power" title="Show Only Power &amp; SoC Curves">Power &amp; SoC</button>
+                                    </div>
+                                </div>
+
+                                <!-- Price Component Toggles Bar (Added to Nord Pool Spot when buying electricity — Default: All On) -->
+                                <div class="dispatch-price-components-bar" role="group" aria-label="Toggle Tax and Transfer Fee Components Added to Nord Pool Spot When Buying Electricity">
+                                    <span class="metrics-filter-label"><i class="fa-solid fa-scale-balanced"></i> Grid Buy Add-Ons (on top of Nord Pool):</span>
+                                    <button type="button" class="btn-price-comp-toggle active" data-price-comp="energiskatt" id="btn-comp-energiskatt" title="Include Swedish Energy Tax (Energiskatt) when buying electricity from the grid">
+                                        <i class="fa-solid fa-check"></i> <span id="lbl-comp-energiskatt">Energiskatt (+42.8 öre)</span>
+                                    </button>
+                                    <button type="button" class="btn-price-comp-toggle active" data-price-comp="transfer" id="btn-comp-transfer" title="Include EEM Grid Transfer Fee (Överföringsavgift) when buying electricity from the grid">
+                                        <i class="fa-solid fa-check"></i> <span id="lbl-comp-transfer">EEM Transfer (+17.6 öre)</span>
+                                    </button>
+                                    <button type="button" class="btn-price-comp-toggle active" data-price-comp="markup" id="btn-comp-markup" title="Include Tibber Retail Markup &amp; Elcertifikat (+2.0 öre/kWh ex. moms) when buying electricity">
+                                        <i class="fa-solid fa-check"></i> <span>Tibber Markup (+2.0 öre)</span>
+                                    </button>
+                                    <button type="button" class="btn-price-comp-toggle active" data-price-comp="moms" id="btn-comp-moms" title="Apply 25% Swedish VAT (Moms) when buying electricity from the grid">
+                                        <i class="fa-solid fa-check"></i> <span>25% Moms (VAT)</span>
+                                    </button>
+                                    <div class="metrics-quick-actions">
+                                        <button type="button" class="btn-metric-preset" id="btn-comp-all-on" title="Include All Taxes, Grid Transfer Fees &amp; VAT when buying from grid">All Add-Ons On</button>
+                                        <button type="button" class="btn-metric-preset" id="btn-comp-pure-spot" title="Turn Off All Add-Ons (Grid Buy Price = Pure Nord Pool Spot Price)">Pure Nord Pool Only</button>
                                     </div>
                                 </div>
 
@@ -854,8 +875,8 @@
     </div>
 
     <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
-    <script src="data/dashboard_data.js?v=20261128b"></script>
+    <script src="data/dashboard_data.js?v=20261128j"></script>
     <!-- Application Logic & Charts -->
-    <script src="app.js?v=20261128b"></script>
+    <script src="app.js?v=20261128j"></script>
 </body>
 </html>

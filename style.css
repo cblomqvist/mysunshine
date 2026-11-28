@@ -209,6 +209,43 @@ body {
     box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
 }
 
+.btn-anim-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-muted);
+    font-family: var(--font-heading);
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 4px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.btn-anim-toggle:hover {
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-anim-toggle.active {
+    background: rgba(168, 85, 247, 0.16);
+    border-color: rgba(168, 85, 247, 0.45);
+    color: #c084fc;
+}
+
+body.no-animations,
+body.no-animations * {
+    --transition-smooth: none !important;
+    transition: none !important;
+}
+
+body.no-animations .progress-ring-fill {
+    transition: none !important;
+}
+
 .logo-container {
     display: flex;
     align-items: center;
@@ -1189,6 +1226,63 @@ body {
 .btn-metric-preset:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
+}
+
+/* Price Component Toggles Bar (Energiskatt, EEM Transfer, Tibber Markup, 25% Moms, Nätnytta) */
+.dispatch-price-components-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 9px 14px;
+    margin-bottom: 14px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(6, 182, 212, 0.18);
+    border-radius: var(--radius-md);
+}
+
+.dispatch-price-components-bar .metrics-filter-label i {
+    color: var(--color-grid);
+}
+
+.btn-price-comp-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    opacity: 0.55;
+}
+
+.btn-price-comp-toggle:hover {
+    opacity: 0.85;
+    border-color: rgba(255, 255, 255, 0.22);
+    color: var(--text-primary);
+}
+
+.btn-price-comp-toggle i {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.btn-price-comp-toggle.active {
+    opacity: 1;
+    background: rgba(6, 182, 212, 0.14);
+    border-color: rgba(6, 182, 212, 0.42);
+    color: #e2e8f0;
+    box-shadow: 0 0 10px -4px rgba(6, 182, 212, 0.45);
+}
+
+.btn-price-comp-toggle.active i {
+    color: #22d3ee;
 }
 
 .charts-grid-secondary {
