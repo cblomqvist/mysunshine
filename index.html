@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261128r">
+    <link rel="stylesheet" href="style.css?v=20261128t">
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -299,7 +299,13 @@
                                         </label>
                                         <div class="custom-timestamp-picker" id="custom-timestamp-picker-wrapper">
                                             <div class="date-input-popover-anchor">
-                                                <input type="text" id="input-ts-date" class="exact-date-text-input" placeholder="YYYY-MM-DD" maxlength="10" aria-label="Timestamp Date (YYYY-MM-DD)" title="Type YYYY-MM-DD or click the calendar button">
+                                                <button type="button" class="btn-stepper" id="btn-ts-day-down" aria-label="Previous Day (-1d)" title="Step Timestamp Back 1 Day (-24h)">
+                                                    <i class="fa-solid fa-chevron-down"></i>
+                                                </button>
+                                                <input type="text" id="input-ts-date" class="exact-date-text-input" placeholder="YYYY-MM-DD" maxlength="10" aria-label="Timestamp Date (YYYY-MM-DD)" title="Type YYYY-MM-DD or use Up/Down buttons to step ±1 Day">
+                                                <button type="button" class="btn-stepper" id="btn-ts-day-up" aria-label="Next Day (+1d)" title="Step Timestamp Forward 1 Day (+24h)">
+                                                    <i class="fa-solid fa-chevron-up"></i>
+                                                </button>
                                                 <button type="button" class="btn-calendar-trigger" id="btn-toggle-calendar" aria-label="Open Calendar (Monday–Sunday)" title="Open Monday–Sunday Calendar Picker">
                                                     <i class="fa-regular fa-calendar-days"></i>
                                                 </button>
@@ -983,8 +989,8 @@
     </div>
 
     <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
-    <script src="data/dashboard_data.js?v=20261128r"></script>
+    <script src="data/dashboard_data.js?v=20261128t"></script>
     <!-- Application Logic & Charts -->
-    <script src="app.js?v=20261128r"></script>
+    <script src="app.js?v=20261128t"></script>
 </body>
 </html>

@@ -60,6 +60,8 @@ const dispatchExplorerState = {
 
 // Exact Time Span & Center Controls DOM Elements
 const inputTsDate = document.getElementById('input-ts-date');
+const btnTsDayUp = document.getElementById('btn-ts-day-up');
+const btnTsDayDown = document.getElementById('btn-ts-day-down');
 const btnToggleCalendar = document.getElementById('btn-toggle-calendar');
 const isoCalendarPopover = document.getElementById('iso-calendar-popover');
 const isoCalMonthTitle = document.getElementById('iso-cal-month-title');
@@ -395,6 +397,17 @@ function setupEventListeners() {
             closeIsoCalendarPopover();
         }
     });
+
+    if (btnTsDayUp) {
+        btnTsDayUp.addEventListener('click', () => {
+            stepTimestampHour(24);
+        });
+    }
+    if (btnTsDayDown) {
+        btnTsDayDown.addEventListener('click', () => {
+            stepTimestampHour(-24);
+        });
+    }
 
     if (btnTsHourUp) {
         btnTsHourUp.addEventListener('click', () => {
@@ -2183,10 +2196,18 @@ function updateHourlyDispatchChart() {
         const actualImportCostSek = (importKwh * gridBuyPriceOre) / 100.0;
         const hourlySavingsSek = baselineGridCostSek - actualImportCostSek;
 
-        // My Effective Price per kWh of household load consumed:
-        // Only affected by Grid Buy Price (and its tax/fee components) in hours where you actually buy electricity (importKwh > 0)!
-        const myEffectivePriceOre = (loadKwh > 0.001 && importKwh > 0.0001)
-            ? ((importKwh * gridBuyPriceOre) / loadKwh)
+        // How much of the household's consumed load in this hour was bought from the grid?
+        // Note: When the battery charges from the grid (e.g. Nov 19 08:00-10:00 where 9.9 kWh goes into the battery
+        // while household load is only 0.56 kWh), dividing total grid import (10.39 kWh) by household load (0.56 kWh)
+        // created an artificial 18.6x spike (8,022 öre/kWh!) because battery charging energy is stored for later,
+        // not consumed by the household in that hour.
+        // Household load supplied by the grid is at most `loadKwh` (bounded between 0 and loadKwh).
+        const gridImportForHouseholdLoadKwh = Math.min(loadKwh, Math.max(0.0, importKwh));
+        const gridChargingToBatteryKwh = Math.max(0.0, importKwh - gridImportForHouseholdLoadKwh);
+
+        // My Effective Price per kWh of household load consumed (0 öre/kWh when running on Solar/Battery, up to Grid Buy Price when buying from grid):
+        const myEffectivePriceOre = (loadKwh > 0.001 && gridImportForHouseholdLoadKwh > 0.0001)
+            ? ((gridImportForHouseholdLoadKwh * gridBuyPriceOre) / loadKwh)
             : (importKwh > 0.0001 ? gridBuyPriceOre : 0.0);
 
         const priceDiffVsGridBuyOre = myEffectivePriceOre - gridBuyPriceOre;
@@ -2202,6 +2223,7 @@ function updateHourlyDispatchChart() {
             baselineGridCostSek: Number(baselineGridCostSek.toFixed(2)),
             actualNetCostSek: Number(actualImportCostSek.toFixed(2)),
             hourlySavingsSek: Number(hourlySavingsSek.toFixed(2)),
+            gridChargingToBatteryKwh: Number(gridChargingToBatteryKwh.toFixed(2)),
             loadKwh,
             importKwh,
             exportKwh

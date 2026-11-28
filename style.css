@@ -1194,10 +1194,11 @@ body.no-animations .progress-ring-fill {
     position: relative;
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     background: rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: var(--radius-sm);
-    padding: 1px 3px 1px 8px;
+    padding: 2px;
     transition: var(--transition-smooth);
 }
 
@@ -1207,15 +1208,16 @@ body.no-animations .progress-ring-fill {
 }
 
 .exact-date-text-input {
-    width: 92px;
+    width: 88px;
     background: transparent;
     border: none;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 0.8rem;
     font-weight: 700;
+    text-align: center;
     outline: none;
-    padding: 4px 0;
+    padding: 3px 0;
 }
 
 .btn-calendar-trigger {
