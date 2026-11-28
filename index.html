@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261128t">
+    <link rel="stylesheet" href="style.css?v=20261128x">
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -422,8 +422,11 @@
                                     <button type="button" class="btn-metric-toggle active" data-dispatch-metric="spot" style="--metric-color: #06b6d4;" title="Toggle Spot / Grid Buy Price Curve (Nord Pool Spot + currently toggled Taxes, Transfer Fees &amp; VAT)">
                                         <span class="metric-dot"></span> Spot / Grid Price
                                     </button>
-                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="myPrice" style="--metric-color: #a3e635;" title="Toggle My Effective Price per consumed kWh (only pays Spot / Grid Price on the fraction of load actually bought from the grid)">
-                                        <span class="metric-dot"></span> My Effective Price
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="myPrice" style="--metric-color: #a3e635;" title="Toggle Effective Price per consumed kWh (öre/kWh)">
+                                        <span class="metric-dot"></span> Effective Price
+                                    </button>
+                                    <button type="button" class="btn-metric-toggle active" data-dispatch-metric="myCost" style="--metric-color: #fb7185;" title="Toggle Effective Cost in SEK/h for all electricity actually bought from the grid (including Automatic Battery Care charging)">
+                                        <span class="metric-dot"></span> Effective Cost (SEK)
                                     </button>
                                     <div class="metrics-quick-actions">
                                         <button type="button" class="btn-metric-preset" id="btn-metrics-all" title="Show All Metrics">All</button>
@@ -989,8 +992,8 @@
     </div>
 
     <!-- Baked Dashboard Data (Provides offline & file:// instant runtime loading) -->
-    <script src="data/dashboard_data.js?v=20261128t"></script>
+    <script src="data/dashboard_data.js?v=20261128x"></script>
     <!-- Application Logic & Charts -->
-    <script src="app.js?v=20261128t"></script>
+    <script src="app.js?v=20261128x"></script>
 </body>
 </html>

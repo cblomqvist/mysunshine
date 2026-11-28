@@ -107,7 +107,8 @@ const dispatchMetricVisibility = {
     battery: true,
     soc: true,
     spot: true,
-    myPrice: true
+    myPrice: true,
+    myCost: true
 };
 
 const btnMetricsAll = document.getElementById('btn-metrics-all');
@@ -488,6 +489,7 @@ function setupEventListeners() {
             dispatchMetricVisibility.soc = false;
             dispatchMetricVisibility.spot = true;
             dispatchMetricVisibility.myPrice = true;
+            dispatchMetricVisibility.myCost = true;
             syncDispatchMetricButtonsUI();
             updateHourlyDispatchChart();
         });
@@ -501,6 +503,7 @@ function setupEventListeners() {
             dispatchMetricVisibility.soc = true;
             dispatchMetricVisibility.spot = false;
             dispatchMetricVisibility.myPrice = false;
+            dispatchMetricVisibility.myCost = false;
             syncDispatchMetricButtonsUI();
             updateHourlyDispatchChart();
         });
@@ -2093,16 +2096,99 @@ function renderAnnualComparisonChart(annualSummaries) {
     });
 }
 
-// Plugin to draw midnight day separators on multi-day dispatch views
+// Plugin to draw midnight day separators AND "Automatic Battery Care" highlight bands on dispatch views
 const dispatchDaySeparatorPlugin = {
     id: 'dispatchDaySeparatorPlugin',
     beforeDatasetsDraw(chart) {
-        const records = chart.config.options.plugins?.dispatchDaySeparatorPlugin?.records || [];
-        if (records.length <= 24) return;
-
+        const pluginOpts = chart.config.options.plugins?.dispatchDaySeparatorPlugin || {};
+        const records = pluginOpts.records || [];
+        const priceDetails = pluginOpts.priceDetails || [];
         const { ctx, chartArea, scales } = chart;
         const xScale = scales.x;
-        if (!chartArea || !xScale) return;
+        if (!chartArea || !xScale || !records.length) return;
+
+        // 1. Draw shaded bands & badges for "Automatic Battery Care" periods (grid charging > solar)
+        const careSpans = [];
+        let currentSpan = null;
+        records.forEach((rec, idx) => {
+            const d = priceDetails[idx];
+            if (d && d.batteryCareType) {
+                if (!currentSpan) {
+                    currentSpan = {
+                        startIdx: idx,
+                        endIdx: idx + 1,
+                        isFullCareCycle: d.batteryCareType === 'FULL_CARE_CHARGE'
+                    };
+                } else {
+                    currentSpan.endIdx = idx + 1;
+                    if (d.batteryCareType === 'FULL_CARE_CHARGE') {
+                        currentSpan.isFullCareCycle = true;
+                    }
+                }
+            } else if (currentSpan) {
+                careSpans.push(currentSpan);
+                currentSpan = null;
+            }
+        });
+        if (currentSpan) careSpans.push(currentSpan);
+
+        ctx.save();
+        careSpans.forEach(sp => {
+            const x1 = Math.max(chartArea.left, xScale.getPixelForValue(sp.startIdx));
+            const x2 = Math.min(chartArea.right, xScale.getPixelForValue(sp.endIdx));
+            const w = Math.max(4, x2 - x1);
+
+            ctx.fillStyle = sp.isFullCareCycle
+                ? 'rgba(168, 85, 247, 0.16)'
+                : 'rgba(168, 85, 247, 0.08)';
+            ctx.fillRect(x1, chartArea.top, w, chartArea.bottom - chartArea.top);
+
+            ctx.strokeStyle = sp.isFullCareCycle
+                ? 'rgba(192, 132, 252, 0.65)'
+                : 'rgba(192, 132, 252, 0.35)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(x1, chartArea.top);
+            ctx.lineTo(x1, chartArea.bottom);
+            ctx.moveTo(x2, chartArea.top);
+            ctx.lineTo(x2, chartArea.bottom);
+            ctx.stroke();
+
+            // Draw "⚡ Automatic Battery Care" pill label at top of full calibration/care charge bands
+            if (sp.isFullCareCycle) {
+                const labelText = '⚡ Automatic Battery Care';
+                ctx.font = '700 10px "Plus Jakarta Sans", sans-serif';
+                const textW = ctx.measureText(labelText).width;
+                const pillW = textW + 12;
+                const pillH = 18;
+                const centerX = (x1 + x2) / 2;
+                const pillX = Math.max(chartArea.left + 4, Math.min(chartArea.right - pillW - 4, centerX - pillW / 2));
+                const pillY = chartArea.top + 6;
+
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(88, 28, 135, 0.92)';
+                ctx.strokeStyle = '#c084fc';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(pillX, pillY, pillW, pillH, 9);
+                } else {
+                    ctx.rect(pillX, pillY, pillW, pillH);
+                }
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#f3e8ff';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(labelText, pillX + 6, pillY + pillH / 2);
+            }
+        });
+        ctx.restore();
+
+        // 2. Draw midnight day separators on multi-day views
+        if (records.length <= 24) return;
 
         ctx.save();
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
@@ -2205,6 +2291,21 @@ function updateHourlyDispatchChart() {
         const gridImportForHouseholdLoadKwh = Math.min(loadKwh, Math.max(0.0, importKwh));
         const gridChargingToBatteryKwh = Math.max(0.0, importKwh - gridImportForHouseholdLoadKwh);
 
+        // Detect Automatic Battery Care (grid-sourced battery charging when solar PV cannot explain the charge):
+        // - FULL_CARE_CHARGE: High-power winter cell calibration / care cycle from the grid (e.g. Nov 19 08:00-11:00)
+        // - RESERVE_TOPUP: Short ~195 Wh BMS deep-discharge protection pulse from the grid at 0% USOC
+        const pvKwh = h.pv_power_kw ?? h.produced_kw ?? 0;
+        const battChgKwh = h.battery_charged_kw ?? 0;
+        const battDisKwh = h.battery_discharged_kw ?? 0;
+        const gridToBattKwh = Math.max(0.0, battChgKwh - pvKwh);
+        let batteryCareType = null;
+        if (battDisKwh === 0 && gridToBattKwh >= 0.30 && importKwh > loadKwh + 0.25) {
+            batteryCareType = 'FULL_CARE_CHARGE';
+        } else if (battDisKwh === 0 && gridToBattKwh >= 0.12 && pvKwh < 0.05 && importKwh > loadKwh + 0.10) {
+            batteryCareType = 'RESERVE_TOPUP';
+        }
+        const batteryCareCostSek = (gridToBattKwh * gridBuyPriceOre) / 100.0;
+
         // My Effective Price per kWh of household load consumed (0 öre/kWh when running on Solar/Battery, up to Grid Buy Price when buying from grid):
         const myEffectivePriceOre = (loadKwh > 0.001 && gridImportForHouseholdLoadKwh > 0.0001)
             ? ((gridImportForHouseholdLoadKwh * gridBuyPriceOre) / loadKwh)
@@ -2218,12 +2319,15 @@ function updateHourlyDispatchChart() {
             gridBuyPriceOre: Number(gridBuyPriceOre.toFixed(2)),
             taxAndFeesBurdenPerImportKwhOre: Number(taxAndFeesBurdenPerImportKwhOre.toFixed(2)),
             myEffectivePriceOre: Number(myEffectivePriceOre.toFixed(2)),
+            myEffectiveCostSek: Number(actualImportCostSek.toFixed(2)),
             priceDiffVsGridBuyOre: Number(priceDiffVsGridBuyOre.toFixed(2)),
             priceDiffVsRawSpotOre: Number(priceDiffVsRawSpotOre.toFixed(2)),
             baselineGridCostSek: Number(baselineGridCostSek.toFixed(2)),
             actualNetCostSek: Number(actualImportCostSek.toFixed(2)),
             hourlySavingsSek: Number(hourlySavingsSek.toFixed(2)),
-            gridChargingToBatteryKwh: Number(gridChargingToBatteryKwh.toFixed(2)),
+            gridChargingToBatteryKwh: Number(gridToBattKwh.toFixed(3)),
+            batteryCareType,
+            batteryCareCostSek: Number(batteryCareCostSek.toFixed(2)),
             loadKwh,
             importKwh,
             exportKwh
@@ -2234,14 +2338,20 @@ function updateHourlyDispatchChart() {
     // so toggling price components OR hiding/showing any curve NEVER causes the Y-axis to rescale or lines to jump!
     const maxPossibleAddOnExVat = rawEnergiskattOre + rawEemTransferOre + 2.0;
     const allPriceValues = [0];
+    const allCostValues = [0];
     hourlyPriceDetails.forEach(d => {
         const fullAllInGridOre = (d.spotOre + maxPossibleAddOnExVat) * (1.0 + MOMS_RATE);
+        const fullAllInCostSek = (d.importKwh * fullAllInGridOre) / 100.0;
         allPriceValues.push(d.spotOre, d.gridBuyPriceOre, d.myEffectivePriceOre, fullAllInGridOre);
+        allCostValues.push(d.myEffectiveCostSek, d.baselineGridCostSek, fullAllInCostSek);
     });
     const rawMinPrice = Math.min(...allPriceValues);
     const rawMaxPrice = Math.max(...allPriceValues);
     const fixedPriceAxisMin = rawMinPrice < 0 ? Math.floor(rawMinPrice / 10) * 10 : 0;
     const fixedPriceAxisMax = Math.max(50, Math.ceil((rawMaxPrice * 1.05) / 20) * 20);
+
+    const rawMaxCost = Math.max(...allCostValues);
+    const fixedCostAxisMax = Math.max(2, Math.ceil(rawMaxCost * 1.1));
 
     const allPowerValues = [0];
     windowRecords.forEach(h => {
@@ -2296,7 +2406,7 @@ function updateHourlyDispatchChart() {
             ? `${firstDateLabel} (${firstHourStr}–${lastHourEndStr})`
             : `${firstDateLabel} ${firstHourStr} → ${lastDateLabel} ${lastHourEndStr} (${windowRecords.length}h)`;
         dispatchChartSubtitle.innerText =
-            `${rangeText} | PV: ${totPvKwh.toFixed(1)} kWh | Load: ${totLoadKwh.toFixed(1)} kWh | Spot Avg: ${avgSpotOre.toFixed(1)} öre | Grid Price Avg: ${avgGridBuyOre.toFixed(1)} öre vs My Price Avg: ${avgMyEffectiveOre.toFixed(1)} öre (Saved ${totWindowSavingsSek >= 0 ? '+' : ''}${totWindowSavingsSek.toFixed(2)} SEK)`;
+            `${rangeText} | PV: ${totPvKwh.toFixed(1)} kWh | Load: ${totLoadKwh.toFixed(1)} kWh | Spot Avg: ${avgSpotOre.toFixed(1)} öre | Grid Price Avg: ${avgGridBuyOre.toFixed(1)} öre vs Effective Price Avg: ${avgMyEffectiveOre.toFixed(1)} öre (Saved ${totWindowSavingsSek >= 0 ? '+' : ''}${totWindowSavingsSek.toFixed(2)} SEK)`;
     }
 
     updatePresetButtonsState();
@@ -2325,6 +2435,7 @@ function updateHourlyDispatchChart() {
     // When "Pure Nord Pool Only" is clicked (all add-ons OFF), this curve shows the pure Nord Pool Spot price!
     const spotOrGridPriceData = withClosingPoint(hourlyPriceDetails.map(d => d.gridBuyPriceOre));
     const myEffectivePriceData = withClosingPoint(hourlyPriceDetails.map(d => d.myEffectivePriceOre));
+    const myEffectiveCostData = withClosingPoint(hourlyPriceDetails.map(d => d.myEffectiveCostSek));
 
     const pointRadiusVal = span <= 48 ? 2 : 0;
     const borderW = span <= 72 ? 2 : 1.5;
@@ -2332,6 +2443,7 @@ function updateHourlyDispatchChart() {
     const showPowerAxis = dispatchMetricVisibility.pv || dispatchMetricVisibility.load || dispatchMetricVisibility.battery;
     const showSocAxis = dispatchMetricVisibility.soc;
     const showPriceAxis = dispatchMetricVisibility.spot || dispatchMetricVisibility.myPrice;
+    const showCostAxis = dispatchMetricVisibility.myCost;
 
     const spotCurveLabel = activeCompNames.length
         ? `Spot + Add-Ons Price (${activeCompSummaryStr} — öre/kWh)`
@@ -2409,7 +2521,7 @@ function updateHourlyDispatchChart() {
         },
         {
             metricKey: 'myPrice',
-            label: 'My Effective Price (öre/kWh)',
+            label: 'Effective Price (öre/kWh)',
             data: myEffectivePriceData,
             hidden: !dispatchMetricVisibility.myPrice,
             borderColor: '#a3e635',
@@ -2421,6 +2533,21 @@ function updateHourlyDispatchChart() {
             tension: 0.2,
             order: 2,
             yAxisID: 'yPrice'
+        },
+        {
+            metricKey: 'myCost',
+            label: 'Effective Cost (SEK/h)',
+            data: myEffectiveCostData,
+            hidden: !dispatchMetricVisibility.myCost,
+            borderColor: '#fb7185',
+            backgroundColor: 'rgba(251, 113, 133, 0.15)',
+            borderWidth: borderW + 0.4,
+            pointRadius: pointRadiusVal,
+            pointHoverRadius: 5,
+            fill: false,
+            tension: 0.2,
+            order: 0,
+            yAxisID: 'yCost'
         }
     ];
 
@@ -2430,15 +2557,30 @@ function updateHourlyDispatchChart() {
             const rawIdx = items[0].dataIndex;
             const clampedIdx = Math.min(windowRecords.length - 1, rawIdx);
             const rec = windowRecords[clampedIdx];
+            const d = hourlyPriceDetails[clampedIdx];
             if (!rec) return items[0].label;
             const startHr = `${String(rec.hour).padStart(2, '0')}:00`;
             const endHr = `${String(rec.hour + 1).padStart(2, '0')}:00`;
-            return `${rec.date} — ${startHr} to ${endHr}`;
+            const careBadge = d?.batteryCareType === 'FULL_CARE_CHARGE'
+                ? '  [⚡ AUTOMATIC BATTERY CARE]'
+                : (d?.batteryCareType === 'RESERVE_TOPUP' ? '  [⚡ BMS RESERVE CARE]' : '');
+            return `${rec.date} — ${startHr} to ${endHr}${careBadge}`;
+        },
+        labelColor: function(context) {
+            const color = context.dataset.borderColor || '#94a3b8';
+            return {
+                borderColor: color,
+                backgroundColor: color,
+                borderWidth: 0,
+                borderRadius: 2
+            };
         },
         label: function(context) {
-            const unit = context.dataset.label.includes('öre') ? 'öre/kWh' : 
-                         context.dataset.label.includes('SoC') ? '%' : 'kW';
-            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(2)} ${unit}`;
+            const lbl = context.dataset.label || '';
+            const unit = lbl.includes('SEK') ? 'SEK' :
+                         lbl.includes('öre') ? 'öre/kWh' : 
+                         lbl.includes('SoC') ? '%' : 'kW';
+            return ` ${lbl}: ${context.parsed.y.toFixed(2)} ${unit}`;
         },
         afterBody: function(items) {
             if (!items.length) return [];
@@ -2451,13 +2593,21 @@ function updateHourlyDispatchChart() {
             const diffSpotSign = d.priceDiffVsRawSpotOre > 0 ? '+' : '';
             const savSign = d.hourlySavingsSek >= 0 ? '+' : '';
 
-            return [
+            const lines = [
                 '────────────────────────────────────────',
                 ` Active Tariff Add-Ons: ${activeCompSummaryStr} (+${d.taxAndFeesBurdenPerImportKwhOre.toFixed(2)} öre/kWh over Spot)`,
-                ` Diff (My Price − Grid Buy Price): ${diffGridSign}${d.priceDiffVsGridBuyOre.toFixed(2)} öre/kWh (${diffGridWord})`,
-                ` Diff (My Price − Raw Spot Price): ${diffSpotSign}${d.priceDiffVsRawSpotOre.toFixed(2)} öre/kWh`,
-                ` Hourly Bill: ${d.actualNetCostSek.toFixed(2)} SEK vs ${d.baselineGridCostSek.toFixed(2)} SEK Grid (${savSign}${d.hourlySavingsSek.toFixed(2)} SEK saved)`
+                ` Diff (Effective Price − Grid Buy Price): ${diffGridSign}${d.priceDiffVsGridBuyOre.toFixed(2)} öre/kWh (${diffGridWord})`,
+                ` Diff (Effective Price − Raw Spot Price): ${diffSpotSign}${d.priceDiffVsRawSpotOre.toFixed(2)} öre/kWh`,
+                ` Effective Cost: ${d.myEffectiveCostSek.toFixed(2)} SEK (vs ${d.baselineGridCostSek.toFixed(2)} SEK Load Baseline | ${savSign}${d.hourlySavingsSek.toFixed(2)} SEK delta)`
             ];
+
+            if (d.batteryCareType === 'FULL_CARE_CHARGE') {
+                lines.push(` ⚡ Automatic Battery Care: ${d.gridChargingToBatteryKwh.toFixed(2)} kWh grid charge (${d.batteryCareCostSek.toFixed(2)} SEK)`);
+            } else if (d.batteryCareType === 'RESERVE_TOPUP') {
+                lines.push(` ⚡ Automatic Battery Care (BMS Reserve Top-Up): ${d.gridChargingToBatteryKwh.toFixed(3)} kWh (${d.batteryCareCostSek.toFixed(2)} SEK)`);
+            }
+
+            return lines;
         }
     };
 
@@ -2475,6 +2625,9 @@ function updateHourlyDispatchChart() {
         });
         chartHourlyDispatchInstance.options.animation = { duration: globalAnimationsEnabled ? 350 : 0 };
         chartHourlyDispatchInstance.options.plugins.dispatchDaySeparatorPlugin.records = windowRecords;
+        chartHourlyDispatchInstance.options.plugins.dispatchDaySeparatorPlugin.priceDetails = hourlyPriceDetails;
+        chartHourlyDispatchInstance.options.plugins.tooltip.multiKeyBackground = 'transparent';
+        chartHourlyDispatchInstance.options.plugins.tooltip.boxPadding = 6;
         chartHourlyDispatchInstance.options.plugins.tooltip.callbacks = tooltipCallbacks;
         chartHourlyDispatchInstance.options.scales.yPower.display = showPowerAxis;
         chartHourlyDispatchInstance.options.scales.yPower.min = fixedPowerAxisMin;
@@ -2484,6 +2637,10 @@ function updateHourlyDispatchChart() {
         chartHourlyDispatchInstance.options.scales.yPrice.min = fixedPriceAxisMin;
         chartHourlyDispatchInstance.options.scales.yPrice.max = fixedPriceAxisMax;
         chartHourlyDispatchInstance.options.scales.yPrice.grid.drawOnChartArea = !showPowerAxis;
+        if (chartHourlyDispatchInstance.options.scales.yCost) {
+            chartHourlyDispatchInstance.options.scales.yCost.display = showCostAxis;
+            chartHourlyDispatchInstance.options.scales.yCost.max = fixedCostAxisMax;
+        }
         chartHourlyDispatchInstance.options.scales.x.ticks.maxTicksLimit = spanDays <= 1 ? 25 : (spanDays <= 3 ? 13 : 15);
         chartHourlyDispatchInstance.update(globalAnimationsEnabled ? undefined : 'none');
         return;
@@ -2506,7 +2663,8 @@ function updateHourlyDispatchChart() {
             },
             plugins: {
                 dispatchDaySeparatorPlugin: {
-                    records: windowRecords
+                    records: windowRecords,
+                    priceDetails: hourlyPriceDetails
                 },
                 legend: {
                     display: false
@@ -2516,6 +2674,8 @@ function updateHourlyDispatchChart() {
                     borderColor: 'rgba(255, 255, 255, 0.14)',
                     borderWidth: 1,
                     padding: 12,
+                    multiKeyBackground: 'transparent',
+                    boxPadding: 6,
                     callbacks: tooltipCallbacks
                 }
             },
@@ -2562,6 +2722,21 @@ function updateHourlyDispatchChart() {
                         display: true,
                         text: 'Price (öre/kWh)',
                         color: '#a3e635',
+                        font: { size: 10 }
+                    }
+                },
+                yCost: {
+                    type: 'linear',
+                    display: showCostAxis,
+                    position: 'right',
+                    min: 0,
+                    max: fixedCostAxisMax,
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: '#fb7185', callback: (v) => `${v} kr` },
+                    title: {
+                        display: true,
+                        text: 'Cost (SEK/h)',
+                        color: '#fb7185',
                         font: { size: 10 }
                     }
                 },
@@ -2950,7 +3125,22 @@ function renderShadowForecastChart(advisorResult, viewLabel) {
                 },
                 tooltip: {
                     backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                    padding: 10
+                    padding: 10,
+                    multiKeyBackground: 'transparent',
+                    boxPadding: 6,
+                    callbacks: {
+                        labelColor: function(context) {
+                            const c = Array.isArray(context.dataset.borderColor)
+                                ? context.dataset.borderColor[context.dataIndex]
+                                : (context.dataset.borderColor || '#94a3b8');
+                            return {
+                                borderColor: c,
+                                backgroundColor: c,
+                                borderWidth: 0,
+                                borderRadius: 2
+                            };
+                        }
+                    }
                 }
             },
             scales: {
