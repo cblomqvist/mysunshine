@@ -2257,15 +2257,15 @@ function updateHourlyDispatchChart() {
         dispatchChartHeading.innerText = `${spanTitle} High-Resolution Dispatch & Price Comparison`;
     }
     if (dispatchWindowBadge) {
-        if (isLatestWindow && span === 24) {
+        const spanDatesLabel = (firstRec.date === lastRec.date)
+            ? firstDateLabel
+            : `${firstDateLabel} → ${lastDateLabel}`;
+        if (isLatestWindow) {
             dispatchWindowBadge.className = 'badge badge-success';
-            dispatchWindowBadge.innerHTML = '<i class="fa-solid fa-clock"></i> Latest 24h (Default)';
-        } else if (isLatestWindow) {
-            dispatchWindowBadge.className = 'badge badge-success';
-            dispatchWindowBadge.innerHTML = `<i class="fa-solid fa-clock"></i> Latest ${formatSpanDurationLabel(span)}`;
+            dispatchWindowBadge.innerHTML = `<i class="fa-solid fa-calendar-check"></i> ${spanDatesLabel} • Latest Data`;
         } else {
             dispatchWindowBadge.className = 'badge badge-accent';
-            dispatchWindowBadge.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${firstRec.date === lastRec.date ? firstDateLabel : `${firstDateLabel} → ${lastDateLabel}`}`;
+            dispatchWindowBadge.innerHTML = `<i class="fa-solid fa-calendar-day"></i> ${spanDatesLabel}`;
         }
     }
 
